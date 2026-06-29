@@ -20,3 +20,8 @@ secrets/
 
 # Data exports
 data/
+
+**/.idea/
+**/.artifacts/
+android/android/.idea/
+

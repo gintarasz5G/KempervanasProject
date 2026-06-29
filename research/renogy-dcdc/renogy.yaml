@@ -1,0 +1,262 @@
+# ==========================================
+# ETAPAS 4: JUNCTEK DEKODERIS + KALIBRAVIMO MYGTUKAI + ESP-NOW
+# ==========================================
+
+esphome:
+  name: renogy-dcdc-test
+  friendly_name: "Kemperio Sistema"
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+    version: latest
+
+# ==========================================
+# LOGAVIMAS IR WIFI
+# ==========================================
+logger:
+  level: DEBUG
+  hardware_uart: USB_SERIAL_JTAG
+  logs:
+    esp32_ble: WARN
+    ble_client: WARN
+    "esp-idf": WARN
+
+# Kad ESP-NOW veiktų patikimai, fiksuojame WiFi kanalą (Pvz., 1)
+wifi:
+  ap:
+    ssid: "Kemperio-Sistema"
+    password: "kemperis123"
+    channel: 1
+    manual_ip:
+      static_ip: 192.168.5.1
+      gateway: 192.168.5.1
+      subnet: 255.255.255.0
+
+web_server:
+  port: 80
+  version: 2
+  local: true
+
+api:
+  reboot_timeout: 0s
+
+# ==========================================
+# GLOBALŪS KINTAMIEJI
+# ==========================================
+globals:
+  - id: junc_buffer
+    type: std::vector<uint8_t>
+
+# ==========================================
+# BLUETOOTH KLIENTAS (Junctek)
+# ==========================================
+esp32_ble_tracker:
+
+ble_client:
+  - mac_address: "38:3B:26:79:DB:64"
+    id: junctek_shunt
+    on_connect:
+      then:
+        - logger.log: "✅ JUNCTEK ŠUNTAS prijungtas!"
+
+# Žadinimo signalas kas 5 sekundes
+interval:
+  - interval: 5s
+    then:
+      - if:
+          condition:
+            lambda: 'return id(junctek_shunt).connected();'
+          then:
+            - ble_client.ble_write:
+                id: junctek_shunt
+                service_uuid: "FFF0"
+                characteristic_uuid: "FFF2"
+                value: [0xFF, 0x03, 0x01, 0x00, 0x00, 0x21, 0xD1, 0xCA]
+
+# ==========================================
+# JUNCTEK SENSORIAI (Web ir ESP-NOW)
+# ==========================================
+sensor:
+  - platform: template
+    name: "Junctek | Įtampa"
+    id: junc_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    icon: mdi:flash
+
+  - platform: template
+    name: "Junctek | Srovė"
+    id: junc_a
+    unit_of_measurement: "A"
+    accuracy_decimals: 1
+    icon: mdi:current-dc
+
+  - platform: template
+    name: "Junctek | Likutis"
+    id: junc_ah
+    unit_of_measurement: "Ah"
+    accuracy_decimals: 2
+    icon: mdi:battery-charging-100
+
+  - platform: template
+    name: "Junctek | SOC"
+    id: junc_soc
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    icon: mdi:battery-50
+    
+  - platform: template
+    name: "Junctek | Temperatūra"
+    id: junc_temp
+    unit_of_measurement: "°C"
+    accuracy_decimals: 0
+    icon: mdi:thermometer
+
+  - platform: template
+    name: "Junctek | Galia"
+    id: junc_w
+    unit_of_measurement: "W"
+    accuracy_decimals: 1
+    icon: mdi:lightning-bolt
+    update_interval: 2s
+    lambda: |-
+      if (std::isnan(id(junc_v).state) || std::isnan(id(junc_a).state)) {
+        return NAN;
+      }
+      return id(junc_v).state * id(junc_a).state;
+
+# ==========================================
+# ESP-NOW SIŲSTUVAS
+# ==========================================
+esp32_espnow:
+  id: espnow_tx
+  # Siunčiame laukimo intervalą (kada surenkamas pilnas paketas dekoderyje)
+  on_setup:
+    - logger.log: "📡 ESP-NOW Siųstuvas inicializuotas"
+
+# ==========================================
+# JUNCTEK VALDYMO MYGTUKAI
+# ==========================================
+button:
+  - platform: template
+    name: "⚙️ Nustatyti Baterijos Talpą (100 Ah)"
+    id: set_junctek_ah
+    icon: mdi:battery-sync
+    on_press:
+      - lambda: |-
+          if (id(junctek_shunt).connected()) {
+            auto chr = id(junctek_shunt).get_characteristic((uint16_t)0xFFF0, (uint16_t)0xFFF2);
+            if (chr != nullptr) {
+              std::string cmd = "01W20=1000\r\n"; // Pakeisti į 1500, jei baterija 150Ah
+              chr->write_value((uint8_t*)cmd.c_str(), cmd.length());
+              ESP_LOGI("JUNCTEK_CMD", "Išsiųsta komanda: Nustatyti 100 Ah");
+            }
+          }
+
+  - platform: template
+    name: "🔋 Nustatyti SOC į 100%"
+    id: set_junctek_100_soc
+    icon: mdi:battery-100
+    on_press:
+      - lambda: |-
+          if (id(junctek_shunt).connected()) {
+            auto chr = id(junctek_shunt).get_characteristic((uint16_t)0xFFF0, (uint16_t)0xFFF2);
+            if (chr != nullptr) {
+              std::string cmd = "01W22=1\r\n"; 
+              chr->write_value((uint8_t*)cmd.c_str(), cmd.length());
+              ESP_LOGI("JUNCTEK_CMD", "Išsiųsta komanda: SOC 100%");
+            }
+          }
+
+# ==========================================
+# BCD DEKODAVIMAS IR ESP-NOW SIUNTIMAS
+# ==========================================
+text_sensor:
+  - platform: ble_client
+    ble_client_id: junctek_shunt
+    name: "Junctek | Ryšio Statusas"
+    id: junctek_status
+    service_uuid: "FFF0"
+    characteristic_uuid: "FFF1"
+    notify: true
+    update_interval: 24h
+    on_notify:
+      - lambda: |-
+          // Konstrukcija duomenų siuntimui per ESP-NOW
+          struct __attribute__((packed)) JunctekData {
+            float voltage;
+            float current;
+            float capacity_ah;
+            int soc_percent;
+            int temperature;
+          } espnow_data;
+          
+          bool data_ready = false;
+
+          for (uint8_t b : x) {
+            if (b == 0xBB) id(junc_buffer).clear();
+            id(junc_buffer).push_back(b);
+
+            if (b == 0xEE && id(junc_buffer).size() > 3) {
+              int size = id(junc_buffer).size();
+              uint8_t current_marker = id(junc_buffer)[1]; 
+              double current_val = 0;
+              bool has_data = false;
+              int bytes_read = 0;
+              bool is_negative = false;
+
+              for (size_t i = 2; i < size - 1; i++) {
+                uint8_t b_val = id(junc_buffer)[i];
+                
+                if (b_val > 0x99) { 
+                  if (has_data) {
+                    double final_val = is_negative ? -current_val : current_val;
+                    if (current_marker == 0xD2) { id(junc_v).publish_state(final_val / 10000.0); espnow_data.voltage = final_val / 10000.0; }
+                    if (current_marker == 0x04) { id(junc_ah).publish_state(final_val / 100.0); espnow_data.capacity_ah = final_val / 100.0; }
+                    if (current_marker == 0xC0) { id(junc_a).publish_state(final_val / 10.0); espnow_data.current = final_val / 10.0; }
+                    if (current_marker == 0x06) { id(junc_soc).publish_state(final_val); espnow_data.soc_percent = (int)final_val; }
+                    if (current_marker == 0x13) { id(junc_temp).publish_state(final_val); espnow_data.temperature = (int)final_val; }
+                  }
+                  current_marker = b_val;
+                  current_val = 0;
+                  bytes_read = 0;
+                  is_negative = false;
+                  has_data = false;
+                } else {
+                  uint8_t high = b_val >> 4;
+                  uint8_t low = b_val & 0x0F;
+                  
+                  if (bytes_read == 0 && current_marker == 0xC0) {
+                      if (high == 1) {
+                          is_negative = true;
+                          high = 0; 
+                      }
+                  }
+                  current_val = current_val * 100 + (high * 10 + low);
+                  has_data = true;
+                  bytes_read++;
+                }
+              }
+              
+              if (has_data) {
+                double final_val = is_negative ? -current_val : current_val;
+                if (current_marker == 0xD2) { id(junc_v).publish_state(final_val / 10000.0); espnow_data.voltage = final_val / 10000.0; }
+                if (current_marker == 0x04) { id(junc_ah).publish_state(final_val / 100.0); espnow_data.capacity_ah = final_val / 100.0; }
+                if (current_marker == 0xC0) { id(junc_a).publish_state(final_val / 10.0); espnow_data.current = final_val / 10.0; }
+                if (current_marker == 0x06) { id(junc_soc).publish_state(final_val); espnow_data.soc_percent = (int)final_val; }
+                if (current_marker == 0x13) { id(junc_temp).publish_state(final_val); espnow_data.temperature = (int)final_val; }
+                data_ready = true;
+              }
+              id(junc_buffer).clear();
+            }
+          }
+          if (id(junc_buffer).size() > 150) id(junc_buffer).clear();
+          
+          // Jei sėkmingai dekodavome paketą, siunčiame per ESP-NOW
+          if (data_ready) {
+             uint8_t broadcast_mac[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // Laikinas sprendimas, geriau naudoti tikslų Kincony MAC
+             id(espnow_tx).send(broadcast_mac, (uint8_t*)&espnow_data, sizeof(espnow_data));
+             ESP_LOGD("ESPNOW", "Išsiųsta V:%.2f A:%.1f SOC:%d%%", espnow_data.voltage, espnow_data.current, espnow_data.soc_percent);
+          }

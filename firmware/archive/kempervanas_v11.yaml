@@ -1,0 +1,883 @@
+# kempervanas_v11.yaml — BE RENOGY (BLE pašalintas)
+#
+# Strategija: TIK 100% PATIKRINTI KOMPONENTAI, jokio Renogy/BLE
+#
+# Įjungta:
+# ✅ GPS: koordinatės, aukštis, greitis, kryptis, palydovai (su konstelacijų išskaidymu)
+# ✅ GSM: operatorius, signalo stiprumas, SIM statusas
+# ✅ Pokrypis: Šoninis (K/D) ir Išilginis (P/G), domkratų patarimas centimetrais
+# ✅ Aplinka: BMP180 — temperatūra, slėgis, orų prognozė (3h tendencija)
+# ✅ Vanduo: VL53L0X — atstumas, lygis %, litrai
+# ✅ Vandens kokybė: TDS PPM
+# ✅ Dujos: HX711 — svoris
+#
+# Pašalinta vs v10_SAFE:
+# ❌ esp32_ble_tracker, ble_client, BMS RAW HEX, visi Energija | sensoriai
+
+esphome:
+  name: kempervanas
+  friendly_name: Kempervanas
+  on_boot:
+    priority: 200
+    then:
+      - lambda: |-
+          // ADXL345 measurement mode
+          uint8_t data[2] = {0x2D, 0x08};
+          id(i2c_bus).write(0x53, data, 2, true);
+      - delay: 500ms
+      - script.execute: a7670e_init
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+wifi:
+  ap:
+    ssid: "Kemperis-Valdymas"
+    password: "kemperis123"
+
+web_server:
+  port: 80
+  version: 2
+  local: true
+
+api:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+
+logger:
+  level: DEBUG
+  hardware_uart: USB_SERIAL_JTAG
+  logs:
+    "i2c.idf": WARN
+    "esp-idf": WARN
+    component: WARN
+    scheduler: WARN
+    sensor: INFO
+    text_sensor: INFO
+    binary_sensor: INFO
+    web_server: INFO
+    wifi: INFO
+    api: INFO
+
+# ==========================================
+# MAGISTRALĖS
+# ==========================================
+i2c:
+  - id: i2c_bus
+    sda: GPIO9
+    scl: GPIO10
+    scan: true
+    frequency: 50kHz
+
+uart:
+  - id: uart_a7670e
+    tx_pin: GPIO40
+    rx_pin: GPIO41
+    baud_rate: 115200
+    rx_buffer_size: 1024
+    debug:
+      direction: BOTH
+      dummy_receiver: false
+      after:
+        delimiter: "\r\n"
+      sequence:
+        - lambda: |-
+            std::string s(bytes.begin(), bytes.end());
+            ESP_LOGD("UART_DATA", "Simcom: %s", s.c_str());
+
+# ==========================================
+# PCF8574
+# ==========================================
+pcf8574:
+  - id: pcf_out1
+    address: 0x24
+  - id: pcf_out2
+    address: 0x25
+  - id: pcf_in1
+    address: 0x21
+  - id: pcf_in2
+    address: 0x22
+
+# ==========================================
+# GLOBALŪS KINTAMIEJI
+# ==========================================
+globals:
+  # ADXL345 kalibracija
+  - id: cal_roll
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: cal_pitch
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+
+  # GPS — pagrindiniai
+  - id: gps_lat
+    type: float
+    initial_value: "0.0"
+  - id: gps_lon
+    type: float
+    initial_value: "0.0"
+  - id: gps_alt
+    type: float
+    initial_value: "0.0"
+  - id: gps_speed
+    type: float
+    initial_value: "0.0"
+  - id: gps_heading
+    type: float
+    initial_value: "0.0"
+  - id: gps_fix_mode
+    type: int
+    initial_value: "0"   # 0=no fix, 2=2D, 3=3D
+  - id: gps_fix
+    type: bool
+    initial_value: "false"
+
+  # GPS — palydovų skaičius pagal konstelaciją
+  - id: gps_sats_gps
+    type: int
+    initial_value: "0"
+  - id: gps_sats_glonass
+    type: int
+    initial_value: "0"
+  - id: gps_sats_bds
+    type: int
+    initial_value: "0"
+  - id: gps_sats_galileo
+    type: int
+    initial_value: "0"
+
+  # GSM
+  - id: uart_buf
+    type: std::string
+    initial_value: '""'
+  - id: gsm_signal
+    type: int
+    initial_value: "0"
+  - id: gsm_operator
+    type: std::string
+    initial_value: '"Ieskoma..."'
+  - id: sim_status
+    type: std::string
+    initial_value: '"Tikrinama..."'
+
+  # Vandens bakas — kalibracija (NVS)
+  - id: water_empty_cm
+    type: float
+    restore_value: true
+    initial_value: '30.0'
+  - id: water_full_cm
+    type: float
+    restore_value: true
+    initial_value: '5.0'
+  - id: water_total_liters
+    type: float
+    restore_value: true
+    initial_value: '150.0'
+
+  # Dujų — kalibracija (NVS)
+  - id: gas_empty_weight
+    type: float
+    restore_value: true
+    initial_value: '13.5'
+  - id: gas_full_weight
+    type: float
+    restore_value: true
+    initial_value: '23.5'
+
+  # Slėgio istorija orų prognozei (7 reikšmės kas 30 min = 3h trend)
+  - id: pressure_history
+    type: std::vector<float>
+
+  # SMS — gaunamas Status? užklausimas
+  - id: sms_sender
+    type: std::string
+    initial_value: '""'
+  - id: cmt_state
+    type: int
+    initial_value: '0'   # 0=idle, 1=expect body
+  - id: last_sms_send_ms
+    type: unsigned long
+    initial_value: '0'
+
+# ==========================================
+# MYGTUKAI IR KALIBRACIJA
+# ==========================================
+button:
+  - platform: template
+    name: "Pokrypis | Kalibruoti (zero)"
+    id: calibrate_button
+    on_press:
+      - lambda: |-
+          id(cal_roll) += id(roll_sensor).state;
+          id(cal_pitch) += id(pitch_sensor).state;
+          ESP_LOGI("CAL", "Posvyris uznulintas: roll_off=%.2f pitch_off=%.2f",
+                   id(cal_roll), id(cal_pitch));
+
+  - platform: template
+    name: "Vanduo | Nustatyti tuscia"
+    id: water_empty_button
+    on_press:
+      - lambda: |-
+          if (!isnan(id(water_distance).state)) {
+            id(water_empty_cm) = id(water_distance).state;
+            ESP_LOGI("WATER", "Tuscio bako atstumas nustatytas: %.1f cm", id(water_empty_cm));
+          }
+
+  - platform: template
+    name: "Vanduo | Nustatyti pilna"
+    id: water_full_button
+    on_press:
+      - lambda: |-
+          if (!isnan(id(water_distance).state)) {
+            id(water_full_cm) = id(water_distance).state;
+            ESP_LOGI("WATER", "Pilno bako atstumas nustatytas: %.1f cm", id(water_full_cm));
+          }
+
+number:
+  - platform: template
+    name: "Vanduo | Bako turis (L)"
+    id: water_total_liters_num
+    min_value: 10.0
+    max_value: 500.0
+    step: 1.0
+    unit_of_measurement: "L"
+    lambda: return id(water_total_liters);
+    set_action:
+      - globals.set:
+          id: water_total_liters
+          value: !lambda return x;
+
+  - platform: template
+    name: "Dujos | Tuscio baliono svoris"
+    id: gas_empty_weight_num
+    min_value: 2.0
+    max_value: 25.0
+    step: 0.1
+    unit_of_measurement: "kg"
+    lambda: return id(gas_empty_weight);
+    set_action:
+      - globals.set:
+          id: gas_empty_weight
+          value: !lambda return x;
+
+  - platform: template
+    name: "Dujos | Pilno baliono svoris"
+    id: gas_full_weight_num
+    min_value: 5.0
+    max_value: 50.0
+    step: 0.1
+    unit_of_measurement: "kg"
+    lambda: return id(gas_full_weight);
+    set_action:
+      - globals.set:
+          id: gas_full_weight
+          value: !lambda return x;
+
+# ==========================================
+# SENSORIAI
+# ==========================================
+sensor:
+  # ===== APLINKA — BMP180 =====
+  - platform: bmp085
+    temperature:
+      name: "Aplinka | Temperatura"
+      id: bmp_temp
+      filters:
+        - offset: -2.0
+      accuracy_decimals: 1
+    pressure:
+      name: "Aplinka | Slegis"
+      id: bmp_pressure
+      accuracy_decimals: 1
+    update_interval: 30s
+
+  # ===== POKRYPIS — ADXL345 =====
+  - platform: template
+    name: "Pokrypis | Soninis K-D"
+    id: roll_sensor
+    unit_of_measurement: "°"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: |-
+      uint8_t reg = 0x32;
+      id(i2c_bus).write(0x53, &reg, 1, false);
+      uint8_t raw[6];
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return {};
+      int16_t y = (int16_t)(raw[2] | (raw[3] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      return (atan2((float)y * 0.004f, (float)z * 0.004f) * 180.0f / M_PI) - id(cal_roll);
+
+  - platform: template
+    name: "Pokrypis | Isilginis P-G"
+    id: pitch_sensor
+    unit_of_measurement: "°"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: |-
+      uint8_t reg = 0x32;
+      id(i2c_bus).write(0x53, &reg, 1, false);
+      uint8_t raw[6];
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return {};
+      int16_t x = (int16_t)(raw[0] | (raw[1] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      return (atan2((float)x * 0.004f, (float)z * 0.004f) * 180.0f / M_PI) - id(cal_pitch);
+
+  # ===== HX711 — DUJŲ SVORIS =====
+  - platform: hx711
+    name: "Dujos | Bendras svoris"
+    id: gas_total_weight
+    clk_pin: GPIO48
+    dout_pin: GPIO47
+    update_interval: 5s
+    unit_of_measurement: "kg"
+    accuracy_decimals: 1
+    filters:
+      - multiply: 0.001  # raw units → kg (kalibruotinas)
+
+  - platform: template
+    name: "Dujos | Likutis kg"
+    id: gas_remaining_kg
+    unit_of_measurement: "kg"
+    accuracy_decimals: 1
+    update_interval: 5s
+    lambda: |-
+      float total = id(gas_total_weight).state;
+      if (isnan(total)) return NAN;
+      return std::max(0.0f, total - id(gas_empty_weight));
+
+  - platform: template
+    name: "Dujos | Likutis %"
+    id: gas_remaining_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      float total = id(gas_total_weight).state;
+      if (isnan(total)) return NAN;
+      float net = std::max(0.0f, total - id(gas_empty_weight));
+      float cap = id(gas_full_weight) - id(gas_empty_weight);
+      if (cap < 0.1f) return NAN;
+      float pct = (net / cap) * 100.0f;
+      if (pct < 0) pct = 0;
+      if (pct > 100) pct = 100;
+      return pct;
+
+  # ===== VL53L0X — VANDENS BAKAS =====
+  - platform: vl53l0x
+    name: "Vanduo | Atstumas iki vandens"
+    id: water_distance
+    i2c_id: i2c_bus
+    address: 0x29
+    accuracy_decimals: 1
+    unit_of_measurement: "cm"
+    update_interval: 5s
+    filters:
+      - multiply: 100   # m → cm
+      - median:
+          window_size: 5
+          send_every: 1
+
+  - platform: template
+    name: "Vanduo | Lygis %"
+    id: water_level_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      float distance = id(water_distance).state;
+      if (isnan(distance)) return NAN;
+      float range = id(water_empty_cm) - id(water_full_cm);
+      if (range <= 0.1f) return NAN;
+      float pct = ((id(water_empty_cm) - distance) / range) * 100.0f;
+      if (pct < 0) pct = 0;
+      if (pct > 100) pct = 100;
+      return pct;
+
+  - platform: template
+    name: "Vanduo | Likutis L"
+    id: water_liters
+    unit_of_measurement: "L"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      float pct = id(water_level_pct).state;
+      if (isnan(pct)) return NAN;
+      return (pct / 100.0f) * id(water_total_liters);
+
+  # ===== TDS — VANDENS KOKYBĖ =====
+  - platform: adc
+    name: "Vanduo | TDS itampa"
+    id: tds_voltage
+    pin: GPIO7
+    attenuation: 12db
+    update_interval: 5s
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    internal: true
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: template
+    name: "Vanduo | Kokybe TDS"
+    id: water_tds
+    unit_of_measurement: "PPM"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      float v = id(tds_voltage).state;
+      if (isnan(v) || v <= 0.05f) return 0.0f;
+      if (v > 2.3f) v = 2.3f;
+      // Polinominis modelis (CLAUDE.md): ~25°C kompensacija
+      return (133.42f * v * v * v - 255.86f * v * v + 857.39f * v) * 0.5f;
+
+  # ===== GPS =====
+  - platform: template
+    name: "GPS | Aukstis"
+    id: gps_altitude
+    unit_of_measurement: "m"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (!id(gps_fix)) return NAN;
+      return id(gps_alt);
+
+  - platform: template
+    name: "GPS | Greitis"
+    id: gps_speed_sensor
+    unit_of_measurement: "km/h"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (!id(gps_fix)) return NAN;
+      return id(gps_speed);
+
+  - platform: template
+    name: "GPS | Kryptis"
+    id: gps_heading_sensor
+    unit_of_measurement: "°"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (!id(gps_fix)) return NAN;
+      return id(gps_heading);
+
+  # GPS palydovai pagal konstelaciją
+  - platform: template
+    name: "GPS | Palydovai GPS (US)"
+    id: gps_sats_gps_sensor
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: return (float)id(gps_sats_gps);
+
+  - platform: template
+    name: "GPS | Palydovai GLONASS (RU)"
+    id: gps_sats_glonass_sensor
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: return (float)id(gps_sats_glonass);
+
+  - platform: template
+    name: "GPS | Palydovai BeiDou (CN)"
+    id: gps_sats_bds_sensor
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: return (float)id(gps_sats_bds);
+
+  - platform: template
+    name: "GPS | Palydovai Galileo (EU)"
+    id: gps_sats_galileo_sensor
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: return (float)id(gps_sats_galileo);
+
+  - platform: template
+    name: "GPS | Palydovai Viso"
+    id: gps_sats_total_sensor
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      return (float)(id(gps_sats_gps) + id(gps_sats_glonass) +
+                     id(gps_sats_bds) + id(gps_sats_galileo));
+
+  # ===== GSM =====
+  - platform: template
+    name: "GSM | Signalas"
+    id: gsm_signal_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 10s
+    lambda: |-
+      if (id(gsm_signal) == 0 || id(gsm_signal) >= 99) return 0;
+      float pct = (float)id(gsm_signal) / 31.0 * 100.0;
+      return (pct > 100) ? 100 : pct;
+
+  - platform: template
+    name: "GSM | RSSI dBm"
+    id: gsm_rssi_dbm
+    unit_of_measurement: "dBm"
+    accuracy_decimals: 0
+    update_interval: 10s
+    lambda: |-
+      // CSQ konversija: dBm = -113 + 2*CSQ
+      if (id(gsm_signal) == 0 || id(gsm_signal) >= 99) return NAN;
+      return -113.0f + 2.0f * id(gsm_signal);
+
+# ==========================================
+# TEKSTINIAI SENSORIAI
+# ==========================================
+text_sensor:
+  - platform: template
+    name: "GSM | SIM Statusas"
+    id: sim_status_sensor
+    update_interval: 10s
+    lambda: return id(sim_status);
+
+  - platform: template
+    name: "GSM | Operatorius"
+    id: gsm_operator_sensor
+    update_interval: 10s
+    lambda: |-
+      if (id(gsm_operator) == "24602") return std::string("Tele2");
+      if (id(gsm_operator) == "24601") return std::string("Telia");
+      if (id(gsm_operator) == "24603") return std::string("Bite");
+      return id(gsm_operator);
+
+  - platform: template
+    name: "GPS | Koordinates"
+    id: gps_coords
+    update_interval: 5s
+    lambda: |-
+      if (id(gps_fix)) {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%.6f, %.6f", id(gps_lat), id(gps_lon));
+        return std::string(buf);
+      }
+      return std::string("Ieskoma palydovu...");
+
+  - platform: template
+    name: "GPS | Fix statusas"
+    id: gps_fix_text
+    update_interval: 5s
+    lambda: |-
+      switch (id(gps_fix_mode)) {
+        case 2: return std::string("2D fix");
+        case 3: return std::string("3D fix");
+        default: return std::string("Nera fix");
+      }
+
+  # ===== POKRYPIS — DOMKRATŲ PATARIMAS (cm) =====
+  - platform: template
+    name: "Pokrypis | Domkratu patarimas"
+    id: domkratu_patarimas
+    update_interval: 2s
+    lambda: |-
+      float roll = id(roll_sensor).state;
+      float pitch = id(pitch_sensor).state;
+      if (isnan(roll) || isnan(pitch)) return std::string("Matavimas...");
+
+      const float threshold = 0.5f;
+      // VW Crafter: ratu tarpas 1800mm, bazes ilgis ~3665mm
+      const float track_cm = 180.0f;     // soninis: K-D
+      const float base_cm  = 366.5f;     // isilginis: P-G
+
+      bool roll_lvl  = std::abs(roll)  < threshold;
+      bool pitch_lvl = std::abs(pitch) < threshold;
+
+      if (roll_lvl && pitch_lvl) return std::string("Lygu");
+
+      std::string out;
+
+      // Šoninis (K/D): teigiamas kampas = dešinė pusė aukščiau → kelti kairę
+      if (roll > threshold) {
+        int cm = (int)std::round(std::tan(roll * M_PI / 180.0f) * track_cm);
+        out = "Kelti K +" + std::to_string(cm) + "cm";
+      } else if (roll < -threshold) {
+        int cm = (int)std::round(std::tan(-roll * M_PI / 180.0f) * track_cm);
+        out = "Kelti D +" + std::to_string(cm) + "cm";
+      }
+
+      // Išilginis (P/G): teigiamas = priekis aukščiau → kelti galą
+      if (pitch > threshold) {
+        int cm = (int)std::round(std::tan(pitch * M_PI / 180.0f) * base_cm);
+        if (!out.empty()) out += " | ";
+        out += "Kelti G +" + std::to_string(cm) + "cm";
+      } else if (pitch < -threshold) {
+        int cm = (int)std::round(std::tan(-pitch * M_PI / 180.0f) * base_cm);
+        if (!out.empty()) out += " | ";
+        out += "Kelti P +" + std::to_string(cm) + "cm";
+      }
+
+      return out;
+
+  # ===== ORŲ PROGNOZĖ (3h slėgio tendencija) =====
+  - platform: template
+    name: "Aplinka | Oru prognoze"
+    id: weather_forecast
+    update_interval: 60s
+    lambda: |-
+      auto& hist = id(pressure_history);
+      if (hist.size() < 7) {
+        char buf[40];
+        snprintf(buf, sizeof(buf), "Kaupiama (%d/7)", (int)hist.size());
+        return std::string(buf);
+      }
+      // Lyginam dabartinę su seniausia (7 reiksmes kas 30 min = 3h)
+      float trend = hist.back() - hist.front();
+      if (trend > 4.0f)   return std::string("Labai greitai gereja");
+      if (trend > 2.0f)   return std::string("Geras");
+      if (trend > 0.5f)   return std::string("Gereja");
+      if (trend > -0.5f)  return std::string("Stabilus");
+      if (trend > -2.0f)  return std::string("Kinta");
+      if (trend > -4.0f)  return std::string("Blogas");
+      return std::string("Smarkiai blogeja");
+
+# ==========================================
+# INTERVALAI
+# ==========================================
+interval:
+  # UART parsing iš A7670E
+  - interval: 100ms
+    then:
+      - lambda: |-
+          while (id(uart_a7670e).available()) {
+            uint8_t byte;
+            id(uart_a7670e).read_byte(&byte);
+            char c = (char)byte;
+            id(uart_buf) += c;
+            if (c == '\n') {
+              std::string line = id(uart_buf);
+              id(uart_buf) = "";
+
+              if (line.find("+CPIN: READY") != std::string::npos) {
+                id(sim_status) = "READY";
+              }
+
+              if (line.find("+CGNSSINFO:") != std::string::npos) {
+                std::vector<std::string> p;
+                size_t start = line.find(":") + 1;
+                size_t end = line.find(",", start);
+                while (end != std::string::npos) {
+                  p.push_back(line.substr(start, end - start));
+                  start = end + 1;
+                  end = line.find(",", start);
+                }
+                p.push_back(line.substr(start));
+
+                std::string fix_mode = p[0];
+                while (!fix_mode.empty() && (fix_mode.front() == ' ' || fix_mode.front() == '\t')) {
+                  fix_mode.erase(0, 1);
+                }
+
+                int fm = atoi(fix_mode.c_str());
+                id(gps_fix_mode) = fm;
+
+                // Palydovų skaičius pagal konstelaciją (visada nuskaitom)
+                id(gps_sats_gps)     = p.size() > 1 && !p[1].empty() ? atoi(p[1].c_str()) : 0;
+                id(gps_sats_glonass) = p.size() > 2 && !p[2].empty() ? atoi(p[2].c_str()) : 0;
+                id(gps_sats_bds)     = p.size() > 3 && !p[3].empty() ? atoi(p[3].c_str()) : 0;
+                id(gps_sats_galileo) = p.size() > 4 && !p[4].empty() ? atoi(p[4].c_str()) : 0;
+
+                if ((fm == 2 || fm == 3) && p.size() > 13
+                    && !p[5].empty() && !p[7].empty()) {
+                  float lat = atof(p[5].c_str());
+                  if (p[6] == "S") lat = -lat;
+                  float lon = atof(p[7].c_str());
+                  if (p[8] == "W") lon = -lon;
+                  float alt = atof(p[11].c_str());
+                  // p[12] = speed (knots), p[13] = course (laipsniai)
+                  float speed_knots = (p[12].empty()) ? 0 : atof(p[12].c_str());
+                  float speed_kmh = speed_knots * 1.852f;
+                  float heading = (p[13].empty()) ? 0 : atof(p[13].c_str());
+
+                  id(gps_lat)     = lat;
+                  id(gps_lon)     = lon;
+                  id(gps_alt)     = alt;
+                  id(gps_speed)   = speed_kmh;
+                  id(gps_heading) = heading;
+                  id(gps_fix)     = true;
+
+                  ESP_LOGI("GPS", "Fix=%dD %.6f,%.6f alt=%.0fm v=%.0fkm/h hdg=%.0f° sats(GPS/GLO/BDS/GAL)=%d/%d/%d/%d",
+                           fm, lat, lon, alt, speed_kmh, heading,
+                           id(gps_sats_gps), id(gps_sats_glonass),
+                           id(gps_sats_bds), id(gps_sats_galileo));
+                } else {
+                  id(gps_fix) = false;
+                }
+              }
+
+              if (line.find("+CSQ:") != std::string::npos) {
+                size_t pos = line.find(":") + 1;
+                id(gsm_signal) = atoi(line.c_str() + pos);
+              }
+
+              if (line.find("+COPS:") != std::string::npos) {
+                size_t q1 = line.find('"');
+                size_t q2 = (q1 != std::string::npos) ? line.find('"', q1+1) : std::string::npos;
+                if (q1 != std::string::npos && q2 != std::string::npos) {
+                  id(gsm_operator) = line.substr(q1+1, q2-q1-1);
+                }
+              }
+
+              // ===== SMS GAUNAMAS (+CMT) =====
+              // Formatas:
+              //   +CMT: "<sender>","","<timestamp>"
+              //   <body>
+              if (line.find("+CMT:") != std::string::npos) {
+                size_t q1 = line.find('"');
+                size_t q2 = (q1 != std::string::npos) ? line.find('"', q1+1) : std::string::npos;
+                if (q1 != std::string::npos && q2 != std::string::npos) {
+                  id(sms_sender) = line.substr(q1+1, q2-q1-1);
+                  id(cmt_state) = 1;
+                  ESP_LOGI("SMS", "Gautas SMS is %s — laukiamas turinys",
+                           id(sms_sender).c_str());
+                }
+              } else if (id(cmt_state) == 1) {
+                // Sekanti eilute = SMS turinys
+                id(cmt_state) = 0;
+                std::string body = line;
+                while (!body.empty() && (body.back() == '\r' || body.back() == '\n')) {
+                  body.pop_back();
+                }
+                // Lower-case trigger paieskai
+                std::string lower = body;
+                for (auto& c : lower) c = std::tolower(c);
+
+                bool trigger = false;
+                if (lower.find("status") != std::string::npos) trigger = true;
+                if (lower.find("info") != std::string::npos)   trigger = true;
+                if (body == "?")                                trigger = true;
+
+                ESP_LOGI("SMS", "Turinys: '%s' (trigger=%d)", body.c_str(), trigger);
+
+                if (trigger) {
+                  unsigned long now = millis();
+                  if (now - id(last_sms_send_ms) < 30000) {
+                    ESP_LOGW("SMS", "Cooldown — atsakymas atmestas");
+                  } else {
+                    id(last_sms_send_ms) = now;
+                    id(sms_send_status).execute();
+                  }
+                }
+              }
+            }
+          }
+
+  # AT komandų ciklas kas 10s (CPIN, CSQ, COPS, CGNSSINFO)
+  - interval: 10s
+    then:
+      - uart.write: { id: uart_a7670e, data: "AT+CPIN?\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CSQ\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+COPS?\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CGNSSINFO\r\n" }
+
+  # Slėgio istorija orų prognozei (kas 30 min)
+  - interval: 30min
+    then:
+      - lambda: |-
+          if (!isnan(id(bmp_pressure).state)) {
+            id(pressure_history).push_back(id(bmp_pressure).state);
+            if (id(pressure_history).size() > 7) {
+              id(pressure_history).erase(id(pressure_history).begin());
+            }
+            ESP_LOGI("WEATHER", "Slegio istorija %d/7, paskutine %.1f hPa",
+                     (int)id(pressure_history).size(), id(bmp_pressure).state);
+          }
+
+# ==========================================
+# SKRIPTAI
+# ==========================================
+script:
+  - id: a7670e_init
+    then:
+      - uart.write: { id: uart_a7670e, data: "AT\r\n" }
+      - delay: 1s
+      - uart.write: { id: uart_a7670e, data: "AT+CGNSSPWR=1\r\n" }
+      - delay: 1s
+      # ===== SMS rezimas: text mode + tiesiogiai i UART =====
+      - uart.write: { id: uart_a7670e, data: "AT+CMGF=1\r\n" }       # Text mode
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CSCS=\"GSM\"\r\n" }  # 7-bit charset
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CNMI=2,2,0,0,0\r\n" } # Auto-deliver via +CMT
+      - delay: 500ms
+      - logger.log: "A7670E inicializuotas (GPS + SMS)"
+
+  # ===== SMS atsakymas: "Status?" / "?" / "info" trigger =====
+  - id: sms_send_status
+    mode: queued
+    then:
+      # 1. AT+CMGS="<phone>" — atveria SMS rezima (laukiam ">" prompt'o)
+      - uart.write:
+          id: uart_a7670e
+          data: !lambda |-
+            std::string cmd = "AT+CMGS=\"" + id(sms_sender) + "\"\r\n";
+            std::vector<uint8_t> v(cmd.begin(), cmd.end());
+            return v;
+      - delay: 1s
+
+      # 2. SMS turinys + Ctrl+Z (0x1A) — siunciam
+      #    Max 160 ASCII simboliu (GSM 7-bit). Tik ASCII, jokiu lt raides!
+      - uart.write:
+          id: uart_a7670e
+          data: !lambda |-
+            // Saugiai paimam visas reikšmes su NaN apsauga
+            auto fnz = [](float v, float fb = 0.0f) -> float {
+              return isnan(v) ? fb : v;
+            };
+
+            float lat   = id(gps_fix) ? id(gps_lat) : 0;
+            float lon   = id(gps_fix) ? id(gps_lon) : 0;
+            float alt   = id(gps_fix) ? id(gps_alt) : 0;
+            float spd   = id(gps_fix) ? id(gps_speed) : 0;
+            int   hdg   = id(gps_fix) ? (int)id(gps_heading) : 0;
+            int   sats  = id(gps_sats_gps) + id(gps_sats_glonass)
+                        + id(gps_sats_bds) + id(gps_sats_galileo);
+            int   roll  = (int)std::round(fnz(id(roll_sensor).state));
+            int   pitch = (int)std::round(fnz(id(pitch_sensor).state));
+            std::string tilt = id(domkratu_patarimas).state;
+            int   wpct  = (int)std::round(fnz(id(water_level_pct).state));
+            int   wlit  = (int)std::round(fnz(id(water_liters).state));
+            int   gpct  = (int)std::round(fnz(id(gas_remaining_pct).state));
+            float gkg   = fnz(id(gas_remaining_kg).state);
+            int   t     = (int)std::round(fnz(id(bmp_temp).state));
+            int   p     = (int)std::round(fnz(id(bmp_pressure).state));
+            std::string fc = id(weather_forecast).state;
+            int   gsm   = (int)std::round(fnz(id(gsm_signal_pct).state));
+
+            char body[180];
+            int n = snprintf(body, sizeof(body),
+              "Kemperis OK\n"
+              "GPS:%.4f,%.4f %.0fm\n"
+              "V:%.0fkm/h H:%dd S:%d\n"
+              "Tilt:K%d P%d %s\n"
+              "H2O:%d%% %dL\n"
+              "Gas:%d%% %.1fkg\n"
+              "T:%dC %dhPa %s\n"
+              "GSM:%d%%\x1A",
+              lat, lon, alt,
+              spd, hdg, sats,
+              roll, pitch, tilt.c_str(),
+              wpct, wlit,
+              gpct, gkg,
+              t, p, fc.c_str(),
+              gsm
+            );
+
+            ESP_LOGI("SMS", "Siunciamas atsakymas (%d B): %s", n, body);
+            std::vector<uint8_t> v(body, body + n);
+            return v;
+
+      - delay: 5s
+      - logger.log: "SMS atsakymas issiustas"

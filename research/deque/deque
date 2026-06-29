@@ -1,0 +1,5 @@
+// Wrapper for ESPHome `includes: [deque]` directive.
+// ESPHome will emit `#include "deque"` referencing this file,
+// which in turn pulls in the standard <deque> header.
+#pragma once
+#include <deque>

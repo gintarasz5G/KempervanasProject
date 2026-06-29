@@ -1,0 +1,1241 @@
+# kempervanas_v16.yaml
+#
+# 🛠️ REFACTORING v15.4 → v16:
+#   ✅ Pašalintas BMP180 (visa iš BME680)
+#   ✅ Pašalintas SSD1306 OLED
+#   ✅ Pašalintas PCF8574 0x21 (220V aptikimas → atskiras ESP32)
+#   ✅ Junctek — tik BLE šuntas (RS485 Modbus šalintas)
+#   ✅ Pašalintas Renogy (tik Junctek)
+#   ✅ Pridėtas ADXL345 domkratų patarimas (text_sensor)
+#   ✅ Pridėtas GPS fix statusas text_sensor ("Nėra"/"2D"/"3D")
+#   ✅ Pridėta BME680 orų prognozė (7 taškų buffer, 30min)
+#   ✅ Dashboard prefiksai — "Vanduo|"/"Dujos|" → "Resursai|"
+#   ✅ RSSI raw sensor (dBm)
+#   ✅ VL53L0X median filtras
+#   ✅ Lambda dokumentavimas
+#   ✅ Error handling — NaN defaults
+#   ✅ GPS recovery timeout
+
+esphome:
+  name: kempervanas
+  friendly_name: Kempervanas
+  on_boot:
+    priority: 200
+    then:
+      - delay: 200ms
+      - lambda: |-
+          uint8_t data[2] = {0x2D, 0x08};
+          id(i2c_bus).write(0x53, data, 2, true);
+      - delay: 500ms
+      - lambda: 'id(a7670e_init).execute();'
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+wifi:
+  ap:
+    ssid: "Kemperis-Valdymas"
+    password: "kemperis123"
+
+web_server:
+  port: 80
+  version: 3
+  local: true
+
+api:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+
+logger:
+  level: DEBUG
+  hardware_uart: USB_SERIAL_JTAG
+
+i2c:
+  - id: i2c_bus
+    sda: GPIO9
+    scl: GPIO10
+    frequency: 100kHz
+    scan: true
+
+uart:
+  - id: uart_a7670e
+    tx_pin: GPIO40
+    rx_pin: GPIO41
+    baud_rate: 115200
+    rx_buffer_size: 2048
+
+pcf8574:
+  # OUT: šviesos (MOSFET sink) — atidėta vėlesniam etapui
+  - id: pcf_out1
+    address: 0x24
+  - id: pcf_out2
+    address: 0x25
+  # IN: jungikliai (GND aktyvacija) — atidėta vėlesniam etapui
+  # Pastaba: 0x21 PAŠALINTA (220V aptikimas per atskirą ESP32)
+
+esp32_ble_tracker:
+
+ble_client:
+  - mac_address: "38:3B:26:79:DB:64"
+    id: junctek_shunt
+    on_disconnect:
+      then:
+        - delay: 2s
+        - ble_client.connect: junctek_shunt
+
+globals:
+  - id: junc_buffer
+    type: std::vector<uint8_t>
+  - id: cal_roll
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: cal_pitch
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: gps_lat
+    type: float
+    initial_value: "0.0"
+  - id: gps_lon
+    type: float
+    initial_value: "0.0"
+  - id: gps_alt
+    type: float
+    initial_value: "0.0"
+  - id: gps_speed
+    type: float
+    initial_value: "0.0"
+  - id: gps_heading
+    type: float
+    initial_value: "0.0"
+  - id: gps_fix_mode
+    type: int
+    initial_value: "0"
+  - id: gps_fix
+    type: bool
+    initial_value: "false"
+  - id: gps_sats_gps
+    type: int
+    initial_value: "0"
+  - id: gps_sats_glonass
+    type: int
+    initial_value: "0"
+  - id: gps_sats_bds
+    type: int
+    initial_value: "0"
+  - id: gps_sats_galileo
+    type: int
+    initial_value: "0"
+  - id: uart_buf
+    type: std::string
+    initial_value: '""'
+  - id: gsm_signal
+    type: int
+    initial_value: "0"
+  - id: gsm_operator
+    type: std::string
+    initial_value: '"Ieskoma..."'
+  - id: sim_status
+    type: std::string
+    initial_value: '"Tikrinama..."'
+  - id: water_empty_cm
+    type: float
+    restore_value: true
+    initial_value: '30.0'
+  - id: water_full_cm
+    type: float
+    restore_value: true
+    initial_value: '5.0'
+  - id: water_total_liters
+    type: float
+    restore_value: true
+    initial_value: '100.0'
+  - id: gas_empty_weight
+    type: float
+    restore_value: true
+    initial_value: '2.8'
+  - id: gas_full_weight
+    type: float
+    restore_value: true
+    initial_value: '7.8'
+  - id: hx711_tare
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: hx711_scale
+    type: float
+    restore_value: true
+    initial_value: '20000.0'
+  - id: bat_capacity_ah
+    type: float
+    restore_value: true
+    initial_value: '110.0'
+  - id: pressure_history
+    type: std::vector<float>
+  - id: sms_sender
+    type: std::string
+    initial_value: '""'
+  - id: cmt_state
+    type: int
+    initial_value: '0'
+  - id: last_sms_send_ms
+    type: unsigned long
+    initial_value: '0'
+  - id: gps_error_count
+    type: int
+    initial_value: '0'
+
+button:
+  # ==================== POKRYPIS KALIBRACIJA ====================
+  - platform: template
+    name: "Pokrypis | Kalibruoti zero (lygu)"
+    id: btn_adxl_zero
+    on_press:
+      - lambda: |-
+          // Nustatyti šiandienę pokrypio orientaciją kaip nulį (lygu)
+          id(cal_roll) = id(roll_sensor).state;
+          id(cal_pitch) = id(pitch_sensor).state;
+
+  # ==================== DUJOS KALIBRACIJA ====================
+  - platform: template
+    name: "Resursai | Dujos — Tare (tuščias bakas)"
+    id: btn_gas_tare
+    on_press:
+      - lambda: |-
+          // HX711 tare — išmatuotas tuščio baliono svoris
+          if (id(gas_hx711_raw).has_state()) {
+            id(hx711_tare) = id(gas_hx711_raw).state;
+          }
+
+  - platform: template
+    name: "Resursai | Dujos — Calibrate pilna (žinomas svoris)"
+    id: btn_gas_cal_full
+    on_press:
+      - lambda: |-
+          // Kalibracija pilnam bakui
+          // Skaičiavimas: scale = (pilnas_svoris - tuščias_svoris) / (pilnas_kg - tuščias_kg)
+          // Naudoti: full_weight - empty_weight = ~5kg (23.5 - 2.8 = 20.7kg pvz)
+          // Tai paprastai: scale = raw_count / ~5kg
+
+  # ==================== VANDUO KALIBRACIJA ====================
+  - platform: template
+    name: "Resursai | Vanduo — Nustatyti TUŠČIĄ (cm)"
+    id: btn_water_empty
+    on_press:
+      - lambda: |-
+          // Nusttyti tuščio bako atstumą (cm)
+          if (id(water_distance).has_state()) {
+            id(water_empty_cm) = id(water_distance).state * 100.0f;  // m → cm
+          }
+
+  - platform: template
+    name: "Resursai | Vanduo — Nustatyti PILNĄ (cm)"
+    id: btn_water_full
+    on_press:
+      - lambda: |-
+          // Nusttyti pilno bako atstumą (cm)
+          if (id(water_distance).has_state()) {
+            id(water_full_cm) = id(water_distance).state * 100.0f;  // m → cm
+          }
+
+  # ==================== TDS KALIBRACIJA ====================
+  - platform: template
+    name: "Resursai | TDS — Kalibracija NULINE (0 ppm)"
+    id: btn_tds_zero
+    on_press:
+      - lambda: |-
+          // TDS kalibracija: išmatuoti voltage šiuo metu
+          // Naudoti voltažą kaip offset (pvz 0.5V = 0ppm reference)
+          if (id(tds_raw_voltage).has_state()) {
+            // Galima naudoti dalies kalibravimu
+          }
+
+number:
+  # ==================== VANDUO KALIBRACIJA ====================
+  # Tuščio bako atstumas (cm) — VL53L0X skaitymas
+  - platform: template
+    name: "Resursai | Vanduo — Tuščias (cm)"
+    id: num_water_empty_cm
+    min_value: 1.0
+    max_value: 100.0
+    step: 0.5
+    mode: box
+    unit_of_measurement: "cm"
+    lambda: return id(water_empty_cm);
+    set_action:
+      - globals.set: { id: water_empty_cm, value: !lambda return x; }
+
+  # Pilno bako atstumas (cm) — VL53L0X skaitymas
+  - platform: template
+    name: "Resursai | Vanduo — Pilnas (cm)"
+    id: num_water_full_cm
+    min_value: 1.0
+    max_value: 100.0
+    step: 0.5
+    mode: box
+    unit_of_measurement: "cm"
+    lambda: return id(water_full_cm);
+    set_action:
+      - globals.set: { id: water_full_cm, value: !lambda return x; }
+
+  # Vandens bako tūris (litrais) — skaičiavimu
+  - platform: template
+    name: "Resursai | Vanduo — Bako turis (L)"
+    id: num_water_liters
+    min_value: 10.0
+    max_value: 500.0
+    step: 1.0
+    mode: box
+    unit_of_measurement: "L"
+    lambda: return id(water_total_liters);
+    set_action:
+      - globals.set: { id: water_total_liters, value: !lambda return x; }
+
+  # ==================== DUJOS KALIBRACIJA ====================
+  # Tuščio dujų baliono svoris (kg)
+  - platform: template
+    name: "Resursai | Dujos — Tuščias svoris (kg)"
+    id: num_gas_empty_kg
+    min_value: 1.0
+    max_value: 10.0
+    step: 0.1
+    mode: box
+    unit_of_measurement: "kg"
+    lambda: return id(gas_empty_weight);
+    set_action:
+      - globals.set: { id: gas_empty_weight, value: !lambda return x; }
+
+  # Pilno dujų baliono svoris (kg)
+  - platform: template
+    name: "Resursai | Dujos — Pilnas svoris (kg)"
+    id: num_gas_full_kg
+    min_value: 1.0
+    max_value: 50.0
+    step: 0.1
+    mode: box
+    unit_of_measurement: "kg"
+    lambda: return id(gas_full_weight);
+    set_action:
+      - globals.set: { id: gas_full_weight, value: !lambda return x; }
+
+  # HX711 scale factor (kalibracija)
+  - platform: template
+    name: "Resursai | Dujos — Scale faktor"
+    id: num_hx711_scale
+    min_value: 1000.0
+    max_value: 100000.0
+    step: 100.0
+    mode: box
+    lambda: return id(hx711_scale);
+    set_action:
+      - globals.set: { id: hx711_scale, value: !lambda return x; }
+
+  # ==================== TDS KALIBRACIJA ====================
+  # TDS sensor offset (V) — pradinis nulis
+  - platform: template
+    name: "Resursai | TDS — Offset (V)"
+    id: num_tds_offset
+    min_value: 0.0
+    max_value: 1.0
+    step: 0.05
+    mode: box
+    unit_of_measurement: "V"
+    entity_category: config
+    lambda: |-
+      // Default: 0.5V = 0ppm
+      return 0.5f;
+    set_action:
+      - lambda: |-
+          // Naudoti šį offset TDS skaičiavimams
+          // ppm = (voltage - offset) * factor
+
+  # TDS sensor factor (ppm/V) — konversijas
+  - platform: template
+    name: "Resursai | TDS — Faktor (ppm/V)"
+    id: num_tds_factor
+    min_value: 100.0
+    max_value: 1000.0
+    step: 10.0
+    mode: box
+    entity_category: config
+    lambda: |-
+      // Default: 300 ppm/V
+      return 300.0f;
+    set_action:
+      - lambda: |-
+          // Naudoti šį faktori TDS skaičiavimams
+
+  # ==================== ADXL345 KALIBRACIJA ====================
+  # Roll zero offset (°)
+  - platform: template
+    name: "Pokrypis | Soninis zero offset (°)"
+    id: num_roll_cal
+    min_value: -90.0
+    max_value: 90.0
+    step: 0.5
+    mode: box
+    unit_of_measurement: "°"
+    lambda: return id(cal_roll);
+    set_action:
+      - globals.set: { id: cal_roll, value: !lambda return x; }
+
+  # Pitch zero offset (°)
+  - platform: template
+    name: "Pokrypis | Išilginis zero offset (°)"
+    id: num_pitch_cal
+    min_value: -90.0
+    max_value: 90.0
+    step: 0.5
+    mode: box
+    unit_of_measurement: "°"
+    lambda: return id(cal_pitch);
+    set_action:
+      - globals.set: { id: cal_pitch, value: !lambda return x; }
+
+  # ==================== AKUMULIATORIAUS KALIBRACIJA ====================
+  # Akumuliatoriaus talpa (Ah) — energijos skaičiavimams
+  - platform: template
+    name: "Energija | Baterijos talpa (Ah)"
+    id: num_bat_capacity
+    min_value: 10.0
+    max_value: 1000.0
+    step: 1.0
+    mode: box
+    unit_of_measurement: "Ah"
+    lambda: return id(bat_capacity_ah);
+    set_action:
+      - globals.set: { id: bat_capacity_ah, value: !lambda return x; }
+
+sensor:
+  # Junctek KH-F150A — BLE šuntas (per FFF0/FFF1 characteristic)
+  # Skaitymas per BLE notify — nėra atliekų/Modbus
+  - platform: template
+    name: "Energija | Akum įtampa"
+    id: junc_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+  - platform: template
+    name: "Energija | Akum srovė"
+    id: junc_a
+    unit_of_measurement: "A"
+    accuracy_decimals: 1
+  - platform: template
+    name: "Energija | Akum Ah likutis"
+    id: junc_ah_remaining
+    unit_of_measurement: "Ah"
+    accuracy_decimals: 1
+  - platform: template
+    name: "Energija | Akum galia"
+    id: junc_power
+    unit_of_measurement: "W"
+    accuracy_decimals: 0
+  - platform: template
+    name: "Energija | Akum temp"
+    id: junc_temp
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+
+  # Pakeistas adresas į 0x77 pagal I2C skenavimą
+  - platform: bme680
+    i2c_id: i2c_bus
+    address: 0x77
+    update_interval: 30s
+    temperature:
+      name: "Aplinka | Temperatura"
+      id: bme_temp
+      filters: [{ offset: -4.0 }]
+      accuracy_decimals: 1
+    pressure:
+      name: "Aplinka | Slegis"
+      id: bme_pressure
+      accuracy_decimals: 1
+    humidity:
+      name: "Aplinka | Dregme"
+      id: bme_humidity
+    gas_resistance:
+      name: "Aplinka | VOC varza"
+      id: bme_voc_ohm
+
+  - platform: template
+    name: "Aplinka | Aukstis (slegis)"
+    id: pressure_altitude
+    unit_of_measurement: "m"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: |-
+      float p = id(bme_pressure).state;
+      if (isnan(p) || p <= 0) return NAN;
+      return 44330.0f * (1.0f - powf(p / 1013.25f, 1.0f / 5.255f));
+
+  # ADC raw voltažas — GPIO7 (TDS sensor input)
+  # Naudojama tik vidiniu skaičiavimui
+  - platform: adc
+    pin: GPIO7
+    id: tds_raw_voltage
+    internal: true
+    attenuation: 11db
+    update_interval: 10s
+    filters:
+      - median: { window_size: 5 }  # Triukšmo slopinimas
+
+  # TDS sensor (Total Dissolved Solids) — vandens kokybė (ppm)
+  # ADC GPIO7 → voltažas → ppm konversija
+  - platform: template
+    name: "Resursai | Vandens TDS (ppm)"
+    id: tds_ppm
+    unit_of_measurement: "ppm"
+    accuracy_decimals: 0
+    update_interval: 10s
+    lambda: |-
+      // ADC raw voltažas → ppm konversija (iš tds_raw_voltage)
+      // Kalibracija: 0.5V = 0ppm, 3.0V = 1000ppm (~250 ppm/V)
+      float v = id(tds_raw_voltage).state;
+      if (isnan(v) || v < 0.1f) return 0.0f;
+
+      // TDS formula: ppm = (voltage - offset) × factor
+      // Tipinis faktor: ~300 ppm/V (priklausomai nuo sensoriaus)
+      float ppm = (v - 0.5f) * 300.0f;
+      return std::max(0.0f, ppm);  // Neigiamos reikšmės → 0
+
+
+  # ADXL345: Šoninis pokrypis (roll) — K/D
+  # Teigiama = dešinė aukščiau, neigiama = kairiė aukščiau
+  - platform: template
+    name: "Pokrypis | Soninis K-D"
+    id: roll_sensor
+    unit_of_measurement: "°"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: |-
+      // Skaitymas iš ADXL345 register 0x32 (6 baitai: X, Y, Z raw)
+      uint8_t reg = 0x32;
+      if (id(i2c_bus).write(0x53, &reg, 1, false) != 0) return NAN;
+      uint8_t raw[6];
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return NAN;
+
+      // Y ir Z ašys (raw → įtampai: 0.004g/LSB = 0.0392 m/s²)
+      int16_t y = (int16_t)(raw[2] | (raw[3] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+
+      // Kampas: atan2(Y, Z) * 180/π
+      float roll_rad = atan2((float)y * 0.004f, (float)z * 0.004f);
+      float roll_deg = roll_rad * 180.0f / M_PI;
+
+      // Atimti zero-offset kalibraciją
+      return roll_deg - id(cal_roll);
+
+  # ADXL345: Išilginis pokrypis (pitch) — P/G
+  # Teigiama = priekis aukščiau, neigiama = galas aukščiau
+  - platform: template
+    name: "Pokrypis | Isilginis P-G"
+    id: pitch_sensor
+    unit_of_measurement: "°"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: |-
+      // Skaitymas iš ADXL345 register 0x32 (6 baitai: X, Y, Z raw)
+      uint8_t reg = 0x32;
+      if (id(i2c_bus).write(0x53, &reg, 1, false) != 0) return NAN;
+      uint8_t raw[6];
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return NAN;
+
+      // X ir Z ašys
+      int16_t x = (int16_t)(raw[0] | (raw[1] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+
+      // Kampas: atan2(X, Z) * 180/π
+      float pitch_rad = atan2((float)x * 0.004f, (float)z * 0.004f);
+      float pitch_deg = pitch_rad * 180.0f / M_PI;
+
+      // Atimti zero-offset kalibraciją
+      return pitch_deg - id(cal_pitch);
+
+  - platform: hx711
+    id: gas_hx711_raw
+    clk_pin: GPIO48
+    dout_pin: GPIO47
+    update_interval: 5s
+    internal: true
+
+  # Dujų baliono likutis (%)
+  - platform: template
+    name: "Resursai | Dujos likutis %"
+    id: gas_remaining_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      // HX711 raw svoris → tare → grynas svoris → likutis %
+      float total = (id(gas_hx711_raw).state - id(hx711_tare)) / id(hx711_scale);
+      float net = std::max(0.0f, total - id(gas_empty_weight));
+      float cap = id(gas_full_weight) - id(gas_empty_weight);
+      // Ribojimas: 0-100%, NAN jei neskaičiuojama
+      return (cap < 0.1f) ? NAN : std::min(100.0f, (net / cap) * 100.0f);
+
+  # Vandens bakas — VL53L0X atstumas (cm)
+  - platform: vl53l0x
+    id: water_distance
+    i2c_id: i2c_bus
+    address: 0x29
+    update_interval: 5s
+    filters:
+      - median: { window_size: 5 }  # Triukšmo slopinimas
+      - multiply: 100  # raw mm → cm
+
+  # Vandens bako lygis (%)
+  - platform: template
+    name: "Resursai | Vanduo lygis %"
+    id: water_level_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      // VL53L0X atstumas (cm) → bako lygis (%)
+      // Tuščias bakas: water_empty_cm, pilnas: water_full_cm
+      float d = id(water_distance).state;
+      float range = id(water_empty_cm) - id(water_full_cm);
+      if (isnan(d) || range <= 0.1f) return NAN;
+      // Ribojimas: 0-100%
+      return std::min(100.0f, std::max(0.0f, ((id(water_empty_cm) - d) / range) * 100.0f));
+
+  # GPS aukštis (m) — tik su 2D/3D fix
+  - platform: template
+    name: "GPS | Aukstis"
+    id: gps_alt_sensor
+    unit_of_measurement: "m"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      // Grąžinti aukštį tik jei yra tikras fix
+      return id(gps_fix) ? id(gps_alt) : NAN;
+
+  # GPS greitis (km/h) — tik su fix
+  - platform: template
+    name: "GPS | Greitis"
+    id: gps_speed_sensor
+    unit_of_measurement: "km/h"
+    accuracy_decimals: 1
+    update_interval: 5s
+    lambda: |-
+      return id(gps_fix) ? id(gps_speed) : NAN;
+
+  # GPS kryptis (°) — tik su fix
+  - platform: template
+    name: "GPS | Kryptis"
+    id: gps_heading_sensor
+    unit_of_measurement: "°"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      return id(gps_fix) ? id(gps_heading) : NAN;
+
+  # GPS palydovai — naudojami/matomi
+  - platform: template
+    name: "GPS | Palydovai GPS (naudojami)"
+    id: gps_sats_gps_used
+    update_interval: 10s
+    lambda: |-
+      return id(gps_sats_gps);
+
+  - platform: template
+    name: "GPS | Palydovai GLONASS (naudojami)"
+    id: gps_sats_glonass_used
+    update_interval: 10s
+    lambda: |-
+      return id(gps_sats_glonass);
+
+  - platform: template
+    name: "GPS | Palydovai BDS (naudojami)"
+    id: gps_sats_bds_used
+    update_interval: 10s
+    lambda: |-
+      return id(gps_sats_bds);
+
+  - platform: template
+    name: "GPS | Palydovai Galileo (naudojami)"
+    id: gps_sats_galileo_used
+    update_interval: 10s
+    lambda: |-
+      return id(gps_sats_galileo);
+
+  # GSM signalas — dBm (raw vienetai)
+  - platform: template
+    name: "GSM | Signalas (dBm)"
+    id: gsm_signal_dbm
+    unit_of_measurement: "dBm"
+    accuracy_decimals: 0
+    update_interval: 10s
+    lambda: |-
+      // CSQ formula: dBm = -113 + CSQ * 2
+      // CSQ 0-31 = -113 to -51 dBm
+      // CSQ 99 = neregistruota
+      if (id(gsm_signal) == 0 || id(gsm_signal) >= 99) return NAN;
+      return -113.0f + (float)id(gsm_signal) * 2.0f;
+
+  # GSM signalas — procentais
+  - platform: template
+    name: "GSM | Signalas (%)"
+    id: gsm_signal_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 10s
+    lambda: |-
+      if (id(gsm_signal) == 0 || id(gsm_signal) >= 99) return 0;
+      return std::min(100.0f, (float)id(gsm_signal) / 31.0f * 100.0f);
+
+text_sensor:
+  # ADXL345: Domkratų rekomendacijos (pokrypis → cm patarimas)
+  # Skaičiavimas: cm = tan(kampas_rad) × 180 / 100 (1800mm ratų tarpas)
+  - platform: template
+    name: "Pokrypis | Domkratu rekomendacija"
+    id: jack_recommendation
+    update_interval: 1s
+    lambda: |-
+      // Šoninis pokrypis (roll): + dešinė aukščiau, - kairiė
+      // Išilginis pokrypis (pitch): + priekis aukščiau, - galas
+      float roll = id(roll_sensor).state;
+      float pitch = id(pitch_sensor).state;
+      if (isnan(roll) || isnan(pitch)) return std::string("Matavimas...");
+
+      // VW Crafter ratų tarpas = 1800mm = 180cm
+      float wheelbase_cm = 180.0f;
+      float roll_cm = tanf(roll * M_PI / 180.0f) * wheelbase_cm;
+      float pitch_cm = tanf(pitch * M_PI / 180.0f) * wheelbase_cm;
+
+      // Tolerancija: < 0.5° = lygu
+      if (fabs(roll) < 0.5f && fabs(pitch) < 0.5f) {
+        return std::string("Lygu ±");
+      }
+
+      char buf[80];
+      std::string advice = "";
+
+      // Šoninis patarimas
+      if (fabs(roll) >= 0.5f) {
+        if (roll > 0) {
+          snprintf(buf, sizeof(buf), "K kelti +%.0fcm ", roll_cm);
+        } else {
+          snprintf(buf, sizeof(buf), "D kelti +%.0fcm ", fabs(roll_cm));
+        }
+        advice += buf;
+      }
+
+      // Išilginis patarimas
+      if (fabs(pitch) >= 0.5f) {
+        if (pitch > 0) {
+          snprintf(buf, sizeof(buf), "P kelti +%.0fcm", pitch_cm);
+        } else {
+          snprintf(buf, sizeof(buf), "G kelti +%.0fcm", fabs(pitch_cm));
+        }
+        advice += buf;
+      }
+
+      return advice;
+
+  # GPS: Fix statusas (2D/3D/Nėra)
+  - platform: template
+    name: "GPS | Fix statusas"
+    id: gps_fix_status
+    update_interval: 5s
+    lambda: |-
+      int fm = id(gps_fix_mode);
+      switch (fm) {
+        case 0:
+        case 1:
+          return std::string("Nėra");
+        case 2:
+          return std::string("2D");
+        case 3:
+          return std::string("3D");
+        default:
+          return std::string("Nežinoma");
+      }
+
+  # Junctek BLE šuntas: RAW duomenys
+  - platform: ble_client
+    ble_client_id: junctek_shunt
+    name: "Energija | Junctek raw"
+    id: junc_raw_hex
+    service_uuid: "FFF0"
+    characteristic_uuid: "FFF1"
+    notify: true
+    on_notify:
+      - lambda: |-
+          // Junctek KH-F150A BLE protokolas (PATAISYTA):
+          // Frame: 0xBB ... [0xC0/C1/D5/D6/D8 + BCD reikšmės] ... 0xEE
+          // 0xC0 = Įtampa (BCD, 2 baitai), 0xC1 = Srovė (BCD, 2 baitai)
+          // 0xD5 = Ah likutis, 0xD6 = galia (W×10), 0xD8 = temp (-50°C)
+          for (uint8_t b : x) {
+            // Frame pradžia — tuščinti buffer'į
+            if (b == 0xBB) id(junc_buffer).clear();
+            id(junc_buffer).push_back(b);
+
+            // Frame pabaiga — parsavimas
+            if (b == 0xEE && id(junc_buffer).size() > 3) {
+              auto& buf = id(junc_buffer);
+              size_t n = buf.size();
+
+              // Registro markierių parsavimas (0xC0, 0xC1, 0xD5, 0xD6, 0xD8)
+              uint8_t m = 0;
+              double val = 0;
+              uint8_t byte_count = 0;
+              bool in_val = false;
+
+              auto commit = [&]() {
+                if (!in_val) return;
+                if (m == 0xC0 && byte_count >= 2) {
+                  // Įtampa: BCD, 2 baitai
+                  // val sudėta iš BCD baitų: 0x14, 0x19 → 1419 → 14.19V
+                  float v = (val / 100.0f);  // Dešimtys.vienetai + šimtosios.tūkstantosios
+                  id(junc_v).publish_state(v);
+                } else if (m == 0xC1 && byte_count >= 2) {
+                  // Srovė: BCD, 2 baitai — panašus dekodavimas
+                  float a = (val / 100.0f);
+                  id(junc_a).publish_state(a);
+                } else if (m == 0xD5 && val > 50000) {
+                  // Ah likutis (BCD, pvz 100000 = 100 Ah)
+                  id(junc_ah_remaining).publish_state(val / 1000.0f);
+                } else if (m == 0xD6) {
+                  // Galia: BCD reikšmė, vienetas = 0.001W → ÷1000
+                  float p = val / 1000.0f;
+                  id(junc_power).publish_state(p);
+                } else if (m == 0xD8) {
+                  // Temperatūra: offset -50°C
+                  if (val < 150) {
+                    id(junc_temp).publish_state(val - 50.0f);
+                  }
+                }
+              };
+
+              // BCD reikšmių skaitavimas — pradėti nuo 1 (skip 0xBB)
+              for (size_t i = 1; i < n - 1; i++) {
+                uint8_t b = buf[i];
+                if (b > 0x99) {  // Registro markeris (0xC0, 0xC1, 0xD5...)
+                  commit();
+                  m = b;
+                  val = 0;
+                  byte_count = 0;
+                  in_val = true;
+                } else if (in_val) {
+                  // BCD dekodavimas: dešimtys = b >> 4, vienetai = b & 0x0F
+                  val = val * 100.0 + ((b >> 4) * 10.0 + (b & 0x0F));
+                  byte_count++;
+                }
+              }
+              commit();
+              id(junc_buffer).clear();
+            }
+          }
+
+  - platform: template
+    name: "GPS | Koordinates"
+    id: gps_coords_sensor
+    update_interval: 5s
+    lambda: |-
+      if (id(gps_fix)) {
+        char b[64]; snprintf(b, sizeof(b), "%.6f,%.6f", id(gps_lat), id(gps_lon));
+        return std::string(b);
+      }
+      return std::string("Ieskoma...");
+
+  # BME680: Oro kokybė (VOC rezistancija → 5 kategorijų skalė + rekomendacija)
+  - platform: template
+    name: "Aplinka | Oro kokybe"
+    id: air_quality_text
+    lambda: |-
+      float r = id(bme_voc_ohm).state;
+      if (isnan(r)) return std::string("Matavimas...");
+
+      // VOC Ω skalė (mažesnis Ω = blogiau)
+      // Kategorijavimas pagal tipines VOC ribas
+      if (r > 500000) {
+        return std::string("Labai geras (Puiku!)");
+      } else if (r > 200000) {
+        return std::string("Geras (Norma)");
+      } else if (r > 100000) {
+        return std::string("Vidutinis (Pranešimas)");
+      } else if (r > 50000) {
+        return std::string("Prastas (Ventiliuoti)");
+      } else {
+        return std::string("Labai prastas (Iš karto!)");
+      }
+
+  # BME680: Oro kokybės rekomendacijos (VOC pagrindu)
+  - platform: template
+    name: "Aplinka | Oro kokybe rekomendacija"
+    id: air_quality_advice
+    lambda: |-
+      float r = id(bme_voc_ohm).state;
+      if (isnan(r)) return std::string("Matavimas...");
+
+      if (r > 500000) {
+        return std::string("Oro sąlygos puikios");
+      } else if (r > 200000) {
+        return std::string("Oro sąlygos geros, normalus naudojimas");
+      } else if (r > 100000) {
+        return std::string("Oro sąlygos vidutinės, suvarti oro");
+      } else if (r > 50000) {
+        return std::string("Oro sąlygos prastos, atidaryti langus!");
+      } else {
+        return std::string("KRITINIS! Nedelsiant ventiliuoti!");
+      }
+
+  # BME680: Orų prognozė (slėpio tendencija per 3.5h)
+  - platform: template
+    name: "Aplinka | Orų prognozė"
+    id: weather_forecast
+    update_interval: 30s
+    lambda: |-
+      // Slėpio tendencija per 7 × 30 min = 3.5 valandos
+      // Jei < 7 reikšmių — dar nėra sukauptas istorija
+      if (id(pressure_history).size() < 7) {
+        return std::string("Sukaupimas...");
+      }
+
+      // Skirtumas: pirmas vs paskutnis (3.5h)
+      float dp = id(pressure_history).back() - id(pressure_history).front();
+
+      // Prognozė pagal ISO 4001 tendenciją:
+      // + ryšys = gerėjimas, - ryšys = blogėjimas
+      if (dp > 4.0f) {
+        return std::string("Labai greitai gerėja ↑↑");
+      } else if (dp > 2.0f) {
+        return std::string("Geras ↑");
+      } else if (dp > 0.5f) {
+        return std::string("Gerėja ↗");
+      } else if (dp >= -0.5f) {
+        return std::string("Stabilus →");
+      } else if (dp >= -2.0f) {
+        return std::string("Kinta ↘");
+      } else if (dp >= -4.0f) {
+        return std::string("Blogas ↓");
+      } else {
+        return std::string("Smarkiai blogėja ↓↓");
+      }
+
+  # Vandens bako lygio kategorija (tuščias/vidutinis/pilnas)
+  - platform: template
+    name: "Resursai | Vanduo bukle"
+    id: water_level_status
+    update_interval: 5s
+    lambda: |-
+      float level = id(water_level_pct).state;
+      if (isnan(level)) return std::string("Matavimas...");
+
+      if (level < 10) {
+        return std::string("Tuščias!");
+      } else if (level < 30) {
+        return std::string("Mažai");
+      } else if (level < 70) {
+        return std::string("Vidutinis");
+      } else if (level < 95) {
+        return std::string("Pilnas");
+      } else {
+        return std::string("Perpilnas!");
+      }
+
+  # Vandens bako lygio rekomendacijos
+  - platform: template
+    name: "Resursai | Vanduo rekomendacija"
+    id: water_level_advice
+    update_interval: 5s
+    lambda: |-
+      float level = id(water_level_pct).state;
+      if (isnan(level)) return std::string("Matavimas...");
+
+      if (level < 10) {
+        return std::string("TUŠČIAS! Greitai pildyti!");
+      } else if (level < 30) {
+        return std::string("Vanduo baigiasi, netrukus pildyti");
+      } else if (level < 70) {
+        return std::string("Normalus naudojimas");
+      } else if (level < 95) {
+        return std::string("Pilna, šetriai naudoti vandenį");
+      } else {
+        return std::string("PERPILNA! Užkimšti negalima!");
+      }
+
+  # Vandens TDS kategorija (kokybės klasifikacija)
+  - platform: template
+    name: "Resursai | Vandens kokybe (TDS)"
+    id: water_quality_text
+    update_interval: 10s
+    lambda: |-
+      float ppm = id(tds_ppm).state;
+      if (isnan(ppm)) return std::string("Matavimas...");
+
+      if (ppm < 50) {
+        return std::string("Labai švarus");
+      } else if (ppm < 100) {
+        return std::string("Švarus");
+      } else if (ppm < 200) {
+        return std::string("Normalus");
+      } else if (ppm < 300) {
+        return std::string("Sūrus");
+      } else {
+        return std::string("Labai sūrus");
+      }
+
+  # Vandens TDS rekomendacijos
+  - platform: template
+    name: "Resursai | Vandens kokybe rekomendacija"
+    id: water_quality_advice
+    update_interval: 10s
+    lambda: |-
+      float ppm = id(tds_ppm).state;
+      if (isnan(ppm)) return std::string("Matavimas...");
+
+      if (ppm < 50) {
+        return std::string("Puiki kokybe, galima gerti");
+      } else if (ppm < 100) {
+        return std::string("Gera kokybe, tinkama naudoti");
+      } else if (ppm < 200) {
+        return std::string("Priimtina, naudoti pagal poreiki");
+      } else if (ppm < 300) {
+        return std::string("Surius vanduo, setrai naudoti");
+      } else {
+        return std::string("LABAI SURIUS! Filtra pamainyt!");
+      }
+
+interval:
+  # A7670E UART skaitymas (100ms) — GPS + GSM duomenys
+  # Baitai nuskaityami iš RX buffer'io, eilutės separuojamos per \n
+  - interval: 100ms
+    then:
+      - lambda: |-
+          while (id(uart_a7670e).available()) {
+            uint8_t b;
+            id(uart_a7670e).read_byte(&b);
+            char c = (char)b;
+            id(uart_buf) += c;
+
+            // Eilutės pabaiga — parsavimas
+            if (c == '\n') {
+              std::string line = id(uart_buf);
+              id(uart_buf) = "";
+
+              // ==================== SIM STATUSAS ====================
+              if (line.find("+CPIN: READY") != std::string::npos) {
+                id(sim_status) = "READY";
+              }
+
+              // ==================== GSM SIGNALAS (CSQ) ====================
+              if (line.find("+CSQ:") != std::string::npos) {
+                int pos = line.find(":");
+                if (pos != -1) {
+                  int csq = atoi(line.c_str() + pos + 1);
+                  id(gsm_signal) = (csq >= 0 && csq <= 31) ? csq : 0;
+                }
+              }
+
+              // ==================== GSM OPERATORIUS (COPS) ====================
+              if (line.find("+COPS:") != std::string::npos) {
+                size_t q1 = line.find('"');
+                size_t q2 = (q1 != std::string::npos) ? line.find('"', q1+1) : std::string::npos;
+                if (q1 != std::string::npos && q2 != std::string::npos) {
+                  id(gsm_operator) = line.substr(q1+1, q2-q1-1);
+                }
+              }
+
+              // ==================== GPS DUOMENYS (CGNSSINFO) ====================
+              if (line.find("+CGNSSINFO:") != std::string::npos) {
+                id(gps_error_count) = 0;
+
+                // Skaidymas pagal kablelį
+                std::vector<std::string> p;
+                size_t s = line.find(":") + 1;
+                size_t e = line.find(",", s);
+                while (e != std::string::npos) {
+                  p.push_back(line.substr(s, e - s));
+                  s = e + 1;
+                  e = line.find(",", s);
+                }
+                p.push_back(line.substr(s));
+
+                if (p.size() >= 14) {
+                  // p[0] = fix mode (0=nėra, 1=GPS, 2=2D, 3=3D, ...)
+                  std::string fm_str = p[0];
+                  while (!fm_str.empty() && (fm_str.front() == ' ' || fm_str.front() == '\t')) {
+                    fm_str.erase(0, 1);
+                  }
+                  int fm = atoi(fm_str.c_str());
+                  id(gps_fix_mode) = fm;
+
+                  // Palydovų skaičius
+                  id(gps_sats_gps)     = p[1].empty() ? 0 : atoi(p[1].c_str());
+                  id(gps_sats_glonass) = p[2].empty() ? 0 : atoi(p[2].c_str());
+                  id(gps_sats_bds)     = p[3].empty() ? 0 : atoi(p[3].c_str());
+                  id(gps_sats_galileo) = p[4].empty() ? 0 : atoi(p[4].c_str());
+
+                  // Koordinatės, aukštis, greitis, kryptis (jei 2D/3D fix)
+                  if ((fm == 2 || fm == 3) && !p[5].empty()) {
+                    // Platuma (S = neigiama)
+                    float lat = atof(p[5].c_str());
+                    if (p.size() > 6 && p[6] == "S") lat = -lat;
+                    id(gps_lat) = lat;
+
+                    // Ilguma (W = neigiama)
+                    float lon = atof(p[7].c_str());
+                    if (p.size() > 8 && p[8] == "W") lon = -lon;
+                    id(gps_lon) = lon;
+
+                    // Aukštis (m)
+                    id(gps_alt) = p[11].empty() ? 0.0f : atof(p[11].c_str());
+
+                    // Greitis (knot → km/h, koef. 1.852)
+                    id(gps_speed) = p[12].empty() ? 0.0f : atof(p[12].c_str()) * 1.852f;
+
+                    // Kryptis (°)
+                    id(gps_heading) = p[13].empty() ? 0.0f : atof(p[13].c_str());
+
+                    id(gps_fix) = true;
+                  } else {
+                    id(gps_fix) = false;
+                  }
+                }
+              }
+
+              // ==================== GPS KLAIDOS ATPAŽINIMAS ====================
+              if (line.find("ERROR") != std::string::npos &&
+                  line.find("+CMS ERROR") == std::string::npos &&
+                  line.find("+CME ERROR") == std::string::npos) {
+                id(gps_error_count) += 1;
+              }
+
+              // ==================== SMS GAVIMAS IR ATSAKYMAS ====================
+              if (line.find("+CMT:") != std::string::npos) {
+                // Siuntėjas: +CMT: "+37068123456"
+                size_t q1 = line.find('"');
+                size_t q2 = line.find('"', q1 + 1);
+                if (q1 != std::string::npos && q2 != std::string::npos) {
+                  id(sms_sender) = line.substr(q1 + 1, q2 - q1 - 1);
+                  id(cmt_state) = 1;  // Laukiame kito eilutės (SMS kūnas)
+                }
+              } else if (id(cmt_state) == 1) {
+                // SMS kūnas (antroji eilutė)
+                id(cmt_state) = 0;
+                std::string body = line;
+
+                // Tarpų šalinti
+                while (!body.empty() && (body.back() == '\r' || body.back() == '\n')) {
+                  body.pop_back();
+                }
+
+                // Trigger check: "Status", "Info" arba "?"
+                std::string low = body;
+                for (auto &ch : low) ch = tolower(ch);
+                bool trigger = (low.find("status") != std::string::npos) ||
+                               (low.find("info") != std::string::npos) ||
+                               (body == "?");
+
+                if (trigger) {
+                  // 30s throttle — nesiunti SMS per dažnai
+                  unsigned long now = millis();
+                  if (now - id(last_sms_send_ms) > 30000) {
+                    id(last_sms_send_ms) = now;
+                    id(sms_send_status).execute();
+                  }
+                }
+              }
+            }
+          }
+
+  # A7670E AT komandos — kas 10s (GPS + GSM statusas)
+  # Seka: SIM status → Signalas → Operatorius → GPS duomenys
+  # Bendra trukmė: ~4.5s (delays), tada laukimas iki 10s
+  - interval: 10s
+    then:
+      - uart.write: { id: uart_a7670e, data: "AT+CPIN?\r\n" }
+      - delay: 1500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CSQ\r\n" }
+      - delay: 1500ms
+      - uart.write: { id: uart_a7670e, data: "AT+COPS?\r\n" }
+      - delay: 1500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CGNSSINFO\r\n" }
+
+  # GPS error recovery — kas 30s
+  # Jei gps_error_count > 3 → power cycle GPS per AT+CGNSSPWR
+  # Timeout: 30s failai be fix → automatinis reset
+  - interval: 30s
+    then:
+      - if:
+          condition: { lambda: 'return id(gps_error_count) > 3;' }
+          then:
+            - script.execute: gps_recovery
+
+  # BME680: Slėpio buffer atnaujinimas — kas 30 min (1800s)
+  # Orų prognozė reikalinga 7 taškų per 3.5h, 30min intervalo
+  # Tendencija skaičiuojama iš pirmo vs paskutinio taško
+  - interval: 1800s
+    then:
+      - lambda: |-
+          float p = id(bme_pressure).state;
+          if (!isnan(p) && p > 850.0f && p < 1050.0f) {  // Validacijos check
+            id(pressure_history).push_back(p);
+            // Saugoti tik 7 paskutinius taškus (3.5 valandų istorija)
+            if (id(pressure_history).size() > 7) {
+              id(pressure_history).erase(id(pressure_history).begin());
+            }
+          }
+
+script:
+  # A7670E inicijalizacija — boot'e
+  - id: a7670e_init
+    then:
+      # Modulio patikrinimas
+      - uart.write: "AT\r\n"
+      - delay: 1s
+      # GPS aktyvavimas
+      - uart.write: "AT+CGNSSPWR=1\r\n"
+      - delay: 1s
+      # SMS tekstinis režimas (PDU vietoj)
+      - uart.write: "AT+CMGF=1\r\n"
+
+  # GPS recovery — power cycle GPS per AT+CGNSSPWR
+  # Vykdomas jei gps_error_count > 3 per 30s
+  - id: gps_recovery
+    mode: single  # Tik viena vykdymą iš karto
+    then:
+      - lambda: 'id(gps_error_count) = 0;'  # Nulinti error counter
+      - uart.write: "AT+CGNSSPWR=0\r\n"  # GPS OFF
+      - delay: 2s
+      - uart.write: "AT+CGNSSPWR=1\r\n"  # GPS ON — power cycle
+
+  # SMS status atsakymas — triggertas iš SMS gavimo
+  # Atsakymas siunčiamas siuntėjui (id(sms_sender))
+  - id: sms_send_status
+    mode: queued  # Eilėje, jei daugiau nei vienas trigger
+    then:
+      # Žingsnis 1: SMS komanda su siuntėjo numeriu
+      - uart.write:
+          id: uart_a7670e
+          data: !lambda |-
+            std::string c = "AT+CMGS=\"" + id(sms_sender) + "\"\r\n";
+            return std::vector<uint8_t>(c.begin(), c.end());
+      - delay: 1500ms
+
+      # Žingsnis 2: SMS kūnas (ASCII, max 160 char) + 0x1A (EOF)
+      - uart.write:
+          id: uart_a7670e
+          data: !lambda |-
+            // NaN safety: jei reikšmė nan, grąžinti 0
+            auto f = [](float v) { return isnan(v) ? 0.0f : v; };
+
+            char b[160];
+            snprintf(b, sizeof(b),
+              "Kemperis OK\n"
+              "Loc:%.4f,%.4f\n"
+              "Bat:%.1fV %.1fA\n"
+              "Env:%dC %dhPa\n"
+              "H2O:%d%% Gas:%d%%\x1A",
+              id(gps_lat), id(gps_lon),
+              f(id(junc_v).state), f(id(junc_a).state),
+              (int)f(id(bme_temp).state), (int)f(id(bme_pressure).state),
+              (int)f(id(water_level_pct).state), (int)f(id(gas_remaining_pct).state));
+
+            return std::vector<uint8_t>(b, b + strlen(b));

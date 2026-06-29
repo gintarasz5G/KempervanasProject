@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<title>Kempervanas — Laidų schema</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #fff; font-family: 'Courier New', monospace; }
+
+@media print {
+  body { background: #fff; }
+  .no-print { display: none; }
+  @page { size: A3 landscape; margin: 10mm; }
+}
+
+.header {
+  background: #0a1a2a;
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.header h1 { font-size: 16px; color: #7eb8f7; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; }
+.header .meta { font-size: 10px; color: #5a7a9a; }
+
+.legend {
+  display: flex; gap: 18px; padding: 8px 24px;
+  background: #f0f4f8; border-bottom: 2px solid #c0d0e0;
+  flex-wrap: wrap; align-items: center;
+}
+.leg { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #334; font-family: monospace; }
+.leg-line { width: 28px; height: 3px; border-radius: 2px; }
+
+.canvas-wrap { background: #fff; }
+
+.print-btn {
+  position: fixed; top: 10px; right: 10px; z-index: 99;
+  background: #1a4a8a; color: #fff; border: none; padding: 8px 16px;
+  border-radius: 6px; cursor: pointer; font-size: 12px; font-family: monospace;
+}
+</style>
+</head>
+<body>
+<button class="print-btn no-print" onclick="window.print()">🖨️ Spausdinti</button>
+
+<div class="header">
+  <div>
+    <div class="h1" style="font-size:16px;color:#7eb8f7;letter-spacing:2px;font-weight:bold;font-family:monospace">KEMPERVANAS — LAIDŲ SCHEMA</div>
+    <div style="font-size:10px;color:#5a7a9a;margin-top:3px;font-family:monospace">KC868-A16v3.1 · ESP32-S3 · ESPHome · VW Crafter 2008</div>
+  </div>
+  <div style="text-align:right;font-size:9px;color:#3a5a7a;font-family:monospace">
+    <div>Sukurta: 2026-04-09</div>
+    <div>Versija: 1.0</div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="leg"><div class="leg-line" style="background:#cc2222"></div>12V DC</div>
+  <div class="leg"><div class="leg-line" style="background:#2255cc"></div>5V DC</div>
+  <div class="leg"><div class="leg-line" style="background:#229922"></div>3.3V</div>
+  <div class="leg"><div class="leg-line" style="background:#222"></div>GND</div>
+  <div class="leg"><div class="leg-line" style="background:repeating-linear-gradient(90deg,#cc9900 0,#cc9900 6px,transparent 6px,transparent 10px)"></div>Signalo laidas</div>
+  <div class="leg"><div class="leg-line" style="background:repeating-linear-gradient(90deg,#0099aa 0,#0099aa 4px,transparent 4px,transparent 7px)"></div>I2C laidas</div>
+  <div class="leg"><div class="leg-line" style="background:repeating-linear-gradient(90deg,#9944cc 0,#9944cc 4px,transparent 4px,transparent 7px)"></div>UART laidas</div>
+</div>
+
+<div class="canvas-wrap">
+<svg width="1480" height="960" viewBox="0 0 1480 960" style="display:block">
+<defs>
+  <marker id="a12" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M1 1.5L7 4L1 6.5" fill="none" stroke="#cc2222" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+  <marker id="a5v" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M1 1.5L7 4L1 6.5" fill="none" stroke="#2255cc" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+  <marker id="a33" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M1 1.5L7 4L1 6.5" fill="none" stroke="#229922" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+  <marker id="agnd" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M1 1.5L7 4L1 6.5" fill="none" stroke="#444" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+  <marker id="asig" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M1 1.5L7 4L1 6.5" fill="none" stroke="#cc9900" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+  <marker id="ai2c" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M1 1.5L7 4L1 6.5" fill="none" stroke="#0099aa" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+  <marker id="auart" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+    <path d="M1 1.5L7 4L1 6.5" fill="none" stroke="#9944cc" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+</defs>
+
+<!-- ===================== KC868 PLOKŠTĖ ===================== -->
+<rect x="520" y="40" width="440" height="820" rx="10" fill="#f0f8f0" stroke="#228822" stroke-width="3"/>
+<rect x="520" y="40" width="440" height="820" rx="10" fill="none" stroke="#aaddaa" stroke-width="8" stroke-opacity="0.4"/>
+
+<!-- Plokštės antraštė -->
+<rect x="530" y="50" width="420" height="36" rx="6" fill="#228822"/>
+<text x="740" y="64" text-anchor="middle" font-family="monospace" font-size="13" font-weight="bold" fill="#fff">KC868-A16v3.1</text>
+<text x="740" y="78" text-anchor="middle" font-family="monospace" font-size="9" fill="#ccffcc">ESP32-S3-WROOM-1U (N16R8) · KinCony</text>
+
+<!-- MAITINIMAS -->
+<rect x="530" y="95" width="420" height="22" rx="4" fill="#cc2222"/>
+<text x="740" y="110" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold" fill="#fff">⚡ POWER INPUT: 12V / 24V DC</text>
+
+<!-- ---- DIN X01-X08 ---- -->
+<rect x="530" y="126" width="420" height="16" rx="3" fill="#1a3a1a"/>
+<text x="740" y="138" text-anchor="middle" font-family="monospace" font-size="8" fill="#88cc88">DIGITAL INPUTS X01–X08  (PCF8574 0x22)</text>
+<rect x="530" y="144" width="28" height="14" rx="2" fill="#2a5a2a" stroke="#4a8a4a" stroke-width="1"/>
+<text x="544" y="154" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaffaa">X01</text>
+<rect x="561" y="144" width="28" height="14" rx="2" fill="#2a5a2a" stroke="#4a8a4a" stroke-width="1"/>
+<text x="575" y="154" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaffaa">X02</text>
+<rect x="592" y="144" width="28" height="14" rx="2" fill="#2a5a2a" stroke="#4a8a4a" stroke-width="1"/>
+<text x="606" y="154" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaffaa">X03</text>
+<rect x="623" y="144" width="28" height="14" rx="2" fill="#2a5a2a" stroke="#4a8a4a" stroke-width="1"/>
+<text x="637" y="154" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaffaa">X04</text>
+<rect x="654" y="144" width="28" height="14" rx="2" fill="#2a5a2a" stroke="#4a8a4a" stroke-width="1"/>
+<text x="668" y="154" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaffaa">X05</text>
+<rect x="685" y="144" width="28" height="14" rx="2" fill="#2a5a2a" stroke="#4a8a4a" stroke-width="1"/>
+<text x="699" y="154" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaffaa">X06</text>
+<rect x="716" y="144" width="28" height="14" rx="2" fill="#2a5a2a" stroke="#4a8a4a" stroke-width="1"/>
+<text x="730" y="154" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaffaa">X07</text>
+<rect x="747" y="144" width="28" height="14" rx="2" fill="#2a5a2a" stroke="#4a8a4a" stroke-width="1"/>
+<text x="761" y="154" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaffaa">X08</text>
+<!-- GND tarp X01-X08 -->
+<rect x="780" y="144" width="28" height="14" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
+<text x="794" y="154" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaa">GND</text>
+
+<!-- ---- DIN X09-X16 ---- -->
+<rect x="530" y="168" width="420" height="16" rx="3" fill="#1a3a1a"/>
+<text x="740" y="180" text-anchor="middle" font-family="monospace" font-size="8" fill="#88cc88">DIGITAL INPUTS X09–X16  (PCF8574 0x21)</text>
+<rect x="530" y="186" width="28" height="14" rx="2" fill="#2a5a2a" stroke="#4a8a4a" stroke-width="1"/>
+<text x="544" y="196" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaffaa">X09</text>
+<rect x="561" y="186" width="28" height="14" rx="2" fill="#1a2a1a" stroke="#3a5a3a" stroke-width="1"/>
+<text x="575" y="196" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#667766">X10</text>
+<rect x="592" y="186" width="28" height="14" rx="2" fill="#1a2a1a" stroke="#3a5a3a" stroke-width="1"/>
+<text x="606" y="196" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#667766">X11</text>
+<text x="660" y="196" font-family="monospace" font-size="8" fill="#557755">X12–X16 (rezervas)</text>
+<!-- GND tarp X09-X16 -->
+<rect x="780" y="186" width="28" height="14" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
+<text x="794" y="196" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaa">GND</text>
+
+<!-- ---- OUT Y01-Y08 ---- -->
+<rect x="530" y="210" width="420" height="16" rx="3" fill="#3a1a0a"/>
+<text x="740" y="222" text-anchor="middle" font-family="monospace" font-size="8" fill="#cc8844">MOSFET OUTPUTS Y01–Y08  (PCF8574 0x24)</text>
+<rect x="530" y="228" width="28" height="14" rx="2" fill="#5a2a0a" stroke="#9a5a2a" stroke-width="1"/>
+<text x="544" y="238" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#ffcc88">Y01</text>
+<rect x="561" y="228" width="28" height="14" rx="2" fill="#5a2a0a" stroke="#9a5a2a" stroke-width="1"/>
+<text x="575" y="238" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#ffcc88">Y02</text>
+<rect x="592" y="228" width="28" height="14" rx="2" fill="#5a2a0a" stroke="#9a5a2a" stroke-width="1"/>
+<text x="606" y="238" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#ffcc88">Y03</text>
+<rect x="623" y="228" width="28" height="14" rx="2" fill="#5a2a0a" stroke="#9a5a2a" stroke-width="1"/>
+<text x="637" y="238" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#ffcc88">Y04</text>
+<rect x="654" y="228" width="28" height="14" rx="2" fill="#5a2a0a" stroke="#9a5a2a" stroke-width="1"/>
+<text x="668" y="238" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#ffcc88">Y05</text>
+<rect x="685" y="228" width="28" height="14" rx="2" fill="#5a2a0a" stroke="#9a5a2a" stroke-width="1"/>
+<text x="699" y="238" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#ffcc88">Y06</text>
+<rect x="716" y="228" width="28" height="14" rx="2" fill="#5a2a0a" stroke="#9a5a2a" stroke-width="1"/>
+<text x="730" y="238" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#ffcc88">Y07</text>
+<rect x="747" y="228" width="28" height="14" rx="2" fill="#5a2a0a" stroke="#9a5a2a" stroke-width="1"/>
+<text x="761" y="238" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#ffcc88">Y08</text>
+<!-- 12V ir GND OUT -->
+<rect x="780" y="228" width="28" height="14" rx="2" fill="#550000" stroke="#aa2222" stroke-width="1"/>
+<text x="794" y="238" text-anchor="middle" font-family="monospace" font-size="7" fill="#ff8888">+12V</text>
+<rect x="811" y="228" width="28" height="14" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
+<text x="825" y="238" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaa">GND</text>
+
+<!-- ---- OUT Y09, Y10 ---- -->
+<rect x="530" y="252" width="420" height="16" rx="3" fill="#3a1a0a"/>
+<text x="740" y="264" text-anchor="middle" font-family="monospace" font-size="8" fill="#cc8844">MOSFET OUTPUTS Y09–Y16</text>
+<rect x="530" y="270" width="50" height="14" rx="2" fill="#5a2a0a" stroke="#9a5a2a" stroke-width="1"/>
+<text x="555" y="280" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#ffcc88">Y09 (UV)</text>
+<rect x="584" y="270" width="60" height="14" rx="2" fill="#5a2a0a" stroke="#9a5a2a" stroke-width="1"/>
+<text x="614" y="280" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#ffcc88">Y10 (INV)</text>
+<text x="660" y="280" font-family="monospace" font-size="8" fill="#885533">Y11–Y16 (rezervas)</text>
+<rect x="780" y="270" width="28" height="14" rx="2" fill="#550000" stroke="#aa2222" stroke-width="1"/>
+<text x="794" y="280" text-anchor="middle" font-family="monospace" font-size="7" fill="#ff8888">+12V</text>
+<rect x="811" y="270" width="28" height="14" rx="2" fill="#222" stroke="#555" stroke-width="1"/>
+<text x="825" y="280" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#aaa">GND</text>
+
+<!-- ---- RS485 ---- -->
+<rect x="530" y="296" width="120" height="30" rx="4" fill="#0a0a2a" stroke="#3a3a8a" stroke-width="1.5"/>
+<text x="590" y="310" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="#8888ff">RS485</text>
+<text x="590" y="322" text-anchor="middle" font-family="monospace" font-size="8" fill="#5555aa">A / B</text>
+
+<!-- ---- Analoginiai ---- -->
+<rect x="530" y="338" width="200" height="30" rx="4" fill="#2a2a0a" stroke="#7a7a2a" stroke-width="1.5"/>
+<text x="630" y="350" text-anchor="middle" font-family="monospace" font-size="8" font-weight="bold" fill="#cccc44">ANALOG IN (DC 0-5V)</text>
+<text x="543" y="362" font-family="monospace" font-size="8" fill="#aaaa33">A1(GPIO4)  A2(GPIO6)  A3  A4</text>
+
+<!-- ---- 1-Wire ---- -->
+<rect x="530" y="380" width="200" height="30" rx="4" fill="#0a2a0a" stroke="#2a7a2a" stroke-width="1.5"/>
+<text x="630" y="392" text-anchor="middle" font-family="monospace" font-size="8" font-weight="bold" fill="#44cc44">1-WIRE (su pull-up)</text>
+<text x="543" y="404" font-family="monospace" font-size="8" fill="#33aa33">HT1(GPIO47)  HT2(48)  HT3(38)</text>
+
+<!-- ---- Free GPIO ---- -->
+<rect x="530" y="422" width="200" height="30" rx="4" fill="#0a0a2a" stroke="#2a2a7a" stroke-width="1.5"/>
+<text x="630" y="434" text-anchor="middle" font-family="monospace" font-size="8" font-weight="bold" fill="#4444cc">FREE GPIO (be pull-up)</text>
+<text x="543" y="446" font-family="monospace" font-size="8" fill="#3333aa">P39  P40(TX)  P41(RX)</text>
+
+<!-- ---- I2C D jungtis ---- -->
+<rect x="530" y="464" width="110" height="36" rx="4" fill="#0a2a2a" stroke="#2a8a8a" stroke-width="1.5"/>
+<text x="585" y="477" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="#44cccc">I2C jungtis D</text>
+<text x="585" y="491" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#33aaaa">SDA·SCL·3V3·GND</text>
+
+<!-- ---- I2C E (OLED) jungtis ---- -->
+<rect x="648" y="464" width="120" height="36" rx="4" fill="#0a2a2a" stroke="#2a8a8a" stroke-width="1.5"/>
+<text x="708" y="477" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="#44cccc">I2C jungtis E</text>
+<text x="708" y="491" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#33aaaa">SSD1306 OLED ekranui</text>
+
+<!-- ---- Maitinimo taškai ---- -->
+<rect x="530" y="512" width="48" height="20" rx="3" fill="#0a2a0a" stroke="#229922" stroke-width="1.5"/>
+<text x="554" y="525" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="#44cc44">3V3</text>
+<rect x="582" y="512" width="48" height="20" rx="3" fill="#0a0a2a" stroke="#2255cc" stroke-width="1.5"/>
+<text x="606" y="525" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="#4488ff">5V</text>
+<rect x="634" y="512" width="48" height="20" rx="3" fill="#1a1a1a" stroke="#555" stroke-width="1.5"/>
+<text x="658" y="525" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="#999">GND</text>
+<rect x="686" y="512" width="60" height="20" rx="3" fill="#2a0000" stroke="#cc2222" stroke-width="1.5"/>
+<text x="716" y="525" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="#ff4444">12V IN</text>
+
+<!-- Vidiniai I2C įrenginiai -->
+<rect x="530" y="546" width="420" height="16" rx="3" fill="#0a2a2a"/>
+<text x="740" y="558" text-anchor="middle" font-family="monospace" font-size="8" fill="#44aaaa">VIDINIAI I2C: PCF8574(0x22,0x24,0x21) · DS3231(0x68) · EEPROM(0x50)</text>
+
+<!-- ESP32-S3 modulis -->
+<rect x="700" y="574" width="160" height="60" rx="6" fill="#1a1a2a" stroke="#4a4aaa" stroke-width="1.5"/>
+<text x="780" y="595" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold" fill="#8888ff">ESP32-S3</text>
+<text x="780" y="609" text-anchor="middle" font-family="monospace" font-size="8" fill="#5555aa">WROOM-1U N16R8</text>
+<text x="780" y="623" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#4444aa">WiFi · BT · USB-C</text>
+
+<!-- USB-C -->
+<rect x="620" y="588" width="70" height="30" rx="4" fill="#1a1a1a" stroke="#555" stroke-width="1.5"/>
+<text x="655" y="603" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="#aaa">USB-C</text>
+<text x="655" y="615" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#777">Flash/OTA</text>
+
+<!-- RTC -->
+<rect x="530" y="650" width="80" height="30" rx="4" fill="#1a1a0a" stroke="#5a5a2a" stroke-width="1"/>
+<text x="570" y="663" text-anchor="middle" font-family="monospace" font-size="8" font-weight="bold" fill="#aaaa44">DS3231</text>
+<text x="570" y="675" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#888833">RTC 0x68</text>
+
+<!-- SD Card -->
+<rect x="620" y="650" width="80" height="30" rx="4" fill="#1a1a0a" stroke="#5a5a2a" stroke-width="1"/>
+<text x="660" y="663" text-anchor="middle" font-family="monospace" font-size="8" font-weight="bold" fill="#aaaa44">SD Card</text>
+<text x="660" y="675" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#888833">SPI Log</text>
+
+<!-- RF433 -->
+<rect x="710" y="650" width="80" height="30" rx="4" fill="#2a0a2a" stroke="#7a2a7a" stroke-width="1"/>
+<text x="750" y="663" text-anchor="middle" font-family="monospace" font-size="8" font-weight="bold" fill="#cc44cc">RF 433MHz</text>
+<text x="750" y="675" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#884488">TX/RX</text>
+
+<!-- Ethernet W5500 -->
+<rect x="800" y="650" width="80" height="30" rx="4" fill="#0a1a2a" stroke="#2a5a8a" stroke-width="1"/>
+<text x="840" y="663" text-anchor="middle" font-family="monospace" font-size="8" font-weight="bold" fill="#4488cc">W5500</text>
+<text x="840" y="675" text-anchor="middle" font-family="monospace" font-size="7.5" fill="#336699">Ethernet</text>
+
+<!-- Versija -->
+<text x="740" y="730" text-anchor="middle" font-family="monospace" font-size="8" fill="#449944">KC868-A16-V3.1 · Designed by KinCony</text>
+
+<!-- ===================== KAIRĖ — DAVIKLIAI ===================== -->
+
+<!-- === DHT22 === -->
+<rect x="30" y="55" width="160" height="90" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="110" y="74" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">DHT22 / AM2301</text>
+<text x="110" y="88" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">Temperatūra + Drėgmė</text>
+<text x="40" y="104" font-family="monospace" font-size="8" fill="#229922">VCC ●</text>
+<text x="40" y="116" font-family="monospace" font-size="8" fill="#333">GND ●</text>
+<text x="40" y="128" font-family="monospace" font-size="8" fill="#cc9900">DATA ●</text>
+<text x="110" y="140" text-anchor="middle" font-family="monospace" font-size="8" fill="#557755">HT1 · GPIO47</text>
+<!-- DHT22 laidai -->
+<path d="M190 98 L280 98 L280 519 L530 519" stroke="#229922" stroke-width="2" fill="none" marker-end="url(#a33)"/>
+<path d="M190 110 L285 110 L285 524 L530 524" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M190 122 L275 122 L275 391 L530 391" stroke="#cc9900" stroke-width="2" fill="none" stroke-dasharray="7,3" marker-end="url(#asig)"/>
+<text x="292" y="119" font-family="monospace" font-size="8" fill="#aa7700">HT1</text>
+
+<!-- === ADXL345 === -->
+<rect x="30" y="175" width="160" height="100" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="110" y="194" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">ADXL345</text>
+<text x="110" y="208" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">Lygio jutiklis</text>
+<text x="110" y="222" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">I2C adresas 0x53</text>
+<text x="40" y="238" font-family="monospace" font-size="8" fill="#229922">VCC + CS→3V3 ●</text>
+<text x="40" y="250" font-family="monospace" font-size="8" fill="#333">GND + SDO→GND ●</text>
+<text x="40" y="262" font-family="monospace" font-size="8" fill="#0099aa">SDA / SCL ●</text>
+<!-- ADXL laidai -->
+<path d="M190 232 L282 232 L282 471 L530 471" stroke="#229922" stroke-width="2" fill="none" marker-end="url(#a33)"/>
+<path d="M190 244 L287 244 L287 476 L530 476" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M190 256 L279 256 L279 469 L530 469" stroke="#0099aa" stroke-width="2" fill="none" stroke-dasharray="5,2" marker-end="url(#ai2c)"/>
+<text x="292" y="253" font-family="monospace" font-size="8" fill="#007788">I2C(D)</text>
+
+<!-- === BMP180 === -->
+<rect x="30" y="305" width="160" height="100" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="110" y="324" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">BMP180</text>
+<text x="110" y="338" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">Slėgis + Temperatūra</text>
+<text x="110" y="352" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">I2C adresas 0x77</text>
+<text x="40" y="368" font-family="monospace" font-size="8" fill="#229922">VCC ●</text>
+<text x="40" y="380" font-family="monospace" font-size="8" fill="#333">GND ●</text>
+<text x="40" y="392" font-family="monospace" font-size="8" fill="#0099aa">SDA / SCL ●</text>
+<!-- BMP180 laidai -->
+<path d="M190 362 L284 362 L284 473 L530 473" stroke="#229922" stroke-width="2" fill="none" marker-end="url(#a33)"/>
+<path d="M190 374 L289 374 L289 478 L530 478" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M190 386 L281 386 L281 471 L530 471" stroke="#0099aa" stroke-width="2" fill="none" stroke-dasharray="5,2" marker-end="url(#ai2c)"/>
+<text x="293" y="383" font-family="monospace" font-size="8" fill="#007788">I2C(D)</text>
+
+<!-- === MQ jutiklis === -->
+<rect x="30" y="435" width="160" height="100" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="110" y="454" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">MQ Dujų jutiklis</text>
+<text x="110" y="468" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">Oro kokybė (A1)</text>
+<text x="40" y="484" font-family="monospace" font-size="8" fill="#2255cc">VCC (5V) ●</text>
+<text x="40" y="496" font-family="monospace" font-size="8" fill="#333">GND ●</text>
+<text x="40" y="508" font-family="monospace" font-size="8" fill="#cc9900">AO → 10kΩ/20kΩ ●</text>
+<text x="40" y="520" font-family="monospace" font-size="8" fill="#cc9900">→ A1 (GPIO4)</text>
+<!-- MQ laidai -->
+<path d="M190 478 L291 478 L291 514 L530 514" stroke="#2255cc" stroke-width="2" fill="none" marker-end="url(#a5v)"/>
+<path d="M190 490 L295 490 L295 522 L530 522" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M190 504 L299 504 L299 350 L530 350" stroke="#cc9900" stroke-width="2" fill="none" stroke-dasharray="7,3" marker-end="url(#asig)"/>
+<text x="303" y="501" font-family="monospace" font-size="8" fill="#aa7700">A1</text>
+
+<!-- === Mygtukai 1-8 === -->
+<rect x="30" y="565" width="160" height="120" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="110" y="584" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">Mygtukai 1–8</text>
+<text x="110" y="598" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">Šviesos valdymas</text>
+<text x="40" y="614" font-family="monospace" font-size="8" fill="#333">1 laidas → GND</text>
+<text x="40" y="626" font-family="monospace" font-size="8" fill="#cc9900">2 laidas → X01–X08</text>
+<text x="110" y="644" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">GND prie bendro GND</text>
+<text x="110" y="658" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">Optocoupler izoliuoti</text>
+<text x="110" y="672" text-anchor="middle" font-family="monospace" font-size="8" fill="#ff4444">inverted: true</text>
+<!-- Mygtukai laidai -->
+<path d="M190 620 L303 620 L303 524 L530 524" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M190 630 L307 630 L307 151 L530 151" stroke="#cc9900" stroke-width="2" fill="none" stroke-dasharray="7,3" marker-end="url(#asig)"/>
+<text x="311" y="627" font-family="monospace" font-size="8" fill="#aa7700">X01-X08</text>
+
+<!-- === HX711 === -->
+<rect x="30" y="715" width="160" height="110" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="110" y="734" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">HX711</text>
+<text x="110" y="748" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">Dujų balono svoris</text>
+<text x="40" y="764" font-family="monospace" font-size="8" fill="#229922">VCC → 3V3 ●</text>
+<text x="40" y="776" font-family="monospace" font-size="8" fill="#333">GND ●</text>
+<text x="40" y="788" font-family="monospace" font-size="8" fill="#cc9900">DOUT → HT2 (GPIO48) ●</text>
+<text x="40" y="800" font-family="monospace" font-size="8" fill="#cc9900">CLK  → HT3 (GPIO38) ●</text>
+<text x="110" y="815" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">4×50kg load cells</text>
+<!-- HX711 laidai -->
+<path d="M190 758 L305 758 L305 519 L530 519" stroke="#229922" stroke-width="2" fill="none" marker-end="url(#a33)"/>
+<path d="M190 770 L309 770 L309 524 L530 524" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M190 782 L313 782 L313 398 L530 398" stroke="#cc9900" stroke-width="2" fill="none" stroke-dasharray="7,3" marker-end="url(#asig)"/>
+<path d="M190 794 L317 794 L317 404 L530 404" stroke="#cc9900" stroke-width="2" fill="none" stroke-dasharray="7,3" marker-end="url(#asig)"/>
+<text x="320" y="400" font-family="monospace" font-size="8" fill="#aa7700">HT2/HT3</text>
+
+<!-- ===================== DEŠINĖ — KOMPONENTAI ===================== -->
+
+<!-- === OLED === -->
+<rect x="1000" y="55" width="170" height="100" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="1085" y="74" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">SSD1306 OLED</text>
+<text x="1085" y="88" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">128×64 Ekranas</text>
+<text x="1085" y="102" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">I2C adresas 0x3C</text>
+<text x="1010" y="118" font-family="monospace" font-size="8" fill="#229922">● VCC → 3V3</text>
+<text x="1010" y="130" font-family="monospace" font-size="8" fill="#333">● GND</text>
+<text x="1010" y="142" font-family="monospace" font-size="8" fill="#0099aa">● SDA / SCL → I2C(E)</text>
+<!-- OLED laidai -->
+<path d="M1000 112 L940 112 L940 471 L768 471" stroke="#229922" stroke-width="2" fill="none" marker-end="url(#a33)"/>
+<path d="M1000 124 L944 124 L944 476 L768 476" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M1000 136 L948 136 L948 469 L768 469" stroke="#0099aa" stroke-width="2" fill="none" stroke-dasharray="5,2" marker-end="url(#ai2c)"/>
+<text x="952" y="133" font-family="monospace" font-size="8" fill="#007788">I2C(E)</text>
+
+<!-- === VL53L0X ×2 === -->
+<rect x="1000" y="185" width="170" height="110" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="1085" y="204" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">VL53L0X ×2</text>
+<text x="1085" y="218" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">Vandens lygio jutikliai</text>
+<text x="1010" y="234" font-family="monospace" font-size="8" fill="#229922">● VCC → 3V3</text>
+<text x="1010" y="246" font-family="monospace" font-size="8" fill="#333">● GND</text>
+<text x="1010" y="258" font-family="monospace" font-size="8" fill="#0099aa">● SDA/SCL → I2C(D)</text>
+<text x="1010" y="270" font-family="monospace" font-size="8" fill="#cc9900">● XSHUT → PCF8574 0x20</text>
+<text x="1085" y="285" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">0x29 / 0x30</text>
+<!-- VL53L0X laidai -->
+<path d="M1000 228 L942 228 L942 473 L640 473" stroke="#229922" stroke-width="2" fill="none" marker-end="url(#a33)"/>
+<path d="M1000 240 L946 240 L946 478 L640 478" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M1000 252 L950 252 L950 471 L640 471" stroke="#0099aa" stroke-width="2" fill="none" stroke-dasharray="5,2" marker-end="url(#ai2c)"/>
+<text x="954" y="249" font-family="monospace" font-size="8" fill="#007788">I2C(D)</text>
+
+<!-- === TDS jutiklis === -->
+<rect x="1000" y="325" width="170" height="90" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="1085" y="344" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">TDS Jutiklis</text>
+<text x="1085" y="358" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">Vandens kokybė (A2)</text>
+<text x="1010" y="374" font-family="monospace" font-size="8" fill="#229922">● VCC → 3V3</text>
+<text x="1010" y="386" font-family="monospace" font-size="8" fill="#333">● GND</text>
+<text x="1010" y="398" font-family="monospace" font-size="8" fill="#cc9900">● AOUT → A2 (GPIO6)</text>
+<!-- TDS laidai -->
+<path d="M1000 368 L956 368 L956 519 L578 519" stroke="#229922" stroke-width="2" fill="none" marker-end="url(#a33)"/>
+<path d="M1000 380 L960 380 L960 524 L578 524" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M1000 392 L964 392 L964 350 L730 350" stroke="#cc9900" stroke-width="2" fill="none" stroke-dasharray="7,3" marker-end="url(#asig)"/>
+<text x="968" y="389" font-family="monospace" font-size="8" fill="#aa7700">A2</text>
+
+<!-- === A7670E === -->
+<rect x="1000" y="445" width="170" height="120" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="1085" y="464" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">A7670E</text>
+<text x="1085" y="478" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">4G + GPS modulis</text>
+<text x="1010" y="494" font-family="monospace" font-size="8" fill="#2255cc">● V/USB → 5V</text>
+<text x="1010" y="506" font-family="monospace" font-size="8" fill="#333">● G → GND</text>
+<text x="1010" y="518" font-family="monospace" font-size="8" fill="#9944cc">● R(RXD) ← P40 TX</text>
+<text x="1010" y="530" font-family="monospace" font-size="8" fill="#9944cc">● T(TXD) → P41 RX</text>
+<text x="1085" y="548" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">LTE antena + GPS antena</text>
+<!-- A7670E laidai -->
+<path d="M1000 488 L962 488 L962 516 L578 516" stroke="#2255cc" stroke-width="2" fill="none" marker-end="url(#a5v)"/>
+<path d="M1000 500 L966 500 L966 522 L578 522" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M1000 512 L970 512 L970 432 L730 432" stroke="#9944cc" stroke-width="2" fill="none" stroke-dasharray="6,3" marker-end="url(#auart)"/>
+<path d="M1000 524 L974 524 L974 438 L730 438" stroke="#9944cc" stroke-width="2" fill="none" stroke-dasharray="6,3" marker-end="url(#auart)"/>
+<text x="978" y="521" font-family="monospace" font-size="8" fill="#882299">P40/P41</text>
+
+<!-- === Šviesos 1-8 === -->
+<rect x="1000" y="595" width="170" height="100" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="1085" y="614" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">Šviesos 1–8</text>
+<text x="1085" y="628" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">LED / Lemputės</text>
+<text x="1010" y="644" font-family="monospace" font-size="8" fill="#cc2222">● +12V → apkrova</text>
+<text x="1010" y="656" font-family="monospace" font-size="8" fill="#333">● GND (bendras)</text>
+<text x="1010" y="668" font-family="monospace" font-size="8" fill="#cc9900">● apkrova → Y01–Y08</text>
+<text x="1085" y="684" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">MOSFET sink, max 10A</text>
+<!-- Šviesos laidai -->
+<path d="M1000 638 L968 638 L968 113 L740 113" stroke="#cc2222" stroke-width="2" fill="none" marker-end="url(#a12)"/>
+<path d="M1000 650 L972 650 L972 522 L839 522" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M1000 662 L976 662 L976 235 L811 235" stroke="#cc9900" stroke-width="2" fill="none" stroke-dasharray="7,3" marker-end="url(#asig)"/>
+<text x="980" y="659" font-family="monospace" font-size="8" fill="#aa7700">Y01-Y08</text>
+
+<!-- === UV LED === -->
+<rect x="1000" y="725" width="170" height="80" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="1085" y="744" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">UV LED lempa</text>
+<text x="1010" y="762" font-family="monospace" font-size="8" fill="#cc2222">● +12V → lampa → Y09</text>
+<text x="1010" y="774" font-family="monospace" font-size="8" fill="#333">● GND (bendras)</text>
+<text x="1085" y="792" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">MOSFET Y09</text>
+<!-- UV laidai -->
+<path d="M1000 756 L984 756 L984 275 L844 275" stroke="#cc2222" stroke-width="2" fill="none" marker-end="url(#a12)"/>
+<path d="M1000 768 L988 768 L988 520 L843 520" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<text x="988" y="772" font-family="monospace" font-size="8" fill="#aa2222">Y09</text>
+
+<!-- === Inverteris + 220V relė === -->
+<rect x="1000" y="835" width="170" height="100" rx="8" fill="#f0f8f0" stroke="#338833" stroke-width="2"/>
+<text x="1085" y="854" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#226622">Inverteris</text>
+<text x="1085" y="868" text-anchor="middle" font-family="monospace" font-size="9" fill="#448844">Green Cell 1500W</text>
+<text x="1010" y="884" font-family="monospace" font-size="8" fill="#cc2222">● +12V → Y10</text>
+<text x="1010" y="896" font-family="monospace" font-size="8" fill="#333">● GND</text>
+<text x="1010" y="908" font-family="monospace" font-size="8" fill="#cc9900">● Sig ← X09 (220V det.)</text>
+<text x="1085" y="924" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">220V perjungimas</text>
+<!-- Inverteris laidai -->
+<path d="M1000 878 L992 878 L992 277 L848 277" stroke="#cc2222" stroke-width="2" fill="none" marker-end="url(#a12)"/>
+<path d="M1000 890 L996 890 L996 518 L843 518" stroke="#444" stroke-width="2" fill="none" marker-end="url(#agnd)"/>
+<path d="M1000 902 L990 902 L990 193 L558 193" stroke="#cc9900" stroke-width="2" fill="none" stroke-dasharray="7,3" marker-end="url(#asig)"/>
+<text x="994" y="899" font-family="monospace" font-size="8" fill="#aa7700">X09</text>
+
+<!-- RS485 Modbus apatinėje dalyje -->
+<rect x="240" y="840" width="260" height="80" rx="8" fill="#f0f0ff" stroke="#3333aa" stroke-width="2"/>
+<text x="370" y="858" text-anchor="middle" font-family="monospace" font-size="11" font-weight="bold" fill="#3333aa">RS485 Modbus</text>
+<text x="370" y="872" text-anchor="middle" font-family="monospace" font-size="9" fill="#5555aa">Renogy DCC50S (Slave 1)</text>
+<text x="370" y="886" text-anchor="middle" font-family="monospace" font-size="9" fill="#5555aa">Junctek KH-F150A (Slave 2)</text>
+<text x="250" y="902" font-family="monospace" font-size="8" fill="#333">A → RS485 A  B → RS485 B</text>
+<text x="370" y="916" text-anchor="middle" font-family="monospace" font-size="8" fill="#666">Daisy-chain · 120Ω terminator</text>
+<!-- RS485 laidai -->
+<path d="M500 870 L650 870 L650 310 L530 310" stroke="#3333aa" stroke-width="2" fill="none" stroke-dasharray="7,3" marker-end="url(#asig)"/>
+
+<!-- 12V šaltinis -->
+<rect x="240" y="900" width="0" height="0"/>
+
+<!-- Maitinimo šaltinis -->
+<rect x="590" y="870" width="140" height="50" rx="6" fill="#2a0000" stroke="#cc2222" stroke-width="2"/>
+<text x="660" y="890" text-anchor="middle" font-family="monospace" font-size="10" font-weight="bold" fill="#ff4444">12V DC</text>
+<text x="660" y="906" text-anchor="middle" font-family="monospace" font-size="8" fill="#ff8888">Akumuliatorius / PSU</text>
+<path d="M660 870 L660 113 L960 113" stroke="#cc2222" stroke-width="2.5" fill="none" stroke-dasharray="10,4" stroke-opacity="0.5"/>
+<text x="800" y="108" text-anchor="middle" font-family="monospace" font-size="8" fill="#cc2222" fill-opacity="0.7">+12V magistralė</text>
+
+<!-- GND magistralė -->
+<path d="M660 920 L660 940 L30 940 L30 130" stroke="#444" stroke-width="2" fill="none" stroke-dasharray="8,4" stroke-opacity="0.4"/>
+<text x="340" y="936" text-anchor="middle" font-family="monospace" font-size="8" fill="#666" fill-opacity="0.7">GND magistralė (bendra)</text>
+
+<!-- Pastabos -->
+<rect x="740" y="780" width="240" height="68" rx="6" fill="#fffae0" stroke="#cc9900" stroke-width="1.5"/>
+<text x="750" y="796" font-family="monospace" font-size="8" font-weight="bold" fill="#884400">⚠ PASTABOS:</text>
+<text x="750" y="810" font-family="monospace" font-size="7.5" fill="#664400">• MQ AO → 10kΩ→CH1→20kΩ→GND</text>
+<text x="750" y="822" font-family="monospace" font-size="7.5" fill="#664400">• ADXL: GND+SDO→GND, VCC+CS→3V3</text>
+<text x="750" y="834" font-family="monospace" font-size="7.5" fill="#664400">• Junctek slave adresas: keisti 1→2</text>
+<text x="750" y="846" font-family="monospace" font-size="7.5" fill="#664400">• X09: GND aktyvuoja (inverted:true)</text>
+
+</svg>
+</div>
+</body>
+</html>

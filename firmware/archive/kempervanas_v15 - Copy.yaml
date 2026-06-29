@@ -1,0 +1,573 @@
+# kempervanas_v15.4.yaml
+#
+# 🛠️ FIXES:
+#   ✅ BME680 adresas pakeistas į 0x77 (pagal naujausią I2C scan)
+#   ✅ GRĄŽINTAS UART skaitymo blokas (100ms), kuris buvo dingęs v15.3! Dabar veiks SMS/GPS.
+#   ✅ Išlaikyti GPS 1.5s pauzių tarpai stabilumui.
+#   ✅ Išlaikytas Junctek temperatūros filtras.
+
+esphome:
+  name: kempervanas
+  friendly_name: Kempervanas
+  on_boot:
+    priority: 200
+    then:
+      - delay: 200ms
+      - lambda: |-
+          uint8_t data[2] = {0x2D, 0x08};
+          id(i2c_bus).write(0x53, data, 2, true);
+      - delay: 500ms
+      - lambda: 'id(a7670e_init).execute();'
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+wifi:
+  ap:
+    ssid: "Kemperis-Valdymas"
+    password: "kemperis123"
+
+web_server:
+  port: 80
+  version: 3
+  local: true
+
+api:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+
+logger:
+  level: DEBUG
+  hardware_uart: USB_SERIAL_JTAG
+
+i2c:
+  - id: i2c_bus
+    sda: GPIO9
+    scl: GPIO10
+    frequency: 100kHz
+    scan: true
+
+uart:
+  - id: uart_a7670e
+    tx_pin: GPIO40
+    rx_pin: GPIO41
+    baud_rate: 115200
+    rx_buffer_size: 2048
+
+pcf8574:
+  - id: pcf_out1
+    address: 0x24
+  - id: pcf_out2
+    address: 0x25
+  - id: pcf_in1
+    address: 0x21
+  - id: pcf_in2
+    address: 0x22
+
+esp32_ble_tracker:
+
+ble_client:
+  - mac_address: "38:3B:26:79:DB:64"
+    id: junctek_shunt
+    on_disconnect:
+      then:
+        - delay: 2s
+        - ble_client.connect: junctek_shunt
+
+globals:
+  - id: junc_buffer
+    type: std::vector<uint8_t>
+  - id: cal_roll
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: cal_pitch
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: gps_lat
+    type: float
+    initial_value: "0.0"
+  - id: gps_lon
+    type: float
+    initial_value: "0.0"
+  - id: gps_alt
+    type: float
+    initial_value: "0.0"
+  - id: gps_speed
+    type: float
+    initial_value: "0.0"
+  - id: gps_heading
+    type: float
+    initial_value: "0.0"
+  - id: gps_fix_mode
+    type: int
+    initial_value: "0"
+  - id: gps_fix
+    type: bool
+    initial_value: "false"
+  - id: gps_sats_gps
+    type: int
+    initial_value: "0"
+  - id: gps_sats_glonass
+    type: int
+    initial_value: "0"
+  - id: gps_sats_bds
+    type: int
+    initial_value: "0"
+  - id: gps_sats_galileo
+    type: int
+    initial_value: "0"
+  - id: uart_buf
+    type: std::string
+    initial_value: '""'
+  - id: gsm_signal
+    type: int
+    initial_value: "0"
+  - id: gsm_operator
+    type: std::string
+    initial_value: '"Ieskoma..."'
+  - id: sim_status
+    type: std::string
+    initial_value: '"Tikrinama..."'
+  - id: water_empty_cm
+    type: float
+    restore_value: true
+    initial_value: '30.0'
+  - id: water_full_cm
+    type: float
+    restore_value: true
+    initial_value: '5.0'
+  - id: water_total_liters
+    type: float
+    restore_value: true
+    initial_value: '100.0'
+  - id: gas_empty_weight
+    type: float
+    restore_value: true
+    initial_value: '2.8'
+  - id: gas_full_weight
+    type: float
+    restore_value: true
+    initial_value: '7.8'
+  - id: hx711_tare
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: hx711_scale
+    type: float
+    restore_value: true
+    initial_value: '20000.0'
+  - id: bat_capacity_ah
+    type: float
+    restore_value: true
+    initial_value: '110.0'
+  - id: pressure_history
+    type: std::vector<float>
+  - id: sms_sender
+    type: std::string
+    initial_value: '""'
+  - id: cmt_state
+    type: int
+    initial_value: '0'
+  - id: last_sms_send_ms
+    type: unsigned long
+    initial_value: '0'
+  - id: gps_error_count
+    type: int
+    initial_value: '0'
+
+button:
+  - platform: template
+    name: "Pokrypis | Kalibruoti (zero)"
+    on_press:
+      - lambda: |-
+          id(cal_roll) += id(roll_sensor).state;
+          id(cal_pitch) += id(pitch_sensor).state;
+
+  - platform: template
+    name: "Dujos | Tare (uznulinti)"
+    on_press:
+      - lambda: |-
+          if (id(gas_hx711_raw).has_state()) {
+            id(hx711_tare) = id(gas_hx711_raw).state;
+          }
+
+number:
+  - platform: template
+    name: "Vanduo | Bako turis (L)"
+    min_value: 10.0
+    max_value: 500.0
+    step: 1.0
+    mode: box
+    unit_of_measurement: "L"
+    lambda: return id(water_total_liters);
+    set_action:
+      - globals.set: { id: water_total_liters, value: !lambda return x; }
+
+  - platform: template
+    name: "Energija | Baterijos talpa (Ah)"
+    min_value: 10.0
+    max_value: 1000.0
+    step: 1.0
+    mode: box
+    unit_of_measurement: "Ah"
+    lambda: return id(bat_capacity_ah);
+    set_action:
+      - globals.set: { id: bat_capacity_ah, value: !lambda return x; }
+
+sensor:
+  - platform: template
+    name: "Energija | Itampa"
+    id: junc_v
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+  - platform: template
+    name: "Energija | Srove"
+    id: junc_a
+    unit_of_measurement: "A"
+    accuracy_decimals: 1
+  - platform: template
+    name: "Energija | Ah likes"
+    id: junc_ah_remaining
+    unit_of_measurement: "Ah"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Energija | Galia"
+    id: junc_power
+    unit_of_measurement: "W"
+    accuracy_decimals: 1
+  - platform: template
+    name: "Energija | Baterijos temp"
+    id: junc_temp
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+
+  # Pakeistas adresas į 0x77 pagal I2C skenavimą
+  - platform: bme680
+    i2c_id: i2c_bus
+    address: 0x77
+    update_interval: 30s
+    temperature:
+      name: "Aplinka | Temperatura"
+      id: bme_temp
+      filters: [{ offset: -4.0 }]
+      accuracy_decimals: 1
+    pressure:
+      name: "Aplinka | Slegis"
+      id: bme_pressure
+      accuracy_decimals: 1
+    humidity:
+      name: "Aplinka | Dregme"
+      id: bme_humidity
+    gas_resistance:
+      name: "Aplinka | VOC varza"
+      id: bme_voc_ohm
+
+  - platform: template
+    name: "Aplinka | Aukstis (slegis)"
+    id: pressure_altitude
+    unit_of_measurement: "m"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: |-
+      float p = id(bme_pressure).state;
+      if (isnan(p) || p <= 0) return NAN;
+      return 44330.0f * (1.0f - powf(p / 1013.25f, 1.0f / 5.255f));
+
+  - platform: template
+    name: "Pokrypis | Soninis K-D"
+    id: roll_sensor
+    unit_of_measurement: "°"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: |-
+      uint8_t reg = 0x32;
+      if (id(i2c_bus).write(0x53, &reg, 1, false) != 0) return NAN;
+      uint8_t raw[6];
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return NAN;
+      int16_t y = (int16_t)(raw[2] | (raw[3] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      return (atan2((float)y * 0.004f, (float)z * 0.004f) * 180.0f / M_PI) - id(cal_roll);
+
+  - platform: template
+    name: "Pokrypis | Isilginis P-G"
+    id: pitch_sensor
+    unit_of_measurement: "°"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: |-
+      uint8_t reg = 0x32;
+      if (id(i2c_bus).write(0x53, &reg, 1, false) != 0) return NAN;
+      uint8_t raw[6];
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return NAN;
+      int16_t x = (int16_t)(raw[0] | (raw[1] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      return (atan2((float)x * 0.004f, (float)z * 0.004f) * 180.0f / M_PI) - id(cal_pitch);
+
+  - platform: hx711
+    id: gas_hx711_raw
+    clk_pin: GPIO48
+    dout_pin: GPIO47
+    update_interval: 5s
+    internal: true
+
+  - platform: template
+    name: "Dujos | Likutis %"
+    id: gas_remaining_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      float total = (id(gas_hx711_raw).state - id(hx711_tare)) / id(hx711_scale);
+      float net = std::max(0.0f, total - id(gas_empty_weight));
+      float cap = id(gas_full_weight) - id(gas_empty_weight);
+      return (cap < 0.1f) ? NAN : std::min(100.0f, (net / cap) * 100.0f);
+
+  - platform: vl53l0x
+    id: water_distance
+    i2c_id: i2c_bus
+    address: 0x29
+    update_interval: 5s
+    filters: [{ multiply: 100 }]
+
+  - platform: template
+    name: "Vanduo | Lygis %"
+    id: water_level_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      float d = id(water_distance).state;
+      float range = id(water_empty_cm) - id(water_full_cm);
+      if (isnan(d) || range <= 0.1f) return NAN;
+      return std::min(100.0f, std::max(0.0f, ((id(water_empty_cm) - d) / range) * 100.0f));
+
+  - platform: template
+    name: "GPS | Aukstis"
+    id: gps_alt_sensor
+    unit_of_measurement: "m"
+    lambda: 'return id(gps_fix) ? id(gps_alt) : NAN;'
+
+  - platform: template
+    name: "GSM | Signalas"
+    id: gsm_signal_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 10s
+    lambda: |-
+      if (id(gsm_signal) == 0 || id(gsm_signal) >= 99) return 0;
+      return std::min(100.0f, (float)id(gsm_signal) / 31.0f * 100.0f);
+
+text_sensor:
+  - platform: ble_client
+    ble_client_id: junctek_shunt
+    name: "Junctek | Raw"
+    id: junc_raw_hex
+    service_uuid: "FFF0"
+    characteristic_uuid: "FFF1"
+    notify: true
+    on_notify:
+      - lambda: |-
+          for (uint8_t b : x) {
+            if (b == 0xBB) id(junc_buffer).clear();
+            id(junc_buffer).push_back(b);
+            if (b == 0xEE && id(junc_buffer).size() > 3) {
+              auto& buf = id(junc_buffer);
+              size_t n = buf.size();
+              
+              if (n >= 5 && (buf[1] == 0x13 || buf[1] == 0x10)) {
+                id(junc_v).publish_state(((buf[1] >> 4) * 10 + (buf[1] & 0x0F) + (buf[2] >> 4) * 0.1 + (buf[2] & 0x0F) * 0.01));
+              }
+
+              uint8_t m = 0; double val = 0; bool in_val = false;
+              auto commit = [&]() {
+                if (!in_val) return;
+                if (m == 0xD5 && val > 50000) id(junc_ah_remaining).publish_state(val/1000.0f);
+                else if (m == 0xD6) {
+                  float p = val/1000.0f; id(junc_power).publish_state(p);
+                  if (id(junc_v).state > 1.0) id(junc_a).publish_state(p / id(junc_v).state);
+                }
+                else if (m == 0xD8 && val < 150) {
+                   if (buf[1] == 0x13 || buf[1] == 0x10) id(junc_temp).publish_state(val - 50.0f);
+                }
+              };
+              for (size_t i = 2; i < n - 1; i++) {
+                if (buf[i] > 0x99) { commit(); m = buf[i]; val = 0; in_val = true; }
+                else if (in_val) { val = val * 100 + ((buf[i] >> 4) * 10 + (buf[i] & 0x0F)); }
+              }
+              commit(); id(junc_buffer).clear();
+            }
+          }
+
+  - platform: template
+    name: "GPS | Koordinates"
+    id: gps_coords_sensor
+    update_interval: 5s
+    lambda: |-
+      if (id(gps_fix)) {
+        char b[64]; snprintf(b, sizeof(b), "%.6f,%.6f", id(gps_lat), id(gps_lon));
+        return std::string(b);
+      }
+      return std::string("Ieskoma...");
+
+  - platform: template
+    name: "Aplinka | Oro kokybe"
+    lambda: |-
+      float r = id(bme_voc_ohm).state;
+      if (isnan(r)) return std::string("Matavimas...");
+      if (r > 100000) return std::string("Labai geras");
+      if (r > 50000) return std::string("Geras");
+      return std::string("Blogas");
+
+interval:
+  # GRĄŽINTAS UART SKAITYMO BLOKAS:
+  - interval: 100ms
+    then:
+      - lambda: |-
+          while (id(uart_a7670e).available()) {
+            uint8_t b;
+            id(uart_a7670e).read_byte(&b);
+            char c = (char)b;
+            id(uart_buf) += c;
+            if (c == '\n') {
+              std::string line = id(uart_buf);
+              id(uart_buf) = "";
+
+              if (line.find("+CPIN: READY") != std::string::npos) id(sim_status) = "READY";
+
+              if (line.find("+CSQ:") != std::string::npos) {
+                int pos = line.find(":");
+                if (pos != -1) id(gsm_signal) = atoi(line.c_str() + pos + 1);
+              }
+
+              if (line.find("+COPS:") != std::string::npos) {
+                size_t q1 = line.find('"');
+                size_t q2 = (q1 != std::string::npos) ? line.find('"', q1+1) : std::string::npos;
+                if (q1 != std::string::npos && q2 != std::string::npos) {
+                  id(gsm_operator) = line.substr(q1+1, q2-q1-1);
+                }
+              }
+
+              if (line.find("+CGNSSINFO:") != std::string::npos) {
+                id(gps_error_count) = 0;
+                std::vector<std::string> p;
+                size_t s = line.find(":") + 1;
+                size_t e = line.find(",", s);
+                while (e != std::string::npos) {
+                  p.push_back(line.substr(s, e - s));
+                  s = e + 1;
+                  e = line.find(",", s);
+                }
+                p.push_back(line.substr(s));
+                if (p.size() >= 14) {
+                  std::string fm_str = p[0];
+                  while (!fm_str.empty() && (fm_str.front() == ' ' || fm_str.front() == '\t')) fm_str.erase(0, 1);
+                  int fm = atoi(fm_str.c_str());
+                  id(gps_fix_mode) = fm;
+                  id(gps_sats_gps)     = p[1].empty() ? 0 : atoi(p[1].c_str());
+                  id(gps_sats_glonass) = p[2].empty() ? 0 : atoi(p[2].c_str());
+                  id(gps_sats_bds)     = p[3].empty() ? 0 : atoi(p[3].c_str());
+                  id(gps_sats_galileo) = p[4].empty() ? 0 : atoi(p[4].c_str());
+                  if ((fm == 2 || fm == 3) && !p[5].empty()) {
+                    float lat = atof(p[5].c_str()); if (p[6] == "S") lat = -lat;
+                    float lon = atof(p[7].c_str()); if (p[8] == "W") lon = -lon;
+                    id(gps_lat) = lat; id(gps_lon) = lon;
+                    id(gps_alt) = p[11].empty() ? 0 : atof(p[11].c_str());
+                    id(gps_speed) = p[12].empty() ? 0 : atof(p[12].c_str()) * 1.852f;
+                    id(gps_heading) = p[13].empty() ? 0 : atof(p[13].c_str());
+                    id(gps_fix) = true;
+                  } else {
+                    id(gps_fix) = false;
+                  }
+                }
+              }
+
+              if (line.find("ERROR") != std::string::npos &&
+                  line.find("+CMS ERROR") == std::string::npos &&
+                  line.find("+CME ERROR") == std::string::npos) {
+                id(gps_error_count) += 1;
+              }
+
+              if (line.find("+CMT:") != std::string::npos) {
+                size_t q1 = line.find('"');
+                size_t q2 = line.find('"', q1 + 1);
+                if (q1 != std::string::npos && q2 != std::string::npos) {
+                  id(sms_sender) = line.substr(q1 + 1, q2 - q1 - 1);
+                  id(cmt_state) = 1;
+                }
+              } else if (id(cmt_state) == 1) {
+                id(cmt_state) = 0;
+                std::string body = line;
+                while (!body.empty() && (body.back() == '\r' || body.back() == '\n')) body.pop_back();
+                std::string low = body;
+                for (auto &ch : low) ch = tolower(ch);
+                bool trigger = (low.find("status") != std::string::npos) || (low.find("info") != std::string::npos) || (body == "?");
+                if (trigger) {
+                  unsigned long now = millis();
+                  if (now - id(last_sms_send_ms) > 30000) {
+                    id(last_sms_send_ms) = now;
+                    id(sms_send_status).execute();
+                  }
+                }
+              }
+            }
+          }
+
+  - interval: 10s
+    then:
+      - uart.write: { id: uart_a7670e, data: "AT+CPIN?\r\n" }
+      - delay: 1500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CSQ\r\n" }
+      - delay: 1500ms
+      - uart.write: { id: uart_a7670e, data: "AT+COPS?\r\n" }
+      - delay: 1500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CGNSSINFO\r\n" }
+
+  - interval: 30s
+    then:
+      - if:
+          condition: { lambda: 'return id(gps_error_count) > 3;' }
+          then:
+            - script.execute: gps_recovery
+
+script:
+  - id: a7670e_init
+    then:
+      - uart.write: "AT\r\n"
+      - delay: 1s
+      - uart.write: "AT+CGNSSPWR=1\r\n"
+      - delay: 1s
+      - uart.write: "AT+CMGF=1\r\n"
+
+  - id: gps_recovery
+    mode: single
+    then:
+      - lambda: 'id(gps_error_count) = 0;'
+      - uart.write: "AT+CGNSSPWR=0\r\n"
+      - delay: 2s
+      - uart.write: "AT+CGNSSPWR=1\r\n"
+
+  - id: sms_send_status
+    mode: queued
+    then:
+      - uart.write:
+          id: uart_a7670e
+          data: !lambda |-
+            std::string c = "AT+CMGS=\"" + id(sms_sender) + "\"\r\n";
+            return std::vector<uint8_t>(c.begin(), c.end());
+      - delay: 1500ms
+      - uart.write:
+          id: uart_a7670e
+          data: !lambda |-
+            auto f = [](float v) { return isnan(v) ? 0.0f : v; };
+            char b[160];
+            snprintf(b, sizeof(b), "Kemperis OK\nLoc:%.4f,%.4f\nBat:%.1fV %.1fA\nEnv:%dC %dhPa\nH2O:%d%%\nGas:%d%%\x1A",
+              id(gps_lat), id(gps_lon), f(id(junc_v).state), f(id(junc_a).state),
+              (int)f(id(bme_temp).state), (int)f(id(bme_pressure).state),
+              (int)f(id(water_level_pct).state), (int)f(id(gas_remaining_pct).state));
+            return std::vector<uint8_t>(b, b + strlen(b));

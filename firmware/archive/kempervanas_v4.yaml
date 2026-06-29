@@ -1,0 +1,452 @@
+esphome:
+  name: kempervanas
+  friendly_name: Kempervanas
+  on_boot:
+    priority: 200
+    then:
+      - lambda: |-
+          uint8_t data[2] = {0x2D, 0x08};
+          id(i2c_bus).write(0x53, data, 2, true);
+      - delay: 500ms
+      - script.execute: a7670e_init
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+wifi:
+  ap:
+    ssid: "Kemperis-Valdymas"
+    password: "kemperis123"
+
+web_server:
+  port: 80
+  version: 2
+  local: true
+
+api:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+
+logger:
+  level: DEBUG
+  hardware_uart: USB_SERIAL_JTAG
+  logs:
+    i2c: WARN
+
+# ==========================================
+# 🔌 MAGISTRALĖS IR MODULIAI
+# ==========================================
+i2c:
+  - id: i2c_bus
+    sda: GPIO9
+    scl: GPIO10
+    scan: true
+    frequency: 50kHz
+
+uart:
+  - id: uart_a7670e
+    tx_pin: GPIO40
+    rx_pin: GPIO41
+    baud_rate: 115200
+    rx_buffer_size: 1024
+    debug:
+      direction: BOTH
+      dummy_receiver: false
+      after:
+        delimiter: "\r\n"
+      sequence:
+        - lambda: |-
+            std::string s(bytes.begin(), bytes.end());
+            ESP_LOGD("UART_DATA", "Simcom: %s", s.c_str());
+
+pcf8574:
+  - id: pcf_out1
+    address: 0x24
+  - id: pcf_out2
+    address: 0x25
+  - id: pcf_in1
+    address: 0x21
+  - id: pcf_in2
+    address: 0x22
+
+# ==========================================
+# 🌐 GLOBALŪS KINTAMIEJI
+# ==========================================
+globals:
+  - id: cal_roll
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: cal_pitch
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: gps_lat
+    type: float
+    initial_value: "0.0"
+  - id: gps_lon
+    type: float
+    initial_value: "0.0"
+  - id: gps_fix
+    type: bool
+    initial_value: "false"
+  - id: uart_buf
+    type: std::string
+    initial_value: '""'
+  - id: gsm_signal
+    type: int
+    initial_value: "0"
+  - id: gsm_operator
+    type: std::string
+    initial_value: '"Ieskoma..."'
+  - id: sim_status
+    type: std::string
+    initial_value: '"Tikrinama..."'
+  # SMS atsakymui
+  - id: sms_sender
+    type: std::string
+    initial_value: '""'
+  - id: sms_expecting
+    type: bool
+    initial_value: "false"
+
+# ==========================================
+# 📡 BLUETOOTH (BLE) IR RENOGY
+# ==========================================
+esp32_ble_tracker:
+
+ble_client:
+  # Renogy Baterija
+  - mac_address: "38:3B:26:79:DB:64"
+    id: renogy_batt
+    on_connect:
+      then:
+        - logger.log: "Renogy BLE connected"
+    on_disconnect:
+      then:
+        - logger.log: "Renogy BLE disconnected"
+        - lambda: |-
+            id(bat_voltage).publish_state(NAN);
+            id(bat_current).publish_state(NAN);
+            id(bat_soc).publish_state(NAN);
+
+  # Renogy DC-DC (kol kas tik prisijungimas, be duomenų)
+  - mac_address: "C4:D3:6A:63:D6:42"
+    id: renogy_dcdc
+    on_connect:
+      then:
+        - logger.log: "Renogy DC-DC prijungtas!"
+    on_disconnect:
+      then:
+        - logger.log: "Renogy DC-DC atsijungė!"
+
+# ==========================================
+# 🔘 MYGTUKAI IR BINARY SENSORIAI
+# ==========================================
+binary_sensor:
+  - platform: gpio
+    id: btn1
+    internal: true
+    pin: { pcf8574: pcf_in1, number: 0, mode: INPUT, inverted: true }
+    on_press:
+      - switch.toggle: lempa1
+
+button:
+  - platform: template
+    name: "Kalibruoti Posvyri"
+    id: calibrate_button
+    on_press:
+      - lambda: |-
+          id(cal_roll) += id(roll_sensor).state;
+          id(cal_pitch) += id(pitch_sensor).state;
+
+switch:
+  - platform: gpio
+    name: "Lempa 1"
+    id: lempa1
+    pin: { pcf8574: pcf_out1, number: 0, mode: OUTPUT, inverted: false }
+  - platform: gpio
+    name: "Inverteris"
+    id: inverteris
+    pin: { pcf8574: pcf_out2, number: 0, mode: OUTPUT, inverted: false }
+
+# ==========================================
+# 📊 SENSORIAI (Fiziniai ir Šablonai)
+# ==========================================
+sensor:
+  # Oro kokybe
+  - platform: adc
+    pin: GPIO4
+    name: "Oro kokybe MQ"
+    id: oro_kokybe
+    update_interval: 5s
+    unit_of_measurement: "%"
+    attenuation: 12db
+    filters:
+      - multiply: 1.515
+      - lambda: return (x / 5.0) * 100.0;
+
+  # BMP085 (Temperatura ir Slegis)
+  - platform: bmp085
+    temperature:
+      name: "Vidaus temperatura"
+      id: bmp_temp
+      filters:
+        - offset: -2.0
+    pressure:
+      name: "Atmosferos slegis"
+      id: bmp_pressure
+    update_interval: 10s
+
+  # Posvyris KD
+  - platform: template
+    name: "Posvyris KD"
+    id: roll_sensor
+    unit_of_measurement: "deg"
+    update_interval: 0.5s
+    lambda: |-
+      uint8_t reg = 0x32;
+      id(i2c_bus).write(0x53, &reg, 1, false);
+      uint8_t raw[6];
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return {};
+      int16_t y = (int16_t)(raw[2] | (raw[3] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      return (atan2((float)y * 0.004f, (float)z * 0.004f) * 180.0f / M_PI) - id(cal_roll);
+
+  # Posvyris PG
+  - platform: template
+    name: "Posvyris PG"
+    id: pitch_sensor
+    unit_of_measurement: "deg"
+    update_interval: 0.5s
+    lambda: |-
+      uint8_t reg = 0x32;
+      id(i2c_bus).write(0x53, &reg, 1, false);
+      uint8_t raw[6];
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return {};
+      int16_t x = (int16_t)(raw[0] | (raw[1] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      return (atan2((float)x * 0.004f, (float)z * 0.004f) * 180.0f / M_PI) - id(cal_pitch);
+
+  # GSM signalas
+  - platform: template
+    name: "GSM Rysio Kokybe"
+    id: gsm_signal_pct
+    unit_of_measurement: "%"
+    lambda: |-
+      if (id(gsm_signal) == 0 || id(gsm_signal) >= 99) return 0;
+      float pct = (float)id(gsm_signal) / 31.0 * 100.0;
+      return (pct > 100) ? 100 : pct;
+
+  # Baterijos šabloniniai sensoriai (reikšmes pildys BLE lambda)
+  - platform: template
+    name: "Renogy Voltage"
+    id: bat_voltage
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: "Renogy Current"
+    id: bat_current
+    unit_of_measurement: "A"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: "Renogy SOC"
+    id: bat_soc
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+
+# ==========================================
+# 🔤 TEKSTINIAI SENSORIAI
+# ==========================================
+text_sensor:
+  - platform: template
+    name: "SIM Statusas"
+    id: sim_status_sensor
+    lambda: return id(sim_status);
+
+  - platform: template
+    name: "GSM Operatorius"
+    id: gsm_operator_sensor
+    lambda: |-
+      if (id(gsm_operator) == "24602") return std::string("Tele2");
+      if (id(gsm_operator) == "24601") return std::string("Telia");
+      if (id(gsm_operator) == "24603") return std::string("Bite");
+      return id(gsm_operator);
+
+  - platform: template
+    name: "GPS Koordinates"
+    id: gps_coords
+    lambda: |-
+      if (id(gps_fix)) {
+        char buf[64];
+        sprintf(buf, "%.6f, %.6f", id(gps_lat), id(gps_lon));
+        return std::string(buf);
+      }
+      return std::string("Ieskoma palydovu...");
+
+  # Baterijos BLE raw + dekodavimas
+  - platform: ble_client
+    ble_client_id: renogy_batt
+    name: "Baterija: Raw HEX"
+    id: bat_raw_hex
+    service_uuid: "FFF0"
+    characteristic_uuid: "FFF1"
+    notify: true
+    on_notify:
+      - lambda: |-
+          std::string hex;
+          for (size_t i = 0; i < x.length(); i++) {
+            char buf[4];
+            snprintf(buf, sizeof(buf), "%02X", (uint8_t)x[i]);
+            hex += buf;
+          }
+          id(bat_raw_hex).publish_state(hex);
+          
+          if (x.size() >= 6 && (uint8_t)x[0] == 0xBB) {
+            // Bandome pirmąjį dažniausią Renogy baitų išdėstymą:
+            uint8_t reg = (uint8_t)x[1];               // antras baitas – registras
+            uint16_t val = ((uint8_t)x[3] << 8) | (uint8_t)x[4]; // 16-bitų reikšmė big-endian
+            
+            // Jei įtampa pasirodytų 10 kartų per didelė, pakeiskite val * 0.01f
+            // Jei registras visai neatitinka, pakeiskite į:
+            // uint8_t reg = (uint8_t)x[2];
+            // uint16_t val = ((uint8_t)x[4] << 8) | (uint8_t)x[5];
+            
+            switch (reg) {
+              case 0x01: // Įtampa (0.1 V)
+                id(bat_voltage).publish_state(val * 0.1f);
+                ESP_LOGI("renogy", "Įtampa: %.1fV", val * 0.1f);
+                break;
+              case 0x02: // Srovė (0.1 A, su ženklu)
+                {
+                  int16_t cur = (int16_t)val;
+                  id(bat_current).publish_state(cur * 0.1f);
+                  ESP_LOGI("renogy", "Srovė: %.1fA", cur * 0.1f);
+                }
+                break;
+              case 0x04: // SOC (0-100 %)
+                id(bat_soc).publish_state((float)(uint8_t)x[5]); // dažnai vienas baitas
+                ESP_LOGI("renogy", "SOC: %d%%", (uint8_t)x[5]);
+                break;
+            }
+          }
+
+# ==========================================
+# ⏱ INTERVALAI (UART Parsing + SMS)
+# ==========================================
+interval:
+  - interval: 100ms
+    then:
+      - lambda: |-
+          while (id(uart_a7670e).available()) {
+            uint8_t byte;
+            id(uart_a7670e).read_byte(&byte);
+            char c = (char)byte;
+            id(uart_buf) += c;
+            if (c == '\n') {
+              std::string line = id(uart_buf);
+              id(uart_buf) = "";
+              
+              // SIM būsena
+              if (line.find("+CPIN: READY") != std::string::npos) id(sim_status) = "READY";
+              
+              // GPS koordinatės
+              if (line.find("+CGNSSINFO:") != std::string::npos) {
+                std::vector<std::string> p;
+                size_t start = line.find(":") + 1;
+                size_t end = line.find(",");
+                while (end != std::string::npos) {
+                  p.push_back(line.substr(start, end - start));
+                  start = end + 1; end = line.find(",", start);
+                }
+                p.push_back(line.substr(start));
+                if (p.size() > 8 && !p[5].empty() && !p[7].empty()) {
+                  float lat_raw = atof(p[5].c_str());
+                  int lat_deg = (int)(lat_raw / 100);
+                  id(gps_lat) = lat_deg + (lat_raw - lat_deg * 100.0) / 60.0;
+                  if (p[6] == "S") id(gps_lat) *= -1;
+                  float lon_raw = atof(p[7].c_str());
+                  int lon_deg = (int)(lon_raw / 100);
+                  id(gps_lon) = lon_deg + (lon_raw - lon_deg * 100.0) / 60.0;
+                  if (p[8] == "W") id(gps_lon) *= -1;
+                  id(gps_fix) = true;
+                }
+              }
+              
+              // Signalas
+              if (line.find("+CSQ:") != std::string::npos) {
+                size_t pos = line.find(":") + 1;
+                id(gsm_signal) = atoi(line.c_str() + pos);
+              }
+              
+              // Operatorius
+              if (line.find("+COPS:") != std::string::npos) {
+                size_t q1 = line.find('"');
+                size_t q2 = (q1 != std::string::npos) ? line.find('"', q1+1) : std::string::npos;
+                if (q1 != std::string::npos && q2 != std::string::npos)
+                  id(gsm_operator) = line.substr(q1+1, q2-q1-1);
+              }
+              
+              // SMS valdymas
+              if (id(sms_expecting)) {
+                // Tai SMS tekstas (po +CMT eilutės)
+                std::string body = line;
+                if (!body.empty() && body.back() == '\r') body.pop_back();
+                if (body.find("Status") != std::string::npos || body.find("status") != std::string::npos) {
+                  char reply[160];
+                  snprintf(reply, sizeof(reply),
+                           "GPS: %.6f, %.6f\r\nBat: %.2fV, %.2fA, %d%%\r\nSignal: %.0f%%",
+                           id(gps_lat), id(gps_lon),
+                           id(bat_voltage).state, id(bat_current).state, (int)id(bat_soc).state,
+                           id(gsm_signal_pct).state);
+                  std::string cmd = "AT+CMGS=\"" + id(sms_sender) + "\"\r\n";
+                  id(uart_a7670e).write_str(cmd.c_str());
+                  delay(200);
+                  id(uart_a7670e).write_str(reply);
+                  id(uart_a7670e).write_byte(26); // Ctrl+Z
+                  id(uart_a7670e).write_str("\r\n");
+                  ESP_LOGI("SMS", "Reply sent to %s", id(sms_sender).c_str());
+                }
+                id(sms_expecting) = false;
+                id(sms_sender) = "";
+              }
+              
+              if (line.find("+CMT:") != std::string::npos) {
+                size_t c1 = line.find('"');
+                size_t c2 = (c1 != std::string::npos) ? line.find('"', c1+1) : std::string::npos;
+                if (c1 != std::string::npos && c2 != std::string::npos) {
+                  id(sms_sender) = line.substr(c1+1, c2-c1-1);
+                  id(sms_expecting) = true; // kita eilutė bus SMS tekstas
+                }
+              }
+            }
+          }
+  - interval: 10s
+    then:
+      - uart.write: { id: uart_a7670e, data: "AT+CPIN?\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CSQ\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+COPS?\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CGNSSINFO\r\n" }
+
+# ==========================================
+# ⚙️ SKRIPTAI
+# ==========================================
+script:
+  - id: a7670e_init
+    then:
+      - uart.write: { id: uart_a7670e, data: "AT\r\n" }
+      - delay: 1s
+      - uart.write: { id: uart_a7670e, data: "AT+CGNSSPWR=1\r\n" }
+      - delay: 1s
+      - uart.write: { id: uart_a7670e, data: 'AT+CNMI=2,2,0,0,0\r\n' }   # įjungti SMS pranešimus
+      - delay: 500ms
+      - logger.log: "A7670E inicializuotas"

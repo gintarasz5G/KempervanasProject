@@ -1,0 +1,360 @@
+esphome:
+  name: kempervanas
+  friendly_name: Kempervanas
+  on_boot:
+    priority: 200
+    then:
+      - lambda: |-
+          uint8_t data[2] = {0x2D, 0x08};
+          id(i2c_bus).write(0x53, data, 2, true);
+      - delay: 500ms
+      - script.execute: a7670e_init
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+wifi:
+  ap:
+    ssid: "Kemperis-Valdymas"
+    password: "kemperis123"
+
+web_server:
+  port: 80
+  version: 2
+  local: true
+
+api:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+
+logger:
+  level: DEBUG
+  hardware_uart: USB_SERIAL_JTAG
+
+i2c:
+  - id: i2c_bus
+    sda: GPIO9
+    scl: GPIO10
+    scan: true
+    frequency: 50kHz
+
+uart:
+  - id: uart_a7670e
+    tx_pin: GPIO40
+    rx_pin: GPIO41
+    baud_rate: 115200
+    rx_buffer_size: 1024
+    debug:
+      direction: BOTH
+      dummy_receiver: false
+      after:
+        delimiter: "\r\n"
+      sequence:
+        - lambda: |-
+            std::string s(bytes.begin(), bytes.end());
+            ESP_LOGD("UART_DATA", "Simcom: %s", s.c_str());
+
+pcf8574:
+  - id: pcf_out1
+    address: 0x24
+  - id: pcf_out2
+    address: 0x25
+  - id: pcf_in1
+    address: 0x21
+  - id: pcf_in2
+    address: 0x22
+
+globals:
+  - id: cal_roll
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: cal_pitch
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: gps_lat
+    type: float
+    initial_value: "0.0"
+  - id: gps_lon
+    type: float
+    initial_value: "0.0"
+  - id: gps_fix
+    type: bool
+    initial_value: "false"
+  - id: uart_buf
+    type: std::string
+    initial_value: '""'
+  - id: gsm_signal
+    type: int
+    initial_value: "0"
+  - id: gsm_operator
+    type: std::string
+    initial_value: '"Ieskoma..."'
+  - id: sim_status
+    type: std::string
+    initial_value: '"Tikrinama..."'
+
+# ---------- BLE Client for Renogy Battery ----------
+ble_client:
+  - mac_address: "38:3B:26:79:DB:64"   # <<< CHANGE to your battery’s MAC
+    id: renogy_batt
+    on_connect:
+      then:
+        - logger.log: "Renogy BLE connected"
+    on_disconnect:
+      then:
+        - logger.log: "Renogy BLE disconnected"
+
+# ---------- Binary Sensors ----------
+binary_sensor:
+  - platform: gpio
+    id: tinklas_220v
+    name: "Isorinis 220V"
+    pin: { pcf8574: pcf_in2, number: 0, mode: INPUT, inverted: true }
+    device_class: power
+
+  - platform: gpio
+    id: btn1
+    internal: true
+    pin: { pcf8574: pcf_in1, number: 0, mode: INPUT, inverted: true }
+    on_press:
+      - switch.toggle: lempa1
+
+button:
+  - platform: template
+    name: "Kalibruoti Posvyri"
+    id: calibrate_button
+    on_press:
+      - lambda: |-
+          id(cal_roll) += id(roll_sensor).state;
+          id(cal_pitch) += id(pitch_sensor).state;
+
+# ---------- Sensors ----------
+sensor:
+  # Air quality
+  - platform: adc
+    pin: GPIO4
+    name: "Oro kokybe MQ"
+    id: oro_kokybe
+    update_interval: 5s
+    unit_of_measurement: "%"
+    attenuation: 12db
+    filters:
+      - multiply: 1.515
+      - lambda: return (x / 5.0) * 100.0;
+
+  # BMP085 temperature & pressure
+  - platform: bmp085
+    temperature:
+      name: "Vidaus temperatura"
+      id: bmp_temp
+      filters:
+        - offset: -2.0
+    pressure:
+      name: "Atmosferos slegis"
+      id: bmp_pressure
+    update_interval: 10s
+
+  # Tilt – roll
+  - platform: template
+    name: "Posvyris KD"
+    id: roll_sensor
+    unit_of_measurement: "deg"
+    update_interval: 0.5s
+    lambda: |-
+      uint8_t reg = 0x32;
+      id(i2c_bus).write(0x53, &reg, 1, false);
+      uint8_t raw[6];
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return {};
+      int16_t y = (int16_t)(raw[2] | (raw[3] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      return (atan2((float)y * 0.004f, (float)z * 0.004f) * 180.0f / M_PI) - id(cal_roll);
+
+  # Tilt – pitch
+  - platform: template
+    name: "Posvyris PG"
+    id: pitch_sensor
+    unit_of_measurement: "deg"
+    update_interval: 0.5s
+    lambda: |-
+      uint8_t reg = 0x32;
+      id(i2c_bus).write(0x53, &reg, 1, false);
+      uint8_t raw[6];
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return {};
+      int16_t x = (int16_t)(raw[0] | (raw[1] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      return (atan2((float)x * 0.004f, (float)z * 0.004f) * 180.0f / M_PI) - id(cal_pitch);
+
+  # GSM signal strength
+  - platform: template
+    name: "GSM Rysio Kokybe"
+    id: gsm_signal_pct
+    unit_of_measurement: "%"
+    lambda: |-
+      if (id(gsm_signal) == 0 || id(gsm_signal) >= 99) return 0;
+      float pct = (float)id(gsm_signal) / 31.0 * 100.0;
+      return (pct > 100) ? 100 : pct;
+
+  # ---------- Renogy Battery BLE Sensors ----------
+  - platform: ble_client
+    ble_client_id: renogy_batt
+    name: "Renogy Voltage"
+    id: renogy_voltage
+    service_uuid: '0000FF00-0000-1000-8000-00805F9B34FB'
+    characteristic_uuid: '0000FF01-0000-1000-8000-00805F9B34FB'
+    unit_of_measurement: 'V'
+    accuracy_decimals: 2
+    lambda: |-
+      if (x.size() < 2) return {};
+      uint16_t raw = (uint16_t)x[0] << 8 | x[1];
+      return raw / 100.0;
+
+  - platform: ble_client
+    ble_client_id: renogy_batt
+    name: "Renogy Current"
+    id: renogy_current
+    service_uuid: '0000FF00-0000-1000-8000-00805F9B34FB'
+    characteristic_uuid: '0000FF02-0000-1000-8000-00805F9B34FB'
+    unit_of_measurement: 'A'
+    accuracy_decimals: 2
+    lambda: |-
+      if (x.size() < 2) return {};
+      uint16_t raw = (uint16_t)x[0] << 8 | x[1];
+      // Renogy reports signed current; offset 10000 → -100A..+100A
+      return (raw - 10000) / 100.0;
+
+  - platform: ble_client
+    ble_client_id: renogy_batt
+    name: "Renogy SOC"
+    id: renogy_soc
+    service_uuid: '0000FF00-0000-1000-8000-00805F9B34FB'
+    characteristic_uuid: '0000FF03-0000-1000-8000-00805F9B34FB'
+    unit_of_measurement: '%'
+    accuracy_decimals: 0
+    lambda: |-
+      if (x.size() < 2) return {};
+      uint16_t raw = (uint16_t)x[0] << 8 | x[1];
+      return raw / 10.0;
+
+  - platform: ble_client
+    ble_client_id: renogy_batt
+    name: "Renogy Temperature"
+    id: renogy_temp
+    service_uuid: '0000FF00-0000-1000-8000-00805F9B34FB'
+    characteristic_uuid: '0000FF04-0000-1000-8000-00805F9B34FB'
+    unit_of_measurement: '°C'
+    accuracy_decimals: 1
+    lambda: |-
+      if (x.size() < 2) return {};
+      uint16_t raw = (uint16_t)x[0] << 8 | x[1];
+      return (raw - 2731) / 10.0;   // Kelvin to Celsius
+
+# ---------- Text Sensors ----------
+text_sensor:
+  - platform: template
+    name: "SIM Statusas"
+    id: sim_status_sensor
+    lambda: return id(sim_status);
+
+  - platform: template
+    name: "GSM Operatorius"
+    id: gsm_operator_sensor
+    lambda: |-
+      if (id(gsm_operator) == "24602") return std::string("Tele2");
+      if (id(gsm_operator) == "24601") return std::string("Telia");
+      if (id(gsm_operator) == "24603") return std::string("Bite");
+      return id(gsm_operator);
+
+  - platform: template
+    name: "GPS Koordinates"
+    id: gps_coords
+    lambda: |-
+      if (id(gps_fix)) {
+        char buf[64];
+        sprintf(buf, "%.6f, %.6f", id(gps_lat), id(gps_lon));
+        return std::string(buf);
+      }
+      return std::string("Ieskoma palydovu...");
+
+# ---------- Switches ----------
+switch:
+  - platform: gpio
+    name: "Lempa 1"
+    id: lempa1
+    pin: { pcf8574: pcf_out1, number: 0, mode: OUTPUT, inverted: false }
+  - platform: gpio
+    name: "Inverteris"
+    id: inverteris
+    pin: { pcf8574: pcf_out2, number: 0, mode: OUTPUT, inverted: false }
+
+# ---------- Intervals (UART parsing + GSM polling) ----------
+interval:
+  - interval: 100ms
+    then:
+      - lambda: |-
+          while (id(uart_a7670e).available()) {
+            uint8_t byte;
+            id(uart_a7670e).read_byte(&byte);
+            char c = (char)byte;
+            id(uart_buf) += c;
+            if (c == '\n') {
+              std::string line = id(uart_buf);
+              id(uart_buf) = "";
+              if (line.find("+CPIN: READY") != std::string::npos) id(sim_status) = "READY";
+              if (line.find("+CGNSSINFO:") != std::string::npos) {
+                std::vector<std::string> p;
+                size_t start = line.find(":") + 1;
+                size_t end = line.find(",");
+                while (end != std::string::npos) {
+                  p.push_back(line.substr(start, end - start));
+                  start = end + 1; end = line.find(",", start);
+                }
+                p.push_back(line.substr(start));
+                if (p.size() > 8 && !p[5].empty() && !p[7].empty()) {
+                  float lat_raw = atof(p[5].c_str());
+                  int lat_deg = (int)(lat_raw / 100);
+                  id(gps_lat) = lat_deg + (lat_raw - lat_deg * 100.0) / 60.0;
+                  if (p[6] == "S") id(gps_lat) *= -1;
+
+                  float lon_raw = atof(p[7].c_str());
+                  int lon_deg = (int)(lon_raw / 100);
+                  id(gps_lon) = lon_deg + (lon_raw - lon_deg * 100.0) / 60.0;
+                  if (p[8] == "W") id(gps_lon) *= -1;
+                  id(gps_fix) = true;
+                }
+              }
+              if (line.find("+CSQ:") != std::string::npos) {
+                size_t pos = line.find(":") + 1;
+                id(gsm_signal) = atoi(line.c_str() + pos);
+              }
+              if (line.find("+COPS:") != std::string::npos) {
+                size_t q1 = line.find('"');
+                size_t q2 = (q1 != std::string::npos) ? line.find('"', q1+1) : std::string::npos;
+                if (q1 != std::string::npos && q2 != std::string::npos) id(gsm_operator) = line.substr(q1+1, q2-q1-1);
+              }
+            }
+          }
+  - interval: 10s
+    then:
+      - uart.write: { id: uart_a7670e, data: "AT+CPIN?\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CSQ\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+COPS?\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CGNSSINFO\r\n" }
+
+# ---------- Init script for A7670E ----------
+script:
+  - id: a7670e_init
+    then:
+      - uart.write: { id: uart_a7670e, data: "AT\r\n" }
+      - delay: 1s
+      - uart.write: { id: uart_a7670e, data: "AT+CGNSSPWR=1\r\n" }
+      - delay: 1s
+      - logger.log: "A7670E inicializuotas"

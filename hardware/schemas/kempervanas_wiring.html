@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<title>Kempervanas — Laidų sujungimo dokumentacija</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&display=swap');
+
+  :root {
+    --ink: #1a1a1a;
+    --ink-soft: #3d3d3d;
+    --paper: #f5f1e8;
+    --paper-warm: #ebe4d1;
+    --rule: #1a1a1a;
+    --accent: #b8410e;
+    --free: #2d5f3f;
+    --free-bg: #d4e4d4;
+    --used-bg: #f0e0d4;
+    --warn: #8b6914;
+    --warn-bg: #f4e8c8;
+    --grid: #c4bda8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.5;
+    padding: 40px 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+    font-size: 13px;
+  }
+
+  header {
+    border-top: 4px double var(--rule);
+    border-bottom: 4px double var(--rule);
+    padding: 24px 0;
+    margin-bottom: 32px;
+    position: relative;
+  }
+
+  .meta-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    color: var(--ink-soft);
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 52px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 20px;
+    color: var(--ink-soft);
+  }
+
+  .meta-bottom {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--grid);
+    font-size: 11px;
+  }
+
+  .meta-bottom dt {
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 2px;
+  }
+
+  .meta-bottom dd { font-weight: 500; }
+
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 600;
+    margin: 40px 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--rule);
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+
+  h2 .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .section-intro {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+    max-width: 700px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--paper-warm);
+    border: 2px solid var(--rule);
+    margin-bottom: 16px;
+    font-size: 12px;
+  }
+
+  th {
+    background: var(--ink);
+    color: var(--paper);
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-right: 1px solid var(--grid);
+  }
+
+  th:last-child { border-right: none; }
+
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--grid);
+    border-right: 1px solid var(--grid);
+    vertical-align: top;
+  }
+
+  td:last-child { border-right: none; }
+
+  tr:last-child td { border-bottom: none; }
+
+  tr.group-start td {
+    background: var(--paper);
+    font-weight: 700;
+  }
+
+  .num-cell {
+    font-weight: 700;
+    color: var(--accent);
+    white-space: nowrap;
+    width: 40px;
+  }
+
+  .free-row td {
+    background: var(--free-bg);
+  }
+
+  .used-row td {
+    background: var(--used-bg);
+  }
+
+  .warn-row td {
+    background: var(--warn-bg);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .badge-free {
+    background: var(--free);
+    color: var(--paper);
+  }
+
+  .badge-used {
+    background: var(--accent);
+    color: var(--paper);
+  }
+
+  .badge-warn {
+    background: var(--warn);
+    color: var(--paper);
+  }
+
+  .color-swatch {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border: 1px solid var(--ink);
+    margin-right: 6px;
+    vertical-align: -1px;
+    border-radius: 50%;
+  }
+
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(26, 26, 26, 0.08);
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .warnings {
+    background: var(--warn-bg);
+    border: 2px solid var(--warn);
+    border-left-width: 8px;
+    padding: 20px 24px;
+    margin: 30px 0;
+  }
+
+  .warnings h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--ink);
+  }
+
+  .warnings ol {
+    margin-left: 20px;
+    font-size: 12px;
+  }
+
+  .warnings li { margin-bottom: 8px; }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 16px 0 24px 0;
+    padding: 12px 16px;
+    background: var(--paper-warm);
+    border: 1px dashed var(--ink);
+    font-size: 11px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .legend-box {
+    width: 20px;
+    height: 12px;
+    border: 1px solid var(--ink);
+  }
+
+  footer {
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 4px double var(--rule);
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .print-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px 18px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    z-index: 100;
+    box-shadow: 3px 3px 0 var(--accent);
+    transition: transform 0.1s;
+  }
+
+  .print-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--accent);
+  }
+
+  @media print {
+    body { background: white; padding: 15mm; font-size: 10px; }
+    .print-btn { display: none; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 18px; page-break-after: avoid; }
+    table { page-break-inside: avoid; font-size: 9px; }
+    th, td { padding: 4px 6px; }
+    .warnings { page-break-inside: avoid; }
+    header { page-break-after: avoid; }
+  }
+
+  @media (max-width: 900px) {
+    body { padding: 20px 12px; font-size: 11px; }
+    h1 { font-size: 32px; }
+    h2 { font-size: 20px; }
+    .meta-bottom { grid-template-columns: repeat(2, 1fr); }
+    table { font-size: 10px; }
+    th, td { padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">⎙ Spausdinti PDF</button>
+
+<header>
+  <div class="meta-top">
+    <span>Techninė dokumentacija</span>
+    <span>Rev. 2026.04 / v1.0</span>
+    <span>KC868-A16v3 · ESP32-S3</span>
+  </div>
+  <h1>Kempervanas</h1>
+  <div class="subtitle">Laidų sujungimo schema &amp; prievadų žemėlapis</div>
+  <dl class="meta-bottom">
+    <div><dt>Kontroleris</dt><dd>KinCony KC868-A16v3</dd></div>
+    <div><dt>Firmware</dt><dd>ESPHome · Arduino framework</dd></div>
+    <div><dt>WiFi AP</dt><dd>Kemperis-Valdymas</dd></div>
+    <div><dt>Web UI</dt><dd>192.168.4.1 : 80</dd></div>
+  </dl>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-box" style="background:var(--used-bg)"></span>Užimta YAML'e</div>
+  <div class="legend-item"><span class="legend-box" style="background:var(--free-bg)"></span>Laisva — galima naudoti</div>
+  <div class="legend-item"><span class="legend-box" style="background:var(--warn-bg)"></span>Dėmesio / įspėjimas</div>
+  <div class="legend-item"><span class="color-swatch" style="background:#d42828"></span>Raudona · maitinimas (+)</div>
+  <div class="legend-item"><span class="color-swatch" style="background:#2a7a3a"></span>Žalia · GND</div>
+  <div class="legend-item"><span class="color-swatch" style="background:#e8c12d"></span>Geltona · duomenys</div>
+  <div class="legend-item"><span class="color-swatch" style="background:#f5f5f5"></span>Balta · laikrodis</div>
+</div>
+
+<!-- ==================== SUJUNGTI JUTIKLIAI ==================== -->
+
+<h2><span class="num">§ 01</span>Sujungtų jutiklių laidyno schema</h2>
+<p class="section-intro">Visi jutikliai, aprašyti <code>kempervanas.yaml</code> konfigūracijoje. Eilutės atitinka fizinį sujungimo planą, įskaitant maitinimo ir I2C magistralės dalybas.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Nr.</th>
+      <th>Mazgas / Vieta</th>
+      <th>Įrenginys (Jutiklis)</th>
+      <th>Laidas / Kojelė</th>
+      <th>Spalva</th>
+      <th>Kur jungti KC dėžutėje</th>
+      <th>Funkcija</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <tr class="group-start used-row"><td colspan="7"><strong>§ 1.1 · VANDENS KOKYBĖ</strong> (toli, 3-gyslis kabelis)</td></tr>
+    <tr class="used-row"><td class="num-cell">5</td><td>Vandens bakas</td><td>TDS jutiklis</td><td>Raudonas (VCC)</td><td><span class="color-swatch" style="background:#d42828"></span>Raudona</td><td>Step-down OUT+ (+5V)</td><td>Maitinimas</td></tr>
+    <tr class="used-row"><td class="num-cell">6</td><td></td><td>TDS jutiklis</td><td>Juodas (GND)</td><td><span class="color-swatch" style="background:#2a7a3a"></span>Žalia</td><td>Step-down OUT− (GND)</td><td>Minusas</td></tr>
+    <tr class="used-row"><td class="num-cell">7</td><td></td><td>TDS jutiklis</td><td>Geltonas (Signal)</td><td><span class="color-swatch" style="background:#9a9a9a"></span>Pilka</td><td><code>A2 (GPIO7)</code></td><td>Analoginis signalas, PPM skaičiavimas</td></tr>
+
+    <tr class="group-start used-row"><td colspan="7"><strong>§ 1.2 · ŠVARUS VANDUO</strong> (toli, 4-gyslis kabelis)</td></tr>
+    <tr class="warn-row"><td class="num-cell">11</td><td>Švaraus vandens bakas</td><td>VL53L0X (lazeris)</td><td>VIN</td><td><span class="color-swatch" style="background:#d42828"></span>Raudona</td><td>Step-down OUT+ <strong>(+3.3V!)</strong></td><td>Maitinimas — TIK 3.3V!</td></tr>
+    <tr class="used-row"><td class="num-cell">12</td><td></td><td>VL53L0X</td><td>GND</td><td><span class="color-swatch" style="background:#2a7a3a"></span>Žalia</td><td>Step-down OUT− (GND)</td><td>Minusas</td></tr>
+    <tr class="used-row"><td class="num-cell">13</td><td></td><td>VL53L0X</td><td>SDA</td><td><span class="color-swatch" style="background:#e8c12d"></span>Geltona</td><td><code>P19 (SDA) → GPIO9</code></td><td>I2C Duomenys (adr. 0x29)</td></tr>
+    <tr class="used-row"><td class="num-cell">14</td><td></td><td>VL53L0X</td><td>SCL</td><td><span class="color-swatch" style="background:#f5f5f5"></span>Balta</td><td><code>P19 (SCL) → GPIO10</code></td><td>I2C Laikrodis</td></tr>
+
+    <tr class="group-start used-row"><td colspan="7"><strong>§ 1.3 · DUJŲ BALIONAS</strong> (toli, 4-gyslis kabelis + svėrimo celės laidai)</td></tr>
+    <tr class="used-row"><td class="num-cell">16</td><td>Dujų skyrius</td><td>HX711 modulis</td><td>VCC</td><td><span class="color-swatch" style="background:#d42828"></span>Raudona</td><td>Step-down OUT+ (+5V)</td><td>Maitinimas</td></tr>
+    <tr class="used-row"><td class="num-cell">17</td><td></td><td>HX711</td><td>GND</td><td><span class="color-swatch" style="background:#2a7a3a"></span>Žalia</td><td>Step-down OUT− (GND)</td><td>Minusas</td></tr>
+    <tr class="warn-row"><td class="num-cell">18</td><td></td><td>HX711</td><td>DT (DOUT)</td><td><span class="color-swatch" style="background:#e8c12d"></span>Geltona</td><td><code>GPIO47</code> <strong>(HT1 gnybtas)</strong></td><td>Duomenys — konfliktas su DHT!</td></tr>
+    <tr class="warn-row"><td class="num-cell">19</td><td></td><td>HX711</td><td>SCK</td><td><span class="color-swatch" style="background:#f5f5f5"></span>Balta</td><td><code>GPIO48</code> <strong>(HT2 gnybtas)</strong></td><td>Laikrodis</td></tr>
+    <tr class="used-row"><td class="num-cell">19a</td><td></td><td>Svėrimo celė → HX711</td><td>E+</td><td><span class="color-swatch" style="background:#d42828"></span>Raudona</td><td>HX711 <code>E+</code></td><td>Sužadinimas +</td></tr>
+    <tr class="used-row"><td class="num-cell">19b</td><td></td><td>Svėrimo celė → HX711</td><td>E−</td><td><span class="color-swatch" style="background:#1a1a1a"></span>Juoda</td><td>HX711 <code>E−</code></td><td>Sužadinimas −</td></tr>
+    <tr class="used-row"><td class="num-cell">19c</td><td></td><td>Svėrimo celė → HX711</td><td>A+</td><td><span class="color-swatch" style="background:#f5f5f5"></span>Balta</td><td>HX711 <code>A+</code></td><td>Signalas +</td></tr>
+    <tr class="used-row"><td class="num-cell">19d</td><td></td><td>Svėrimo celė → HX711</td><td>A−</td><td><span class="color-swatch" style="background:#2a7a3a"></span>Žalia</td><td>HX711 <code>A−</code></td><td>Signalas −</td></tr>
+
+    <tr class="group-start used-row"><td colspan="7"><strong>§ 1.4 · VIETINIAI I2C JUTIKLIAI</strong> (prie pat Kincony, trumpa magistralė)</td></tr>
+    <tr class="used-row"><td class="num-cell">21</td><td>Prie pat KC</td><td>ADXL345 (posvyris)</td><td>VCC</td><td><span class="color-swatch" style="background:#d42828"></span>Raudona</td><td>+3.3V šyna</td><td>Maitinimas (adr. 0x53)</td></tr>
+    <tr class="used-row"><td class="num-cell">22</td><td></td><td>ADXL345</td><td>GND</td><td><span class="color-swatch" style="background:#2a7a3a"></span>Žalia</td><td>GND šyna</td><td>Minusas</td></tr>
+    <tr class="used-row"><td class="num-cell">23</td><td></td><td>ADXL345</td><td>SDA</td><td><span class="color-swatch" style="background:#e8c12d"></span>Geltona</td><td><code>P19 (SDA) → GPIO9</code></td><td>I2C Duomenys (lygiagrečiai)</td></tr>
+    <tr class="used-row"><td class="num-cell">24</td><td></td><td>ADXL345</td><td>SCL</td><td><span class="color-swatch" style="background:#f5f5f5"></span>Balta</td><td><code>P19 (SCL) → GPIO10</code></td><td>I2C Laikrodis (lygiagrečiai)</td></tr>
+    <tr class="used-row"><td class="num-cell">25</td><td>Kajutė</td><td>BMP180 (temp. + atm. slėgis)</td><td>VCC</td><td><span class="color-swatch" style="background:#d42828"></span>Raudona</td><td>+3.3V šyna</td><td>Maitinimas</td></tr>
+    <tr class="used-row"><td class="num-cell">26</td><td></td><td>BMP180</td><td>GND</td><td><span class="color-swatch" style="background:#2a7a3a"></span>Žalia</td><td>GND šyna</td><td>Minusas</td></tr>
+    <tr class="used-row"><td class="num-cell">27</td><td></td><td>BMP180</td><td>SDA</td><td><span class="color-swatch" style="background:#e8c12d"></span>Geltona</td><td><code>P19 (SDA) → GPIO9</code></td><td>I2C Duomenys</td></tr>
+    <tr class="used-row"><td class="num-cell">28</td><td></td><td>BMP180</td><td>SCL</td><td><span class="color-swatch" style="background:#f5f5f5"></span>Balta</td><td><code>P19 (SCL) → GPIO10</code></td><td>I2C Laikrodis</td></tr>
+
+    <tr class="group-start used-row"><td colspan="7"><strong>§ 1.5 · 4G + GPS MODULIS</strong> (pakeičia anksčiau planuotą NEO-M8N)</td></tr>
+    <tr class="warn-row"><td class="num-cell">30</td><td>Komunikacijų skyrius</td><td>A7670E (GSM+GPS)</td><td>VCC (<strong>4V!</strong>)</td><td><span class="color-swatch" style="background:#d42828"></span>Raudona</td><td><strong>Atskiras buck 12V→4V</strong> (NE iš KC 5V!)</td><td>Maitinimas — ~2A piko srovė!</td></tr>
+    <tr class="used-row"><td class="num-cell">31</td><td></td><td>A7670E</td><td>GND</td><td><span class="color-swatch" style="background:#2a7a3a"></span>Žalia</td><td>Bendras GND (KC + buck)</td><td>Minusas</td></tr>
+    <tr class="used-row"><td class="num-cell">32</td><td></td><td>A7670E</td><td>TXD (modulio)</td><td><span class="color-swatch" style="background:#e8c12d"></span>Geltona</td><td><code>KC RX → GPIO41</code></td><td>UART: modulis → ESP</td></tr>
+    <tr class="used-row"><td class="num-cell">33</td><td></td><td>A7670E</td><td>RXD (modulio)</td><td><span class="color-swatch" style="background:#f5f5f5"></span>Balta</td><td><code>KC TX → GPIO40</code></td><td>UART: ESP → modulis</td></tr>
+    <tr class="used-row"><td class="num-cell">34</td><td></td><td>A7670E</td><td>PWR_KEY</td><td><span class="color-swatch" style="background:#7a4b9e"></span>Violetinė</td><td>GND per 1s impulsą</td><td>Įjungimas (jei auto-on neveikia)</td></tr>
+    <tr class="used-row"><td class="num-cell">35</td><td></td><td>A7670E</td><td>GSM antena</td><td>koax.</td><td>SMA jungtis (MAIN)</td><td>GSM signalas</td></tr>
+    <tr class="used-row"><td class="num-cell">36</td><td></td><td>A7670E</td><td>GPS antena</td><td>koax.</td><td>SMA jungtis (GPS)</td><td>GPS palydovų imtuvas</td></tr>
+    <tr class="used-row"><td class="num-cell">37</td><td></td><td>A7670E</td><td>SIM kortelė</td><td>—</td><td>SIM lizdas modulyje</td><td>Tele2 / Telia / Bitė</td></tr>
+
+    <tr class="group-start used-row"><td colspan="7"><strong>§ 1.6 · 220V TINKLO DETEKTORIUS</strong></td></tr>
+    <tr class="used-row"><td class="num-cell">39</td><td>Prie 220V įvado</td><td>AC optokupleris (PC817 + R)</td><td>AC+</td><td><span class="color-swatch" style="background:#6d4c3d"></span>Ruda / L</td><td>Fazė (per 100kΩ varžą)</td><td>Tinklo detekcija</td></tr>
+    <tr class="used-row"><td class="num-cell">40</td><td></td><td>Optokupleris</td><td>AC−</td><td><span class="color-swatch" style="background:#2a5f9e"></span>Mėlyna / N</td><td>Nulis</td><td>—</td></tr>
+    <tr class="used-row"><td class="num-cell">41</td><td></td><td>Optokupleris (DC pusė)</td><td>Collector</td><td><span class="color-swatch" style="background:#e8c12d"></span>Geltona</td><td><code>IN9</code> (pcf_in2 pin 0)</td><td>Skaitmeninis (invertuotas YAML'e)</td></tr>
+    <tr class="used-row"><td class="num-cell">42</td><td></td><td>Optokupleris (DC pusė)</td><td>Emitter</td><td><span class="color-swatch" style="background:#2a7a3a"></span>Žalia</td><td>GND</td><td>Minusas</td></tr>
+
+    <tr class="group-start"><td colspan="7"><strong>§ 1.7 · KABELIŲ APSAUGA</strong></td></tr>
+    <tr><td class="num-cell">44</td><td>Visi 3 ilgieji kabeliai</td><td>Ekranuotas kabelis</td><td>Metalinis šarvas</td><td>(pynė)</td><td>Step-down OUT− (GND) — tik viename gale!</td><td>Apsauga nuo EMI trikdžių</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================== LAISVOS RELĖS ==================== -->
+
+<h2><span class="num">§ 02</span>Laisvos relių išėjimų jungtys</h2>
+<p class="section-intro">KC868-A16v3 turi 16 relių išėjimų (OUT1–OUT16). YAML'e apibrėžti pirmieji 10. Likę 6 — laisvi, paruošti plėtrai.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Nr.</th>
+      <th>KC gnybtas</th>
+      <th>PCF8574 / pinas</th>
+      <th>Būsena</th>
+      <th>Priskirta funkcija</th>
+      <th>Siūlomas panaudojimas</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="used-row"><td class="num-cell">R01</td><td><code>OUT1</code></td><td>0x24 / pin 0</td><td><span class="badge badge-used">Užimta</span></td><td>Apšvietimas 1</td><td>—</td></tr>
+    <tr class="used-row"><td class="num-cell">R02</td><td><code>OUT2</code></td><td>0x24 / pin 1</td><td><span class="badge badge-used">Užimta</span></td><td>Apšvietimas 2</td><td>—</td></tr>
+    <tr class="used-row"><td class="num-cell">R03</td><td><code>OUT3</code></td><td>0x24 / pin 2</td><td><span class="badge badge-used">Užimta</span></td><td>Apšvietimas 3</td><td>—</td></tr>
+    <tr class="used-row"><td class="num-cell">R04</td><td><code>OUT4</code></td><td>0x24 / pin 3</td><td><span class="badge badge-used">Užimta</span></td><td>Apšvietimas 4</td><td>—</td></tr>
+    <tr class="used-row"><td class="num-cell">R05</td><td><code>OUT5</code></td><td>0x24 / pin 4</td><td><span class="badge badge-used">Užimta</span></td><td>Apšvietimas 5</td><td>—</td></tr>
+    <tr class="used-row"><td class="num-cell">R06</td><td><code>OUT6</code></td><td>0x24 / pin 5</td><td><span class="badge badge-used">Užimta</span></td><td>Apšvietimas 6</td><td>—</td></tr>
+    <tr class="used-row"><td class="num-cell">R07</td><td><code>OUT7</code></td><td>0x24 / pin 6</td><td><span class="badge badge-used">Užimta</span></td><td>Apšvietimas 7</td><td>—</td></tr>
+    <tr class="used-row"><td class="num-cell">R08</td><td><code>OUT8</code></td><td>0x24 / pin 7</td><td><span class="badge badge-used">Užimta</span></td><td>Apšvietimas 8</td><td>—</td></tr>
+    <tr class="used-row"><td class="num-cell">R09</td><td><code>OUT9</code></td><td>0x25 / pin 0</td><td><span class="badge badge-used">Užimta</span></td><td>Invertoriaus P-MOSFET valdymas</td><td>Green Cell 1500W ON/OFF</td></tr>
+    <tr class="used-row"><td class="num-cell">R10</td><td><code>OUT10</code></td><td>0x25 / pin 1</td><td><span class="badge badge-used">Užimta</span></td><td>UV LED (sterilizacija)</td><td>—</td></tr>
+    <tr class="free-row"><td class="num-cell">R11</td><td><code>OUT11</code></td><td>0x25 / pin 2</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Vandens siurblys (12V)</td></tr>
+    <tr class="free-row"><td class="num-cell">R12</td><td><code>OUT12</code></td><td>0x25 / pin 3</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Ištraukiamas ventiliatorius (WC / virtuvė)</td></tr>
+    <tr class="free-row"><td class="num-cell">R13</td><td><code>OUT13</code></td><td>0x25 / pin 4</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Dyzelinio šildytuvo ON signalas</td></tr>
+    <tr class="free-row"><td class="num-cell">R14</td><td><code>OUT14</code></td><td>0x25 / pin 5</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Dušo vandens šildytuvas (12V boileris)</td></tr>
+    <tr class="free-row"><td class="num-cell">R15</td><td><code>OUT15</code></td><td>0x25 / pin 6</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Šaldytuvo ECO režimo perjungimas</td></tr>
+    <tr class="free-row"><td class="num-cell">R16</td><td><code>OUT16</code></td><td>0x25 / pin 7</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Išorinis 220V/invertorius perjungimas</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================== LAISVI ĮĖJIMAI ==================== -->
+
+<h2><span class="num">§ 03</span>Laisvi skaitmeninių įėjimų prievadai</h2>
+<p class="section-intro">16 įėjimų kanalai (IN1–IN16). Tik IN9 užimtas 220V detektoriui. Likusieji 15 — laukia panaudojimo.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Nr.</th>
+      <th>KC gnybtas</th>
+      <th>PCF8574 / pinas</th>
+      <th>Būsena</th>
+      <th>Priskirta funkcija</th>
+      <th>Siūlomas panaudojimas</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="free-row"><td class="num-cell">I01</td><td><code>IN1</code></td><td>0x21 / pin 0</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Sieninis mygtukas · šviesa 1</td></tr>
+    <tr class="free-row"><td class="num-cell">I02</td><td><code>IN2</code></td><td>0x21 / pin 1</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Sieninis mygtukas · šviesa 2</td></tr>
+    <tr class="free-row"><td class="num-cell">I03</td><td><code>IN3</code></td><td>0x21 / pin 2</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Sieninis mygtukas · šviesa 3</td></tr>
+    <tr class="free-row"><td class="num-cell">I04</td><td><code>IN4</code></td><td>0x21 / pin 3</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Sieninis mygtukas · šviesa 4</td></tr>
+    <tr class="free-row"><td class="num-cell">I05</td><td><code>IN5</code></td><td>0x21 / pin 4</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Sieninis mygtukas · šviesa 5</td></tr>
+    <tr class="free-row"><td class="num-cell">I06</td><td><code>IN6</code></td><td>0x21 / pin 5</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Sieninis mygtukas · šviesa 6</td></tr>
+    <tr class="free-row"><td class="num-cell">I07</td><td><code>IN7</code></td><td>0x21 / pin 6</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Sieninis mygtukas · šviesa 7</td></tr>
+    <tr class="free-row"><td class="num-cell">I08</td><td><code>IN8</code></td><td>0x21 / pin 7</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Master OFF / panikos mygtukas</td></tr>
+    <tr class="used-row"><td class="num-cell">I09</td><td><code>IN9</code></td><td>0x22 / pin 0</td><td><span class="badge badge-used">Užimta</span></td><td>220V tinklo detektorius</td><td>— (invertuotas signalas)</td></tr>
+    <tr class="free-row"><td class="num-cell">I10</td><td><code>IN10</code></td><td>0x22 / pin 1</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Durų kontaktas (magnetinis)</td></tr>
+    <tr class="free-row"><td class="num-cell">I11</td><td><code>IN11</code></td><td>0x22 / pin 2</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Langų kontaktas (apsauga)</td></tr>
+    <tr class="free-row"><td class="num-cell">I12</td><td><code>IN12</code></td><td>0x22 / pin 3</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>PIR judesio daviklis salone</td></tr>
+    <tr class="free-row"><td class="num-cell">I13</td><td><code>IN13</code></td><td>0x22 / pin 4</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Dūmų / CO daviklis (NO kontaktas)</td></tr>
+    <tr class="free-row"><td class="num-cell">I14</td><td><code>IN14</code></td><td>0x22 / pin 5</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Vandens min. lygio plūdė</td></tr>
+    <tr class="free-row"><td class="num-cell">I15</td><td><code>IN15</code></td><td>0x22 / pin 6</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Pilkojo vandens bako plūdė</td></tr>
+    <tr class="free-row"><td class="num-cell">I16</td><td><code>IN16</code></td><td>0x22 / pin 7</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Uždegimo (ACC) signalas iš Crafter</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================== KITI PRIEVADAI ==================== -->
+
+<h2><span class="num">§ 04</span>Kiti KC prievadai (analoginiai, UART, RS485)</h2>
+<p class="section-intro">Specializuoti prievadai, kurių dalis YAML'e neužimta. Jie tinka tiek jutikliams, tiek komunikacijai su išoriniais įrenginiais.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Nr.</th>
+      <th>KC gnybtas</th>
+      <th>GPIO / linija</th>
+      <th>Būsena</th>
+      <th>Priskirta funkcija</th>
+      <th>Siūlomas panaudojimas</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="free-row"><td class="num-cell">A1</td><td><code>A1</code></td><td>GPIO ADC1_CH0</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Baterijos įtampos dalytojas (backup matavimas)</td></tr>
+    <tr class="used-row"><td class="num-cell">A2</td><td><code>A2</code></td><td>GPIO7 (ADC1_CH6)</td><td><span class="badge badge-used">Užimta</span></td><td>TDS vandens kokybė</td><td>—</td></tr>
+    <tr class="free-row"><td class="num-cell">A3</td><td><code>A3</code></td><td>GPIO ADC1</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>MQ-2 / MQ-5 dujų nuotėkio daviklis (LPG)</td></tr>
+    <tr class="free-row"><td class="num-cell">A4</td><td><code>A4</code></td><td>GPIO ADC1</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>LDR šviesos daviklis (auto-light)</td></tr>
+    <tr class="warn-row"><td class="num-cell">H1</td><td><code>HT1</code></td><td>GPIO47</td><td><span class="badge badge-warn">Užimta HX711</span></td><td>HX711 DOUT</td><td>Konfliktas — negali dėti DHT!</td></tr>
+    <tr class="warn-row"><td class="num-cell">H2</td><td><code>HT2</code></td><td>GPIO48</td><td><span class="badge badge-warn">Užimta HX711</span></td><td>HX711 SCK</td><td>Konfliktas — negali dėti DHT!</td></tr>
+    <tr class="free-row"><td class="num-cell">H3</td><td><code>HT3</code></td><td>GPIO38</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>AM2301 (DHT) kajutės drėgmei + temp.</td></tr>
+    <tr class="free-row"><td class="num-cell">U1</td><td><code>UART</code> (KC header)</td><td>GPIO40/41</td><td><span class="badge badge-used">Užimta</span></td><td>A7670E GSM+GPS</td><td>—</td></tr>
+    <tr class="free-row"><td class="num-cell">R1</td><td><code>RS485 A/B/GND</code></td><td>(atskiras MAX485)</td><td><span class="badge badge-free">Rezervuota</span></td><td>Dar nepridėta YAML'e</td><td>Junctek šuntas (slave 2) + Renogy DCC50S (slave 1) per Modbus RTU</td></tr>
+    <tr class="free-row"><td class="num-cell">L1</td><td><code>LAN</code></td><td>W5500 Ethernet</td><td><span class="badge badge-free">LAISVA</span></td><td>—</td><td>Atsarginis ryšys vietoje WiFi</td></tr>
+    <tr class="used-row"><td class="num-cell">U0</td><td><code>USB-C</code></td><td>USB-Serial-JTAG</td><td><span class="badge badge-used">Programavimas</span></td><td>Flash + logger + debug</td><td>Per web.esphome.io</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================== ĮSPĖJIMAI ==================== -->
+
+<div class="warnings">
+  <h3>⚠ Svarbūs techniniai pastebėjimai</h3>
+  <ol>
+    <li><strong>HX711 užima HT1/HT2 gnybtus.</strong> YAML'e <code>GPIO47/48</code> skirti HX711. KC868-A16v3 šie pinai pažymėti kaip <em>DHT jutiklių</em> prievadai. Jei norėsi AM2301 drėgmės matavimo — reikės naudoti <code>HT3 (GPIO38)</code>.</li>
+    <li><strong>A7670E maitinimas atskiras.</strong> NETRAUK iš bendro 5V step-down. Modulis siuntimo metu paima iki 2A. Reikia atskiro buck converter'io (pvz. MP1584EN), nustatyto į 4.0V tiesiai iš 12V baterijos.</li>
+    <li><strong>VL53L0X yra 3.3V įrenginys.</strong> NEJUNK prie 5V — sugadinsi. Jei step-down yra 5V, reikės papildomo AMS1117-3.3 arba atskiros 3.3V linijos iš KC.</li>
+    <li><strong>I2C dažnis 50 kHz</strong> (YAML: <code>frequency: 50kHz</code>). Tai žemesnis nei standartinis 100kHz — gerai ilgesniems kabeliams, bet debug'inant verta žinoti.</li>
+    <li><strong>I2C bendras pritraukimas.</strong> Visi 3 I2C jutikliai (VL53L0X, ADXL345, BMP180) dalinasi ta pačia SDA/SCL magistrale. Užtenka vienų 4.7kΩ pull-up rezistorių į 3.3V.</li>
+    <li><strong>RS485 Modbus dar neintegruotas.</strong> Junctek + Renogy į YAML bus pridėti atskiru žingsniu. Fiziškai prievadas rezervuotas, konfigūracija laukia.</li>
+    <li><strong>Ekranuotų kabelių šarvas</strong> jungiamas į GND tik <em>viename gale</em> (prie KC). Abiejų galų jungimas sukuria „ground loop" triukšmą.</li>
+  </ol>
+</div>
+
+<footer>
+  Kempervanas · KC868-A16v3 · ESPHome · v1.0 · 2026
+</footer>
+
+</body>
+</html>

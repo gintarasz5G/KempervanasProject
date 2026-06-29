@@ -1,0 +1,445 @@
+esphome:
+  name: kempervanas
+  friendly_name: Kempervanas
+  on_boot:
+    priority: 250
+    then:
+      - lambda: |-
+          uint8_t data[2] = {0x2D, 0x08};
+          id(i2c_bus).write(0x53, data, 2, true);
+      - delay: 1s
+      - script.execute: a7670e_init
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+
+debug:
+
+wifi:
+  ap:
+    ssid: "Kemperis-Valdymas"
+    password: "kemperis123"
+
+web_server:
+  port: 80
+  version: 2
+  local: true
+
+api:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+
+logger:
+  level: DEBUG
+  hardware_uart: USB_SERIAL_JTAG
+
+i2c:
+  - id: i2c_bus
+    sda: GPIO9
+    scl: GPIO10
+    scan: true
+    frequency: 50kHz
+
+uart:
+  - id: uart_a7670e
+    tx_pin: GPIO40
+    rx_pin: GPIO41
+    baud_rate: 115200
+    rx_buffer_size: 2048
+
+pcf8574:
+  - id: pcf_out1
+    address: 0x24
+  - id: pcf_out2
+    address: 0x25
+  - id: pcf_in1
+    address: 0x21
+  - id: pcf_in2
+    address: 0x22
+
+globals:
+  - id: uart_buf
+    type: std::string
+    initial_value: '""'
+  - id: sms_sender
+    type: std::string
+    initial_value: '""'
+  - id: gsm_signal_val
+    type: int
+    initial_value: "0"
+  - id: gsm_operator
+    type: std::string
+    initial_value: '"Ieškoma..."'
+  - id: sim_status
+    type: std::string
+    initial_value: '"Tikrinama..."'
+  - id: gps_lat
+    type: float
+    initial_value: "0.0"
+  - id: gps_lon
+    type: float
+    initial_value: "0.0"
+  - id: gps_alt
+    type: float
+    initial_value: "0.0"
+  - id: gps_speed_val
+    type: float
+    initial_value: "0.0"
+  - id: gps_course_val
+    type: float
+    initial_value: "0.0"
+  - id: gps_fix
+    type: bool
+    initial_value: "false"
+  - id: cal_roll
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: cal_pitch
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: trip_odometer
+    type: float
+    restore_value: true
+    initial_value: '0.0'
+  - id: last_pressure
+    type: float
+    initial_value: '1013.25'
+  - id: initial_baro_alt
+    type: float
+    initial_value: 'NAN'
+
+number:
+  - platform: template
+    name: "Bako TUSCIAS (cm)"
+    id: tank_fresh_empty
+    optimistic: true
+    restore_value: true
+    min_value: 0
+    max_value: 200
+    step: 1
+    unit_of_measurement: "cm"
+    initial_value: 40
+  - platform: template
+    name: "Bako PILNAS (cm)"
+    id: tank_fresh_full
+    optimistic: true
+    restore_value: true
+    min_value: 0
+    max_value: 200
+    step: 1
+    unit_of_measurement: "cm"
+    initial_value: 5
+
+button:
+  - platform: template
+    name: "Kalibruoti Posvyri"
+    on_press:
+      - lambda: |-
+          id(cal_roll) += id(roll_sensor).state;
+          id(cal_pitch) += id(pitch_sensor).state;
+  - platform: template
+    name: "Nulinti kelionės atstumą"
+    on_press:
+      - lambda: 'id(trip_odometer) = 0.0;'
+
+sensor:
+  # --- BAKAS ---
+  - platform: vl53l0x
+    id: fresh_water_laser
+    address: 0x29
+    update_interval: 2s
+
+  - platform: template
+    name: "Vandens lygis (cm)"
+    id: fresh_water_cm
+    unit_of_measurement: "cm"
+    lambda: 'return id(fresh_water_laser).state * 100.0;'
+
+  - platform: template
+    name: "Bako užpildymas (%)"
+    id: tank_fresh_pct
+    unit_of_measurement: "%"
+    lambda: |-
+      float current = id(fresh_water_cm).state;
+      float empty = id(tank_fresh_empty).state;
+      float full = id(tank_fresh_full).state;
+      if (abs(empty - full) < 0.1) return 0;
+      float pct = (current - empty) / (full - empty) * 100.0;
+      return clamp(pct, 0.0f, 100.0f);
+
+  # --- TDS ---
+  - platform: adc
+    pin: GPIO7
+    id: tds_volts
+    name: "TDS Įtampa"
+    attenuation: 12db
+    update_interval: 5s
+
+  - platform: template
+    name: "Vandens Kokybė"
+    id: tds_ppm
+    unit_of_measurement: "PPM"
+    lambda: |-
+      float v = id(tds_volts).state;
+      if (isnan(v) || v <= 0.05) return 0.0;
+      return (133.42 * v * v * v - 255.86 * v * v + 857.39 * v) * 0.5;
+
+  # --- IMU ---
+  - platform: template
+    name: "Posvyris KD"
+    id: roll_sensor
+    unit_of_measurement: "deg"
+    update_interval: 0.5s
+    lambda: |-
+      uint8_t reg = 0x32; uint8_t raw[6];
+      id(i2c_bus).write(0x53, &reg, 1, false);
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return {};
+      int16_t y = (int16_t)(raw[2] | (raw[3] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      return (atan2((float)y * 0.004f, (float)z * 0.004f) * 180.0f / M_PI) - id(cal_roll);
+
+  - platform: template
+    name: "Posvyris PG"
+    id: pitch_sensor
+    unit_of_measurement: "deg"
+    update_interval: 0.5s
+    lambda: |-
+      uint8_t reg = 0x32; uint8_t raw[6];
+      id(i2c_bus).write(0x53, &reg, 1, false);
+      if (id(i2c_bus).read(0x53, raw, 6) != 0) return {};
+      int16_t x = (int16_t)(raw[0] | (raw[1] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      return (atan2((float)x * 0.004f, (float)z * 0.004f) * 180.0f / M_PI) - id(cal_pitch);
+
+  # --- GPS ---
+  - platform: template
+    name: "Greitis"
+    unit_of_measurement: "km/h"
+    lambda: 'return id(gps_speed_val);'
+    update_interval: 2s
+
+  - platform: template
+    name: "GPS Aukštis"
+    unit_of_measurement: "m"
+    lambda: 'return id(gps_alt);'
+    update_interval: 2s
+
+  - platform: template
+    name: "Kelionės atstumas"
+    unit_of_measurement: "km"
+    lambda: 'return id(trip_odometer);'
+    update_interval: 10s
+
+  # --- BMP (PATAISYTA) ---
+  - platform: bmp085
+    temperature:
+      name: "Temperatūra (BMP)"
+      id: bmp_temp
+    pressure:
+      name: "Atmosferos slėgis"
+      id: bmp_pressure
+    update_interval: 10s
+
+  - platform: template
+    name: "Baro Aukštis (Absoliutus)"
+    id: baro_alt_abs
+    unit_of_measurement: "m"
+    accuracy_decimals: 0
+    lambda: |-
+      if (isnan(id(bmp_pressure).state)) return NAN;
+      // Standartinė formulė aukščiui pagal slėgį skaičiuoti
+      return (1.0 - pow(id(bmp_pressure).state / 1013.25, 0.190284)) * 44330.0;
+    update_interval: 10s
+
+  - platform: template
+    name: "Aukščio pokytis (Baro)"
+    unit_of_measurement: "m"
+    accuracy_decimals: 1
+    lambda: |-
+      if (isnan(id(baro_alt_abs).state)) return NAN;
+      if (isnan(id(initial_baro_alt))) {
+        id(initial_baro_alt) = id(baro_alt_abs).state;
+      }
+      return id(baro_alt_abs).state - id(initial_baro_alt);
+    update_interval: 10s
+
+  # --- DIAGNOSTIKA ---
+  - platform: uptime
+    name: "Sistemos darbo laikas"
+  - platform: debug
+    free:
+      name: "Laisva atmintis (Heap)"
+
+text_sensor:
+  - platform: template
+    name: "GSM Operatorius"
+    lambda: |-
+      if (id(gsm_operator) == "24602") return std::string("Tele2");
+      if (id(gsm_operator) == "24601") return std::string("Telia");
+      if (id(gsm_operator) == "24603") return std::string("Bitė");
+      return id(gsm_operator);
+
+  - platform: template
+    name: "GPS Koordinatės"
+    lambda: |-
+      if (id(gps_fix)) {
+        char buf[64];
+        sprintf(buf, "%.6f, %.6f", id(gps_lat), id(gps_lon));
+        return std::string(buf);
+      }
+      return std::string("Ieškoma palydovų...");
+
+  - platform: template
+    name: "Judėjimo kryptis"
+    lambda: |-
+      float c = id(gps_course_val);
+      if (id(gps_speed_val) < 2.0) return std::string("Stovi");
+      if (c >= 337.5 || c < 22.5) return std::string("Šiaurė");
+      if (c >= 22.5 && c < 67.5) return std::string("Šiaurės Rytai");
+      if (c >= 67.5 && c < 112.5) return std::string("Rytai");
+      if (c >= 112.5 && c < 157.5) return std::string("Pietryčiai");
+      if (c >= 157.5 && c < 202.5) return std::string("Pietūs");
+      if (c >= 202.5 && c < 247.5) return std::string("Pietvakariai");
+      if (c >= 247.5 && c < 292.5) return std::string("Vakarai");
+      if (c >= 292.5 && c < 337.5) return std::string("Šiaurės Vakarai");
+      return std::string("Skaičiuojama...");
+
+  - platform: template
+    name: "Orų prognozė"
+    lambda: |-
+      float diff = id(bmp_pressure).state - id(last_pressure);
+      id(last_pressure) = id(bmp_pressure).state;
+      if (isnan(diff) || abs(diff) < 0.1) return std::string("Stabilu");
+      if (diff > 0.5) return std::string("Gėrėja");
+      if (diff < -0.5) return std::string("Prastėja (Audra?)");
+      return std::string("Kinta");
+
+  - platform: template
+    name: "SIM Statusas"
+    lambda: return id(sim_status);
+
+binary_sensor:
+  - platform: gpio
+    id: tinklas_220v
+    name: "Išorinis 220V"
+    device_class: power
+    pin:
+      pcf8574: pcf_in2
+      number: 0
+      mode: INPUT
+      inverted: true
+
+script:
+  - id: a7670e_init
+    then:
+      - uart.write: "AT\r\n"
+      - delay: 500ms
+      - uart.write: "AT+CPIN?\r\n"
+      - delay: 500ms
+      - uart.write: "AT+CMGF=1\r\n"
+      - delay: 500ms
+      - uart.write: "AT+CNMI=2,2,0,0,0\r\n"
+      - delay: 500ms
+      - uart.write: "AT+CGNSSPWR=1\r\n"
+
+  - id: send_status_sms
+    parameters:
+      target_num: std::string
+    then:
+      - uart.write: !lambda |-
+          std::string cmd = "AT+CMGS=\"" + target_num + "\"\r\n";
+          return std::vector<uint8_t>(cmd.begin(), cmd.end());
+      - delay: 1s
+      - uart.write: !lambda |-
+          char status_msg[160];
+          sprintf(status_msg, 
+            "Kemperis:\nVanduo: %.0f%% (%.0fcm)\nTemp: %.1f C\n220V: %s\nGreitis: %.0f km/h\nAukstis (GPS/Baro): %.0f/%.0f m",
+            id(tank_fresh_pct).state, id(fresh_water_cm).state, 
+            id(bmp_temp).state,
+            id(tinklas_220v).state ? "YRA" : "NERA",
+            id(gps_speed_val), id(gps_alt), id(baro_alt_abs).state
+          );
+          std::string final_msg = std::string(status_msg) + "\x1A";
+          return std::vector<uint8_t>(final_msg.begin(), final_msg.end());
+
+interval:
+  - interval: 200ms
+    then:
+      - lambda: |-
+          uint8_t byte;
+          while (id(uart_a7670e).available() > 0) {
+            if (id(uart_a7670e).read_byte(&byte)) {
+              char c = (char)byte;
+              id(uart_buf) += c;
+              if (c == '\n') {
+                std::string line = id(uart_buf);
+                id(uart_buf) = "";
+
+                if (line.find("+CMT:") != std::string::npos) {
+                  size_t start = line.find("\"") + 1;
+                  size_t end = line.find("\"", start);
+                  id(sms_sender) = line.substr(start, end - start);
+                }
+                if (line.find("Status?") != std::string::npos) {
+                  if (!id(sms_sender).empty()) id(send_status_sms).execute(id(sms_sender));
+                }
+
+                if (line.find("+CGNSSINFO:") != std::string::npos) {
+                  size_t start = line.find(":") + 1;
+                  std::string data = line.substr(start);
+                  std::vector<std::string> p;
+                  size_t pos = 0;
+                  while ((pos = data.find(",")) != std::string::npos) {
+                    p.push_back(data.substr(0, pos));
+                    data.erase(0, pos + 1);
+                  }
+                  p.push_back(data);
+                  
+                  if (p.size() > 10 && !p[0].empty()) {
+                    float rlat = atof(p[0].c_str());
+                    int dlat = (int)(rlat / 100);
+                    id(gps_lat) = dlat + (rlat - (dlat * 100.0)) / 60.0;
+                    if (p[1] == "S") id(gps_lat) *= -1;
+                    float rlon = atof(p[2].c_str());
+                    int dlon = (int)(rlon / 100);
+                    id(gps_lon) = dlon + (rlon - (dlon * 100.0)) / 60.0;
+                    if (p[3] == "W") id(gps_lon) *= -1;
+                    
+                    id(gps_alt) = atof(p[8].c_str());
+                    id(gps_speed_val) = atof(p[9].c_str()) * 1.852;
+                    id(gps_course_val) = atof(p[10].c_str());
+                    id(gps_fix) = true;
+                    
+                    if (id(gps_speed_val) > 3.0) id(trip_odometer) += id(gps_speed_val) * 0.0055;
+                  }
+                }
+
+                if (line.find("+COPS:") != std::string::npos) {
+                  size_t q1 = line.find('"'); size_t q2 = (q1 != std::string::npos) ? line.find('"', q1+1) : std::string::npos;
+                  if (q1 != std::string::npos && q2 != std::string::npos) id(gsm_operator) = line.substr(q1+1, q2-q1-1);
+                }
+
+                if (line.find("+CSQ:") != std::string::npos) {
+                  size_t pos = line.find(":") + 2;
+                  id(gsm_signal_val) = atoi(line.substr(pos, 2).c_str());
+                }
+                if (line.find("READY") != std::string::npos) id(sim_status) = "READY";
+              }
+            }
+          }
+
+  - interval: 20s
+    then:
+      - uart.write: "AT+CSQ\r\n"
+      - delay: 500ms
+      - uart.write: "AT+COPS?\r\n"
+      - delay: 500ms
+      - uart.write: "AT+CGNSSINFO\r\n"
+      - delay: 500ms
+      - uart.write: "AT+CPIN?\r\n"

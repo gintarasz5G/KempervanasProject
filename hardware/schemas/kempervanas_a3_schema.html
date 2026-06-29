@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<title>Kempervanas — A3 Schema · KC868-A16v3</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;7..144,600;9..144,900&display=swap');
+
+  @page {
+    size: A3 landscape;
+    margin: 0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #b5ad95;
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .page {
+    width: 420mm;
+    height: 297mm;
+    background: #f5f1e8;
+    position: relative;
+    box-shadow: 0 10px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+
+  svg { display: block; width: 100%; height: 100%; }
+
+  .print-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 22px;
+    background: #1a1a1a;
+    color: #f5f1e8;
+    border: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    z-index: 100;
+    box-shadow: 4px 4px 0 #b8410e;
+    transition: all 0.1s;
+  }
+
+  .print-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0 #b8410e;
+  }
+
+  @media print {
+    body { background: white; padding: 0; display: block; }
+    .page { box-shadow: none; width: 100%; height: 100vh; margin: 0; }
+    .print-btn { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<button class="print-btn" onclick="window.print()">⎙ Spausdinti A3</button>
+
+<div class="page">
+<svg viewBox="0 0 1400 990" xmlns="http://www.w3.org/2000/svg">
+
+<defs>
+  <style>
+    text { font-family: 'JetBrains Mono', monospace; fill: #1a1a1a; }
+    .title-font { font-family: 'Fraunces', serif; }
+    .xs { font-size: 7.5px; }
+    .sm { font-size: 9px; }
+    .md { font-size: 11px; }
+    .lg { font-size: 13px; font-weight: 700; }
+    .xl { font-size: 16px; font-weight: 700; }
+    .pin { font-size: 6.5px; font-weight: 700; }
+    .silk { fill: #e8d8b0; font-family: 'JetBrains Mono', monospace; }
+  </style>
+
+  <!-- Dot marker for callout ends -->
+  <marker id="dot" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="5" markerHeight="5">
+    <circle cx="4" cy="4" r="3" fill="#1a1a1a"/>
+  </marker>
+
+  <!-- Paper texture -->
+  <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#c4bda8" stroke-width="0.3"/>
+  </pattern>
+</defs>
+
+<!-- Background -->
+<rect width="1400" height="990" fill="#f5f1e8"/>
+<rect width="1400" height="990" fill="url(#grid)" opacity="0.6"/>
+
+<!-- Outer frame (double line engineering style) -->
+<rect x="14" y="14" width="1372" height="962" fill="none" stroke="#1a1a1a" stroke-width="3"/>
+<rect x="22" y="22" width="1356" height="946" fill="none" stroke="#1a1a1a" stroke-width="0.8"/>
+
+<!-- ═══════════════════ TITLE BLOCK ═══════════════════ -->
+<g>
+  <text x="45" y="62" class="title-font" font-size="42" font-weight="900">KEMPERVANAS</text>
+  <text x="45" y="88" class="title-font" font-size="14" font-style="italic" fill="#3d3d3d">
+    Kincony KC868-A16v3 · prievadų žemėlapis · spausdinimui A3 (420 × 297 mm)
+  </text>
+
+  <!-- Meta block top-right -->
+  <g text-anchor="end" fill="#1a1a1a">
+    <text x="1355" y="40" class="xs" letter-spacing="2.2">TECHNINĖ SCHEMA</text>
+    <text x="1355" y="54" class="xs" letter-spacing="2.2">REV 2026.04 · v1.0</text>
+    <text x="1355" y="68" class="xs" letter-spacing="2.2">ESP32-S3 · ESPHOME</text>
+    <text x="1355" y="82" class="xs" letter-spacing="2.2">LAPAS 01 / 01</text>
+    <text x="1355" y="96" class="xs" letter-spacing="2.2" fill="#b8410e" font-weight="700">MASTABAS 1:1 A3</text>
+  </g>
+
+  <line x1="45" y1="108" x2="1355" y2="108" stroke="#1a1a1a" stroke-width="1.5"/>
+</g>
+
+<!-- ═══════════════════ BOARD ILLUSTRATION ═══════════════════ -->
+<g transform="translate(400, 280)">
+
+  <!-- PCB Shadow -->
+  <rect x="4" y="4" width="600" height="400" fill="#1a1a1a" opacity="0.15" rx="6"/>
+
+  <!-- Main PCB body (dark green solder mask) -->
+  <rect x="0" y="0" width="600" height="400" fill="#1d4a2e" stroke="#0a2a18" stroke-width="1.5" rx="6"/>
+
+  <!-- Inner silkscreen border -->
+  <rect x="12" y="12" width="576" height="376" fill="none" stroke="#e8d8b0" stroke-width="0.5" stroke-dasharray="2,3" opacity="0.6"/>
+
+  <!-- PCB brand silkscreen -->
+  <text x="300" y="30" text-anchor="middle" class="silk" font-size="11" font-weight="700" letter-spacing="3">KINCONY · KC868-A16v3</text>
+  <text x="300" y="43" text-anchor="middle" class="silk" font-size="7" letter-spacing="2" opacity="0.6">ESP32-S3 · 16 RELAY · 16 INPUT · 4G-READY</text>
+
+  <!-- ESP32-S3 module (central) -->
+  <g transform="translate(250, 140)">
+    <rect x="0" y="0" width="100" height="70" fill="#0a0a0a" stroke="#444" stroke-width="0.5"/>
+    <!-- Module shield -->
+    <rect x="4" y="4" width="92" height="62" fill="#1a1a1a" stroke="#666" stroke-width="0.3"/>
+    <!-- Antenna -->
+    <rect x="40" y="4" width="20" height="18" fill="#c4a464" stroke="#8a7030" stroke-width="0.3"/>
+    <text x="50" y="42" text-anchor="middle" fill="#e8d8b0" font-size="8" font-weight="700" class="silk">ESP32-S3</text>
+    <text x="50" y="55" text-anchor="middle" fill="#888" font-size="6" class="silk">WROOM-1</text>
+  </g>
+
+  <!-- PCF8574 chips for relays -->
+  <g>
+    <rect x="75" y="105" width="58" height="22" fill="#1a1a1a" stroke="#555" stroke-width="0.5"/>
+    <text x="104" y="119" text-anchor="middle" fill="#e8d8b0" font-size="7" class="silk">PCF8574 0x24</text>
+
+    <rect x="150" y="105" width="58" height="22" fill="#1a1a1a" stroke="#555" stroke-width="0.5"/>
+    <text x="179" y="119" text-anchor="middle" fill="#e8d8b0" font-size="7" class="silk">PCF8574 0x25</text>
+  </g>
+
+  <!-- PCF8574 chips for inputs -->
+  <g>
+    <rect x="390" y="265" width="58" height="22" fill="#1a1a1a" stroke="#555" stroke-width="0.5"/>
+    <text x="419" y="279" text-anchor="middle" fill="#e8d8b0" font-size="7" class="silk">PCF8574 0x21</text>
+
+    <rect x="465" y="265" width="58" height="22" fill="#1a1a1a" stroke="#555" stroke-width="0.5"/>
+    <text x="494" y="279" text-anchor="middle" fill="#e8d8b0" font-size="7" class="silk">PCF8574 0x22</text>
+  </g>
+
+  <!-- Relay array indicators -->
+  <g fill="#e8d8b0" opacity="0.3">
+    <rect x="75" y="135" width="130" height="8"/>
+    <rect x="75" y="147" width="130" height="8"/>
+  </g>
+  <text x="140" y="155" text-anchor="middle" fill="#e8d8b0" font-size="5" opacity="0.6" class="silk">16× SONGLE RELAY 30A</text>
+
+  <!-- ═══════════ TOP: 16 RELAY TERMINALS ═══════════ -->
+  <!-- Green plastic terminal blocks, 16 pieces -->
+  <g transform="translate(20, 50)">
+    <!-- Block group 1: OUT1-OUT8 (used, lighting) -->
+    <g>
+      <!-- R1-R8 backing -->
+      <rect x="0" y="0" width="275" height="22" fill="#1a5f2a" stroke="#0a3018" stroke-width="0.5"/>
+      <!-- Individual terminal dividers + screws -->
+      <g stroke="#0a3018" stroke-width="0.5">
+        <line x1="34.4" y1="0" x2="34.4" y2="22"/>
+        <line x1="68.8" y1="0" x2="68.8" y2="22"/>
+        <line x1="103.1" y1="0" x2="103.1" y2="22"/>
+        <line x1="137.5" y1="0" x2="137.5" y2="22"/>
+        <line x1="171.9" y1="0" x2="171.9" y2="22"/>
+        <line x1="206.3" y1="0" x2="206.3" y2="22"/>
+        <line x1="240.6" y1="0" x2="240.6" y2="22"/>
+      </g>
+      <!-- Screws -->
+      <g fill="#c0c0c0" stroke="#666" stroke-width="0.3">
+        <circle cx="17.2" cy="8" r="2.5"/>
+        <circle cx="51.6" cy="8" r="2.5"/>
+        <circle cx="86" cy="8" r="2.5"/>
+        <circle cx="120.3" cy="8" r="2.5"/>
+        <circle cx="154.7" cy="8" r="2.5"/>
+        <circle cx="189.1" cy="8" r="2.5"/>
+        <circle cx="223.4" cy="8" r="2.5"/>
+        <circle cx="257.8" cy="8" r="2.5"/>
+      </g>
+      <!-- Pin labels -->
+      <g fill="#e8d8b0" text-anchor="middle" class="pin">
+        <text x="17.2" y="19">1</text><text x="51.6" y="19">2</text>
+        <text x="86" y="19">3</text><text x="120.3" y="19">4</text>
+        <text x="154.7" y="19">5</text><text x="189.1" y="19">6</text>
+        <text x="223.4" y="19">7</text><text x="257.8" y="19">8</text>
+      </g>
+    </g>
+
+    <!-- Block group 2: OUT9-OUT16 (mix of used and free) -->
+    <g transform="translate(285, 0)">
+      <rect x="0" y="0" width="275" height="22" fill="#1a5f2a" stroke="#0a3018" stroke-width="0.5"/>
+      <g stroke="#0a3018" stroke-width="0.5">
+        <line x1="34.4" y1="0" x2="34.4" y2="22"/>
+        <line x1="68.8" y1="0" x2="68.8" y2="22"/>
+        <line x1="103.1" y1="0" x2="103.1" y2="22"/>
+        <line x1="137.5" y1="0" x2="137.5" y2="22"/>
+        <line x1="171.9" y1="0" x2="171.9" y2="22"/>
+        <line x1="206.3" y1="0" x2="206.3" y2="22"/>
+        <line x1="240.6" y1="0" x2="240.6" y2="22"/>
+      </g>
+      <g fill="#c0c0c0" stroke="#666" stroke-width="0.3">
+        <circle cx="17.2" cy="8" r="2.5"/>
+        <circle cx="51.6" cy="8" r="2.5"/>
+        <circle cx="86" cy="8" r="2.5"/>
+        <circle cx="120.3" cy="8" r="2.5"/>
+        <circle cx="154.7" cy="8" r="2.5"/>
+        <circle cx="189.1" cy="8" r="2.5"/>
+        <circle cx="223.4" cy="8" r="2.5"/>
+        <circle cx="257.8" cy="8" r="2.5"/>
+      </g>
+      <g fill="#e8d8b0" text-anchor="middle" class="pin">
+        <text x="17.2" y="19">9</text><text x="51.6" y="19">10</text>
+        <text x="86" y="19">11</text><text x="120.3" y="19">12</text>
+        <text x="154.7" y="19">13</text><text x="189.1" y="19">14</text>
+        <text x="223.4" y="19">15</text><text x="257.8" y="19">16</text>
+      </g>
+    </g>
+
+    <!-- Label OUT above -->
+    <text x="280" y="-4" text-anchor="middle" fill="#e8d8b0" class="silk" font-size="7" letter-spacing="3">RELAY OUTPUTS · OUT1 — OUT16</text>
+  </g>
+
+  <!-- ═══════════ BOTTOM: 16 INPUT TERMINALS ═══════════ -->
+  <g transform="translate(20, 330)">
+    <!-- Input group 1: IN1-IN8 -->
+    <g>
+      <rect x="0" y="0" width="275" height="22" fill="#1a3f6e" stroke="#0a1f3e" stroke-width="0.5"/>
+      <g stroke="#0a1f3e" stroke-width="0.5">
+        <line x1="34.4" y1="0" x2="34.4" y2="22"/>
+        <line x1="68.8" y1="0" x2="68.8" y2="22"/>
+        <line x1="103.1" y1="0" x2="103.1" y2="22"/>
+        <line x1="137.5" y1="0" x2="137.5" y2="22"/>
+        <line x1="171.9" y1="0" x2="171.9" y2="22"/>
+        <line x1="206.3" y1="0" x2="206.3" y2="22"/>
+        <line x1="240.6" y1="0" x2="240.6" y2="22"/>
+      </g>
+      <g fill="#c0c0c0" stroke="#666" stroke-width="0.3">
+        <circle cx="17.2" cy="14" r="2.5"/>
+        <circle cx="51.6" cy="14" r="2.5"/>
+        <circle cx="86" cy="14" r="2.5"/>
+        <circle cx="120.3" cy="14" r="2.5"/>
+        <circle cx="154.7" cy="14" r="2.5"/>
+        <circle cx="189.1" cy="14" r="2.5"/>
+        <circle cx="223.4" cy="14" r="2.5"/>
+        <circle cx="257.8" cy="14" r="2.5"/>
+      </g>
+      <g fill="#e8d8b0" text-anchor="middle" class="pin">
+        <text x="17.2" y="7">1</text><text x="51.6" y="7">2</text>
+        <text x="86" y="7">3</text><text x="120.3" y="7">4</text>
+        <text x="154.7" y="7">5</text><text x="189.1" y="7">6</text>
+        <text x="223.4" y="7">7</text><text x="257.8" y="7">8</text>
+      </g>
+    </g>
+
+    <!-- Input group 2: IN9-IN16 -->
+    <g transform="translate(285, 0)">
+      <rect x="0" y="0" width="275" height="22" fill="#1a3f6e" stroke="#0a1f3e" stroke-width="0.5"/>
+      <g stroke="#0a1f3e" stroke-width="0.5">
+        <line x1="34.4" y1="0" x2="34.4" y2="22"/>
+        <line x1="68.8" y1="0" x2="68.8" y2="22"/>
+        <line x1="103.1" y1="0" x2="103.1" y2="22"/>
+        <line x1="137.5" y1="0" x2="137.5" y2="22"/>
+        <line x1="171.9" y1="0" x2="171.9" y2="22"/>
+        <line x1="206.3" y1="0" x2="206.3" y2="22"/>
+        <line x1="240.6" y1="0" x2="240.6" y2="22"/>
+      </g>
+      <g fill="#c0c0c0" stroke="#666" stroke-width="0.3">
+        <circle cx="17.2" cy="14" r="2.5"/>
+        <circle cx="51.6" cy="14" r="2.5"/>
+        <circle cx="86" cy="14" r="2.5"/>
+        <circle cx="120.3" cy="14" r="2.5"/>
+        <circle cx="154.7" cy="14" r="2.5"/>
+        <circle cx="189.1" cy="14" r="2.5"/>
+        <circle cx="223.4" cy="14" r="2.5"/>
+        <circle cx="257.8" cy="14" r="2.5"/>
+      </g>
+      <g fill="#e8d8b0" text-anchor="middle" class="pin">
+        <text x="17.2" y="7">9</text><text x="51.6" y="7">10</text>
+        <text x="86" y="7">11</text><text x="120.3" y="7">12</text>
+        <text x="154.7" y="7">13</text><text x="189.1" y="7">14</text>
+        <text x="223.4" y="7">15</text><text x="257.8" y="7">16</text>
+      </g>
+    </g>
+
+    <text x="280" y="34" text-anchor="middle" fill="#e8d8b0" class="silk" font-size="7" letter-spacing="3">DIGITAL INPUTS · IN1 — IN16</text>
+  </g>
+
+  <!-- ═══════════ LEFT EDGE: Power, USB, LAN ═══════════ -->
+  <g transform="translate(0, 80)">
+    <!-- 12V Power input terminal -->
+    <rect x="-8" y="0" width="24" height="28" fill="#1a5f2a" stroke="#0a3018" stroke-width="0.5"/>
+    <circle cx="4" cy="9" r="2" fill="#c0c0c0"/>
+    <circle cx="4" cy="19" r="2" fill="#c0c0c0"/>
+    <text x="22" y="12" fill="#e8d8b0" class="silk" font-size="6">12V+</text>
+    <text x="22" y="22" fill="#e8d8b0" class="silk" font-size="6">GND</text>
+
+    <!-- USB-C port -->
+    <g transform="translate(-6, 60)">
+      <rect x="0" y="0" width="22" height="9" rx="4" fill="#2a2a2a" stroke="#555" stroke-width="0.3"/>
+      <rect x="3" y="2.5" width="16" height="4" rx="2" fill="#1a1a1a"/>
+      <text x="26" y="7" fill="#e8d8b0" class="silk" font-size="6">USB-C</text>
+    </g>
+
+    <!-- LAN / Ethernet RJ45 -->
+    <g transform="translate(-8, 90)">
+      <rect x="0" y="0" width="24" height="22" fill="#c0c0c0" stroke="#666" stroke-width="0.5"/>
+      <rect x="3" y="3" width="18" height="16" fill="#2a2a2a"/>
+      <!-- LED indicators -->
+      <circle cx="6" cy="18" r="1" fill="#3a8a3a"/>
+      <circle cx="10" cy="18" r="1" fill="#c4a464"/>
+      <text x="28" y="13" fill="#e8d8b0" class="silk" font-size="6">LAN</text>
+    </g>
+  </g>
+
+  <!-- ═══════════ LEFT INNER: HT1-3, A1-4 ═══════════ -->
+  <g transform="translate(25, 230)">
+    <!-- HT1 -->
+    <rect x="0" y="0" width="30" height="10" fill="#000" stroke="#555" stroke-width="0.3"/>
+    <circle cx="6" cy="5" r="1.5" fill="#c0c0c0"/>
+    <circle cx="15" cy="5" r="1.5" fill="#c0c0c0"/>
+    <circle cx="24" cy="5" r="1.5" fill="#c0c0c0"/>
+    <text x="34" y="8" fill="#e8d8b0" class="silk" font-size="6">HT1 · GPIO47</text>
+
+    <!-- HT2 -->
+    <rect x="0" y="13" width="30" height="10" fill="#000" stroke="#555" stroke-width="0.3"/>
+    <circle cx="6" cy="18" r="1.5" fill="#c0c0c0"/>
+    <circle cx="15" cy="18" r="1.5" fill="#c0c0c0"/>
+    <circle cx="24" cy="18" r="1.5" fill="#c0c0c0"/>
+    <text x="34" y="21" fill="#e8d8b0" class="silk" font-size="6">HT2 · GPIO48</text>
+
+    <!-- HT3 -->
+    <rect x="0" y="26" width="30" height="10" fill="#000" stroke="#555" stroke-width="0.3"/>
+    <circle cx="6" cy="31" r="1.5" fill="#c0c0c0"/>
+    <circle cx="15" cy="31" r="1.5" fill="#c0c0c0"/>
+    <circle cx="24" cy="31" r="1.5" fill="#c0c0c0"/>
+    <text x="34" y="34" fill="#e8d8b0" class="silk" font-size="6">HT3 · GPIO38</text>
+
+    <!-- A1-A4 header -->
+    <g transform="translate(0, 48)">
+      <rect x="0" y="0" width="42" height="10" fill="#000" stroke="#555" stroke-width="0.3"/>
+      <g fill="#c0c0c0">
+        <circle cx="5" cy="5" r="1.3"/>
+        <circle cx="14" cy="5" r="1.3"/>
+        <circle cx="23" cy="5" r="1.3"/>
+        <circle cx="32" cy="5" r="1.3"/>
+      </g>
+      <text x="46" y="8" fill="#e8d8b0" class="silk" font-size="6">A1 · A2 · A3 · A4</text>
+    </g>
+  </g>
+
+  <!-- ═══════════ RIGHT EDGE: I2C, UART, RS485, 4G ═══════════ -->
+  <g transform="translate(545, 65)">
+    <!-- P19 I2C Header -->
+    <rect x="0" y="0" width="42" height="12" fill="#000" stroke="#555" stroke-width="0.3"/>
+    <g fill="#c0c0c0">
+      <circle cx="5" cy="6" r="1.5"/>
+      <circle cx="14" cy="6" r="1.5"/>
+      <circle cx="23" cy="6" r="1.5"/>
+      <circle cx="32" cy="6" r="1.5"/>
+    </g>
+    <text x="-4" y="9" text-anchor="end" fill="#e8d8b0" class="silk" font-size="6">P19 · I2C</text>
+    <text x="22" y="22" text-anchor="middle" fill="#e8d8b0" class="silk" font-size="5.5">3V3 GND SDA SCL</text>
+
+    <!-- UART Header -->
+    <g transform="translate(0, 38)">
+      <rect x="0" y="0" width="42" height="12" fill="#000" stroke="#555" stroke-width="0.3"/>
+      <g fill="#c0c0c0">
+        <circle cx="5" cy="6" r="1.5"/>
+        <circle cx="14" cy="6" r="1.5"/>
+        <circle cx="23" cy="6" r="1.5"/>
+        <circle cx="32" cy="6" r="1.5"/>
+      </g>
+      <text x="-4" y="9" text-anchor="end" fill="#e8d8b0" class="silk" font-size="6">UART</text>
+      <text x="22" y="22" text-anchor="middle" fill="#e8d8b0" class="silk" font-size="5.5">V G RX TX</text>
+    </g>
+
+    <!-- RS485 Terminal -->
+    <g transform="translate(0, 76)">
+      <rect x="0" y="0" width="42" height="18" fill="#1a5f2a" stroke="#0a3018" stroke-width="0.4"/>
+      <circle cx="7" cy="9" r="1.8" fill="#c0c0c0"/>
+      <circle cx="21" cy="9" r="1.8" fill="#c0c0c0"/>
+      <circle cx="35" cy="9" r="1.8" fill="#c0c0c0"/>
+      <text x="-4" y="11" text-anchor="end" fill="#e8d8b0" class="silk" font-size="6">RS485</text>
+      <text x="22" y="27" text-anchor="middle" fill="#e8d8b0" class="silk" font-size="5.5">A · B · GND</text>
+    </g>
+
+    <!-- SIM card area + antennas -->
+    <g transform="translate(-5, 120)">
+      <rect x="0" y="0" width="48" height="34" fill="#0a0a0a" stroke="#555" stroke-width="0.5"/>
+      <rect x="4" y="4" width="40" height="20" fill="#2a2a2a" stroke="#666" stroke-width="0.3"/>
+      <text x="24" y="16" text-anchor="middle" fill="#e8d8b0" class="silk" font-size="6">SIM</text>
+      <text x="24" y="31" text-anchor="middle" fill="#e8d8b0" class="silk" font-size="5">4G MODULE BAY</text>
+
+      <!-- Antenna connectors -->
+      <circle cx="8" cy="40" r="3" fill="#c0c0c0" stroke="#444" stroke-width="0.4"/>
+      <circle cx="8" cy="40" r="1" fill="#1a1a1a"/>
+      <text x="8" y="52" text-anchor="middle" fill="#e8d8b0" class="silk" font-size="5">GSM</text>
+
+      <circle cx="24" cy="40" r="3" fill="#c0c0c0" stroke="#444" stroke-width="0.4"/>
+      <circle cx="24" cy="40" r="1" fill="#1a1a1a"/>
+      <text x="24" y="52" text-anchor="middle" fill="#e8d8b0" class="silk" font-size="5">GPS</text>
+
+      <circle cx="40" cy="40" r="3" fill="#c0c0c0" stroke="#444" stroke-width="0.4"/>
+      <circle cx="40" cy="40" r="1" fill="#1a1a1a"/>
+      <text x="40" y="52" text-anchor="middle" fill="#e8d8b0" class="silk" font-size="5">DIV</text>
+    </g>
+  </g>
+
+  <!-- Corner mounting holes -->
+  <g fill="#0a2a18" stroke="#c0c0c0" stroke-width="0.6">
+    <circle cx="10" cy="10" r="3"/>
+    <circle cx="590" cy="10" r="3"/>
+    <circle cx="10" cy="390" r="3"/>
+    <circle cx="590" cy="390" r="3"/>
+  </g>
+
+</g>
+
+<!-- ═══════════════════ TOP CALLOUTS (RELAYS) ═══════════════════ -->
+<g font-family="'JetBrains Mono', monospace">
+
+  <!-- Callout 1: OUT1-OUT8 Lighting -->
+  <g>
+    <rect x="50" y="125" width="240" height="80" fill="#f0e0d4" stroke="#b8410e" stroke-width="1.5"/>
+    <rect x="50" y="125" width="6" height="80" fill="#b8410e"/>
+    <text x="65" y="142" font-size="10" font-weight="700" fill="#b8410e" letter-spacing="1.5">OUT1 — OUT8 · 8 KANALAI</text>
+    <text x="65" y="158" class="md" font-weight="700">APŠVIETIMAS (8 ŠVIESOS)</text>
+    <text x="65" y="173" class="sm" fill="#3d3d3d">Kajutės, virtuvės, lauko LED juostos</text>
+    <text x="65" y="187" class="sm" fill="#3d3d3d">PCF8574 @ 0x24 · pin 0-7</text>
+    <text x="65" y="199" font-size="8" fill="#b8410e" font-weight="700" letter-spacing="1">🔒 UŽIMTA YAML'e</text>
+  </g>
+
+  <!-- Callout 2: OUT9 Inverter -->
+  <g>
+    <rect x="310" y="125" width="170" height="80" fill="#f0e0d4" stroke="#b8410e" stroke-width="1.5"/>
+    <rect x="310" y="125" width="6" height="80" fill="#b8410e"/>
+    <text x="325" y="142" font-size="10" font-weight="700" fill="#b8410e" letter-spacing="1.5">OUT9 · INVERTORIUS</text>
+    <text x="325" y="158" class="md" font-weight="700">GREEN CELL 1500W</text>
+    <text x="325" y="173" class="sm" fill="#3d3d3d">P-MOSFET gate valdymas</text>
+    <text x="325" y="187" class="sm" fill="#3d3d3d">PCF8574 0x25 · pin 0</text>
+    <text x="325" y="199" font-size="8" fill="#b8410e" font-weight="700" letter-spacing="1">🔒 UŽIMTA</text>
+  </g>
+
+  <!-- Callout 3: OUT10 UV -->
+  <g>
+    <rect x="500" y="125" width="160" height="80" fill="#f0e0d4" stroke="#b8410e" stroke-width="1.5"/>
+    <rect x="500" y="125" width="6" height="80" fill="#b8410e"/>
+    <text x="515" y="142" font-size="10" font-weight="700" fill="#b8410e" letter-spacing="1.5">OUT10 · UV LED</text>
+    <text x="515" y="158" class="md" font-weight="700">STERILIZACIJA</text>
+    <text x="515" y="173" class="sm" fill="#3d3d3d">Vandens bakas · UV-C diodas</text>
+    <text x="515" y="187" class="sm" fill="#3d3d3d">PCF8574 0x25 · pin 1</text>
+    <text x="515" y="199" font-size="8" fill="#b8410e" font-weight="700" letter-spacing="1">🔒 UŽIMTA</text>
+  </g>
+
+  <!-- Callout 4: OUT11-OUT16 Free -->
+  <g>
+    <rect x="680" y="125" width="300" height="80" fill="#d4e4d4" stroke="#2d5f3f" stroke-width="1.5"/>
+    <rect x="680" y="125" width="6" height="80" fill="#2d5f3f"/>
+    <text x="695" y="142" font-size="10" font-weight="700" fill="#2d5f3f" letter-spacing="1.5">OUT11 — OUT16 · 6 LAISVOS</text>
+    <text x="695" y="158" class="sm" fill="#1a1a1a">OUT11: Vandens siurblys (12V)</text>
+    <text x="695" y="170" class="sm" fill="#1a1a1a">OUT12: Ištraukiamas ventiliatorius</text>
+    <text x="695" y="182" class="sm" fill="#1a1a1a">OUT13: Dyzelinis šildytuvas · ON</text>
+    <text x="695" y="194" class="sm" fill="#1a1a1a">OUT14: Boileris · OUT15: ECO šaldytuvas</text>
+    <text x="845" y="205" class="sm" fill="#1a1a1a">· OUT16: 220V/inv. jungiklis</text>
+  </g>
+
+</g>
+
+<!-- ═══════════════════ BOTTOM CALLOUTS (INPUTS) ═══════════════════ -->
+<g>
+  <!-- Callout 1: IN1-IN8 Free -->
+  <g>
+    <rect x="50" y="720" width="290" height="80" fill="#d4e4d4" stroke="#2d5f3f" stroke-width="1.5"/>
+    <rect x="50" y="720" width="6" height="80" fill="#2d5f3f"/>
+    <text x="65" y="737" font-size="10" font-weight="700" fill="#2d5f3f" letter-spacing="1.5">IN1 — IN8 · 8 LAISVI</text>
+    <text x="65" y="753" class="md" font-weight="700">SIENINIAMS MYGTUKAMS</text>
+    <text x="65" y="768" class="sm" fill="#3d3d3d">Šviesų manual override (IN1→OUT1...)</text>
+    <text x="65" y="781" class="sm" fill="#3d3d3d">IN8: master OFF / panikos mygtukas</text>
+    <text x="65" y="794" class="sm" fill="#3d3d3d">PCF8574 @ 0x21 · pin 0-7</text>
+  </g>
+
+  <!-- Callout 2: IN9 220V -->
+  <g>
+    <rect x="360" y="720" width="180" height="80" fill="#f0e0d4" stroke="#b8410e" stroke-width="1.5"/>
+    <rect x="360" y="720" width="6" height="80" fill="#b8410e"/>
+    <text x="375" y="737" font-size="10" font-weight="700" fill="#b8410e" letter-spacing="1.5">IN9 · 220V DETEKTORIUS</text>
+    <text x="375" y="753" class="md" font-weight="700">AC OPTOKUPLERIS</text>
+    <text x="375" y="768" class="sm" fill="#3d3d3d">Išorinis tinklo detektorius</text>
+    <text x="375" y="781" class="sm" fill="#3d3d3d">PC817 + 100kΩ · invertuotas</text>
+    <text x="375" y="794" font-size="8" fill="#b8410e" font-weight="700" letter-spacing="1">🔒 UŽIMTA</text>
+  </g>
+
+  <!-- Callout 3: IN10-IN16 Free -->
+  <g>
+    <rect x="560" y="720" width="400" height="80" fill="#d4e4d4" stroke="#2d5f3f" stroke-width="1.5"/>
+    <rect x="560" y="720" width="6" height="80" fill="#2d5f3f"/>
+    <text x="575" y="737" font-size="10" font-weight="700" fill="#2d5f3f" letter-spacing="1.5">IN10 — IN16 · 7 LAISVI</text>
+    <text x="575" y="753" class="sm" fill="#1a1a1a">IN10: Durų kontaktas · IN11: Langų kontaktas · IN12: PIR judesys</text>
+    <text x="575" y="766" class="sm" fill="#1a1a1a">IN13: Dūmų / CO daviklis · IN14: Vandens min. lygio plūdė</text>
+    <text x="575" y="779" class="sm" fill="#1a1a1a">IN15: Pilkojo vandens plūdė · IN16: Crafter ACC uždegimas</text>
+    <text x="575" y="794" class="sm" fill="#3d3d3d">PCF8574 @ 0x22 · pin 1-7</text>
+  </g>
+</g>
+
+<!-- ═══════════════════ LEFT SIDE CALLOUTS ═══════════════════ -->
+<g>
+  <!-- HX711 callout -->
+  <g>
+    <rect x="55" y="310" width="290" height="90" fill="#f4e8c8" stroke="#8b6914" stroke-width="1.5"/>
+    <rect x="55" y="310" width="6" height="90" fill="#8b6914"/>
+    <text x="70" y="328" font-size="10" font-weight="700" fill="#8b6914" letter-spacing="1.5">HT1 + HT2 · KONFLIKTAS!</text>
+    <text x="70" y="345" class="md" font-weight="700">HX711 · DUJŲ BALIONO SVORIS</text>
+    <text x="70" y="360" class="sm" fill="#3d3d3d">HT1 (GPIO47) → HX711 DT</text>
+    <text x="70" y="373" class="sm" fill="#3d3d3d">HT2 (GPIO48) → HX711 SCK</text>
+    <text x="70" y="386" class="xs" fill="#8b6914" font-weight="700">⚠ Užimti HT portai — AM2301 negalima</text>
+  </g>
+
+  <!-- HT3 free -->
+  <g>
+    <rect x="55" y="410" width="290" height="52" fill="#d4e4d4" stroke="#2d5f3f" stroke-width="1.5"/>
+    <rect x="55" y="410" width="6" height="52" fill="#2d5f3f"/>
+    <text x="70" y="428" font-size="10" font-weight="700" fill="#2d5f3f" letter-spacing="1.5">HT3 · LAISVAS</text>
+    <text x="70" y="445" class="sm" fill="#1a1a1a">GPIO38 — siūloma: AM2301 (DHT22)</text>
+    <text x="70" y="457" class="sm" fill="#3d3d3d">Kajutės drėgmė + temp. jutiklis</text>
+  </g>
+
+  <!-- Analog inputs -->
+  <g>
+    <rect x="55" y="472" width="290" height="86" fill="#f4e8c8" stroke="#8b6914" stroke-width="1.5"/>
+    <rect x="55" y="472" width="6" height="86" fill="#8b6914"/>
+    <text x="70" y="490" font-size="10" font-weight="700" fill="#8b6914" letter-spacing="1.5">A1 — A4 · ANALOGINIAI ĮĖJIMAI</text>
+    <text x="70" y="506" class="sm" fill="#b8410e" font-weight="700">A2 (GPIO7) → TDS jutiklis 🔒</text>
+    <text x="70" y="519" class="sm" fill="#2d5f3f">A1 laisvas → baterijos įtampa (backup)</text>
+    <text x="70" y="532" class="sm" fill="#2d5f3f">A3 laisvas → MQ-2/MQ-5 dujų nuotėkis</text>
+    <text x="70" y="545" class="sm" fill="#2d5f3f">A4 laisvas → LDR šviesos daviklis</text>
+  </g>
+
+  <!-- USB-C / LAN -->
+  <g>
+    <rect x="55" y="568" width="290" height="55" fill="#f0e0d4" stroke="#b8410e" stroke-width="1.5"/>
+    <rect x="55" y="568" width="6" height="55" fill="#b8410e"/>
+    <text x="70" y="586" font-size="10" font-weight="700" fill="#b8410e" letter-spacing="1.5">USB-C · PROGRAMAVIMAS</text>
+    <text x="70" y="601" class="sm" fill="#3d3d3d">web.esphome.io · flash + log + debug</text>
+    <text x="70" y="614" class="sm" fill="#2d5f3f">LAN (W5500) — laisvas, rezervui</text>
+  </g>
+</g>
+
+<!-- ═══════════════════ RIGHT SIDE CALLOUTS ═══════════════════ -->
+<g>
+  <!-- I2C Bus with 3 devices -->
+  <g>
+    <rect x="1055" y="280" width="300" height="130" fill="#f0e0d4" stroke="#b8410e" stroke-width="1.5"/>
+    <rect x="1055" y="280" width="6" height="130" fill="#b8410e"/>
+    <text x="1070" y="298" font-size="10" font-weight="700" fill="#b8410e" letter-spacing="1.5">P19 · I2C MAGISTRALĖ</text>
+    <text x="1070" y="313" class="sm" fill="#3d3d3d">GPIO9 (SDA) · GPIO10 (SCL) · 50 kHz</text>
+
+    <!-- Device 1: VL53L0X -->
+    <line x1="1075" y1="325" x2="1075" y2="395" stroke="#b8410e" stroke-width="1"/>
+    <circle cx="1075" cy="335" r="3" fill="#b8410e"/>
+    <text x="1085" y="337" class="sm" font-weight="700" fill="#1a1a1a">VL53L0X · 0x29</text>
+    <text x="1085" y="349" class="xs" fill="#3d3d3d">lazerinis atstumo daviklis (švarus vanduo)</text>
+
+    <!-- Device 2: ADXL345 -->
+    <circle cx="1075" cy="362" r="3" fill="#b8410e"/>
+    <text x="1085" y="364" class="sm" font-weight="700" fill="#1a1a1a">ADXL345 · 0x53</text>
+    <text x="1085" y="376" class="xs" fill="#3d3d3d">akselerometras (posvyris / lyginimas)</text>
+
+    <!-- Device 3: BMP180 -->
+    <circle cx="1075" cy="389" r="3" fill="#b8410e"/>
+    <text x="1085" y="391" class="sm" font-weight="700" fill="#1a1a1a">BMP180 · 0x77</text>
+    <text x="1085" y="403" class="xs" fill="#3d3d3d">temperatūra + atmosferos slėgis</text>
+  </g>
+
+  <!-- UART / 4G Module -->
+  <g>
+    <rect x="1055" y="420" width="300" height="86" fill="#f0e0d4" stroke="#b8410e" stroke-width="1.5"/>
+    <rect x="1055" y="420" width="6" height="86" fill="#b8410e"/>
+    <text x="1070" y="438" font-size="10" font-weight="700" fill="#b8410e" letter-spacing="1.5">UART · 4G + GPS MODULIS</text>
+    <text x="1070" y="455" class="md" font-weight="700">SIMCOM A7670E</text>
+    <text x="1070" y="468" class="sm" fill="#3d3d3d">TX: GPIO40 · RX: GPIO41 · 115200 bps</text>
+    <text x="1070" y="481" class="sm" fill="#3d3d3d">SMS statusas · GPS palydovai · LTE</text>
+    <text x="1070" y="497" class="xs" fill="#8b6914" font-weight="700">⚠ Reikalingas atskiras 12V→4V buck (~2A)</text>
+  </g>
+
+  <!-- RS485 Reserved -->
+  <g>
+    <rect x="1055" y="515" width="300" height="80" fill="#f4e8c8" stroke="#8b6914" stroke-width="1.5"/>
+    <rect x="1055" y="515" width="6" height="80" fill="#8b6914"/>
+    <text x="1070" y="533" font-size="10" font-weight="700" fill="#8b6914" letter-spacing="1.5">RS485 · REZERVUOTA</text>
+    <text x="1070" y="550" class="sm" fill="#3d3d3d">Modbus RTU daisy-chain (dar pridėt YAML)</text>
+    <text x="1070" y="564" class="sm" fill="#1a1a1a">→ Renogy DCC50S · slave 1</text>
+    <text x="1070" y="577" class="sm" fill="#1a1a1a">→ Junctek KH-F150A šuntas · slave 2</text>
+    <text x="1070" y="590" class="xs" fill="#8b6914" font-weight="700">A/B + GND · 9600 bps</text>
+  </g>
+</g>
+
+<!-- ═══════════════════ CALLOUT CONNECTING LINES ═══════════════════ -->
+<g stroke="#1a1a1a" stroke-width="0.8" fill="none" marker-start="url(#dot)" marker-end="url(#dot)">
+  <!-- Top callouts to relay terminals -->
+  <path d="M 170 205 Q 170 250 440 330" opacity="0.7"/>        <!-- OUT1-8 -->
+  <path d="M 395 205 Q 395 260 720 330" opacity="0.7"/>         <!-- OUT9 -->
+  <path d="M 580 205 Q 580 260 755 330" opacity="0.7"/>         <!-- OUT10 -->
+  <path d="M 830 205 Q 830 260 900 330" opacity="0.7"/>         <!-- OUT11-16 -->
+
+  <!-- Bottom callouts to input terminals -->
+  <path d="M 195 720 Q 195 680 440 632" opacity="0.7"/>         <!-- IN1-8 -->
+  <path d="M 450 720 Q 450 680 720 632" opacity="0.7"/>         <!-- IN9 -->
+  <path d="M 760 720 Q 760 680 880 632" opacity="0.7"/>         <!-- IN10-16 -->
+
+  <!-- Left callouts to HT ports -->
+  <path d="M 345 360 L 420 515" opacity="0.7"/>                 <!-- HT1-2 HX711 -->
+  <path d="M 345 436 L 425 545" opacity="0.7"/>                 <!-- HT3 free -->
+  <path d="M 345 515 L 425 560" opacity="0.7"/>                 <!-- Analog -->
+  <path d="M 345 595 L 400 380" opacity="0.7"/>                 <!-- USB/LAN -->
+
+  <!-- Right callouts to right edge -->
+  <path d="M 1055 335 L 955 360" opacity="0.7"/>                <!-- I2C -->
+  <path d="M 1055 465 L 955 395" opacity="0.7"/>                <!-- UART/4G -->
+  <path d="M 1055 555 L 955 430" opacity="0.7"/>                <!-- RS485 -->
+</g>
+
+<!-- ═══════════════════ BOTTOM LEGEND + STATS ═══════════════════ -->
+<g transform="translate(0, 855)">
+  <line x1="45" y1="0" x2="1355" y2="0" stroke="#1a1a1a" stroke-width="1.5"/>
+
+  <!-- Legend -->
+  <g transform="translate(45, 18)">
+    <text x="0" y="0" font-size="10" font-weight="700" letter-spacing="2">SUTARTINIAI ŽENKLAI</text>
+
+    <g transform="translate(0, 15)">
+      <rect x="0" y="0" width="20" height="14" fill="#f0e0d4" stroke="#b8410e" stroke-width="1"/>
+      <text x="26" y="10" class="sm">Užimta YAML'e</text>
+
+      <rect x="140" y="0" width="20" height="14" fill="#d4e4d4" stroke="#2d5f3f" stroke-width="1"/>
+      <text x="166" y="10" class="sm">Laisva · galima plėsti</text>
+
+      <rect x="310" y="0" width="20" height="14" fill="#f4e8c8" stroke="#8b6914" stroke-width="1"/>
+      <text x="336" y="10" class="sm">Dėmesio / konfliktas</text>
+
+      <rect x="490" y="0" width="16" height="14" fill="#1a5f2a"/>
+      <text x="510" y="10" class="sm">Relay (zaliai)</text>
+
+      <rect x="620" y="0" width="16" height="14" fill="#1a3f6e"/>
+      <text x="640" y="10" class="sm">Digital In (mėl.)</text>
+    </g>
+  </g>
+
+  <!-- Statistics -->
+  <g transform="translate(650, 18)">
+    <text x="0" y="0" font-size="10" font-weight="700" letter-spacing="2">PRIEVADŲ STATISTIKA</text>
+
+    <g transform="translate(0, 15)">
+      <!-- Relays -->
+      <text x="0" y="10" class="sm" font-weight="700">Relės:</text>
+      <text x="50" y="10" class="sm" fill="#b8410e">10 užimtos</text>
+      <text x="130" y="10" class="sm" fill="#2d5f3f">6 laisvos</text>
+      <text x="200" y="10" class="sm" fill="#3d3d3d">(16 viso)</text>
+
+      <!-- Inputs -->
+      <text x="270" y="10" class="sm" font-weight="700">Įėjimai:</text>
+      <text x="322" y="10" class="sm" fill="#b8410e">1 užimta</text>
+      <text x="390" y="10" class="sm" fill="#2d5f3f">15 laisvų</text>
+      <text x="460" y="10" class="sm" fill="#3d3d3d">(16 viso)</text>
+    </g>
+  </g>
+
+  <!-- Signature / QR area style block -->
+  <g transform="translate(1170, 10)">
+    <rect x="0" y="0" width="180" height="60" fill="none" stroke="#1a1a1a" stroke-width="0.8"/>
+    <line x1="0" y1="15" x2="180" y2="15" stroke="#1a1a1a" stroke-width="0.4"/>
+    <line x1="60" y1="0" x2="60" y2="60" stroke="#1a1a1a" stroke-width="0.4"/>
+    <text x="30" y="11" text-anchor="middle" class="xs" letter-spacing="1.5">PROJEKTAS</text>
+    <text x="120" y="11" text-anchor="middle" class="xs" letter-spacing="1.5">DATA</text>
+    <text x="30" y="35" text-anchor="middle" font-size="10" font-weight="700">KEMPERVANAS</text>
+    <text x="120" y="30" text-anchor="middle" font-size="9">2026.04</text>
+    <text x="120" y="45" text-anchor="middle" font-size="8" fill="#3d3d3d">rev 1.0</text>
+    <text x="30" y="52" text-anchor="middle" font-size="7" fill="#3d3d3d">ESPHome/ESP32-S3</text>
+  </g>
+</g>
+
+</svg>
+</div>
+
+</body>
+</html>

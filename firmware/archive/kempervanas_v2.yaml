@@ -1,0 +1,1160 @@
+esphome:
+  name: kempervanas
+  friendly_name: Kempervanas
+  on_boot:
+    priority: 250
+    then:
+      - lambda: |-
+          uint8_t data[2] = {0x2D, 0x08};
+          id(i2c_bus)->write(0x53, data, 2, true);
+      - delay: 1s
+      - script.execute: a7670e_init
+
+esp32:
+  board: esp32-s3-devkitc-1
+  framework: { type: esp-idf }
+
+debug:
+  update_interval: 30s
+
+wifi:
+  ap:
+    ssid: "Kemperis-Valdymas"
+    password: "kemperis123"
+
+web_server:
+  port: 80
+  version: 2
+  local: true
+
+api:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+
+logger:
+  level: DEBUG
+  hardware_uart: USB_SERIAL_JTAG
+
+# ==========================================
+# 🔌 MAGISTRALĖS
+# ==========================================
+i2c:
+  - id: i2c_bus
+    sda: GPIO9
+    scl: GPIO10
+    scan: true
+    frequency: 50kHz
+
+uart:
+  # A7670E GSM/GPS modemas (GPIO40/41)
+  - id: uart_a7670e
+    tx_pin: GPIO40
+    rx_pin: GPIO41
+    baud_rate: 115200
+    rx_buffer_size: 2048
+
+# Renogy DCC50S — valdymas per Bluetooth (BLE), ne per laidą.
+# Pridedamas ateityje kaip ESPHome BLE client + custom komponentas.
+# GPIO16/17 (RS485) laisvi kitam naudojimui.
+
+pcf8574:
+  # 0x24 — 8 šviesų išėjimai (sviesa_1..8)
+  - id: pcf_lights
+    address: 0x24
+  # 0x25 — papildomi išėjimai (Inverteris, UV LED — kol kas nenaudojama)
+  - id: pcf_out2
+    address: 0x25
+  # 0x22 — 8 fiziniai jungikliai (jungiklis_1..8)
+  # 0x21 nenaudojamas — 220V aptikimas perkeltas į atskirą ESP32 (CLAUDE.md)
+  - id: pcf_switches
+    address: 0x22
+
+# ==========================================
+# 🌐 GLOBALŪS KINTAMIEJI
+# ==========================================
+globals:
+  - id: uart_buf
+    type: std::string
+    initial_value: '""'
+  - id: sms_sender
+    type: std::string
+    initial_value: '""'
+  - id: gsm_signal_val
+    type: int
+    initial_value: "0"
+  - id: gsm_operator
+    type: std::string
+    initial_value: '"Ieškoma..."'
+  - id: gsm_creg_val
+    type: int
+    initial_value: "0"
+  - id: sim_status
+    type: std::string
+    initial_value: '"Tikrinama..."'
+  - id: gps_lat
+    type: float
+    initial_value: "0.0"
+  - id: gps_lon
+    type: float
+    initial_value: "0.0"
+  - id: gps_alt
+    type: float
+    initial_value: "0.0"
+  - id: gps_speed_val
+    type: float
+    initial_value: "0.0"
+  - id: gps_course_val
+    type: float
+    initial_value: "0.0"
+  - id: gps_sats_gps
+    type: int
+    initial_value: "0"
+  - id: gps_sats_glonass
+    type: int
+    initial_value: "0"
+  - id: gps_sats_beidou
+    type: int
+    initial_value: "0"
+  - id: gps_fix
+    type: bool
+    initial_value: "false"
+  - id: gps_fix_mode
+    type: int
+    initial_value: "0"
+  - id: cal_roll
+    type: float
+    restore_value: true
+    initial_value: "0.0"
+  - id: cal_pitch
+    type: float
+    restore_value: true
+    initial_value: "0.0"
+  - id: raw_roll
+    type: float
+    initial_value: "0.0"
+  - id: raw_pitch
+    type: float
+    initial_value: "0.0"
+  - id: trip_odometer
+    type: float
+    restore_value: true
+    initial_value: "0.0"
+  - id: hx711_zero_raw
+    type: float
+    restore_value: true
+    initial_value: "622900.0"
+  # std::array nepalaiko restore_value (RestoringGlobalsComponent template klaida).
+  # Slėgio istorija po reboot pradedama rinkti iš naujo (3.5 val. iki pilnos prognozės).
+  - id: pressure_hist
+    type: std::array<float, 7>
+    restore_value: false
+    initial_value: "{0,0,0,0,0,0,0}"
+  - id: pressure_hist_count
+    type: int
+    restore_value: false
+    initial_value: "0"
+
+# ==========================================
+# 🛠 NUSTATYMAI (per ESPHome UI)
+# ==========================================
+number:
+  - platform: template
+    name: "Vanduo: Tuscias (cm)"
+    id: tank_fresh_empty
+    min_value: 0
+    max_value: 200
+    step: 1
+    initial_value: 40
+    restore_value: true
+    optimistic: true
+    unit_of_measurement: "cm"
+
+  - platform: template
+    name: "Vanduo: Pilnas (cm)"
+    id: tank_fresh_full
+    min_value: 0
+    max_value: 200
+    step: 1
+    initial_value: 5
+    restore_value: true
+    optimistic: true
+    unit_of_measurement: "cm"
+
+  - platform: template
+    name: "Vandens bako turis"
+    id: tank_volume_liters
+    min_value: 1
+    max_value: 500
+    step: 1
+    initial_value: 100
+    restore_value: true
+    optimistic: true
+    unit_of_measurement: "L"
+
+  - platform: template
+    name: "Dujos: Tuscias balionas (kg)"
+    id: cylinder_tare
+    min_value: 0
+    max_value: 50
+    step: 0.1
+    initial_value: 3.8
+    restore_value: true
+    optimistic: true
+    unit_of_measurement: "kg"
+
+  - platform: template
+    name: "Dujos: Pilnas balionas (kg)"
+    id: gas_full_weight
+    min_value: 0
+    max_value: 80
+    step: 0.1
+    initial_value: 23.5
+    restore_value: true
+    optimistic: true
+    unit_of_measurement: "kg"
+
+  - platform: template
+    name: "Dujos: Svarstykliu faktorius"
+    id: hx711_kg_per_count
+    min_value: 0.00001
+    max_value: 0.001
+    step: 0.000001
+    initial_value: 0.00005623
+    restore_value: true
+    optimistic: true
+
+  - platform: template
+    name: "Dujos: Etalono svoris (kalibravimui)"
+    id: gas_ref_weight
+    min_value: 0.5
+    max_value: 30
+    step: 0.1
+    initial_value: 5.0
+    restore_value: true
+    optimistic: true
+    unit_of_measurement: "kg"
+
+  - platform: template
+    name: "Temperaturos korekcija"
+    id: temp_offset
+    min_value: -10
+    max_value: 10
+    step: 0.1
+    initial_value: -0.6
+    restore_value: true
+    optimistic: true
+    unit_of_measurement: "C"
+
+  - platform: template
+    name: "Juros lygio slėgis (QNH)"
+    id: sea_level_pressure
+    min_value: 950
+    max_value: 1080
+    step: 0.1
+    initial_value: 1013.25
+    restore_value: true
+    optimistic: true
+    unit_of_measurement: "hPa"
+
+# ==========================================
+# 🔘 MYGTUKAI
+# ==========================================
+button:
+  - platform: template
+    name: "Kalibruoti pokrypi"
+    id: btn_cal_tilt
+    on_press:
+      - lambda: |-
+          id(cal_roll) = id(raw_roll);
+          id(cal_pitch) = id(raw_pitch);
+
+  - platform: template
+    name: "Nulinti kelione"
+    id: btn_reset_odometer
+    on_press:
+      - lambda: 'id(trip_odometer) = 0.0;'
+
+  - platform: template
+    name: "Dujos: Taruoti svarstykles"
+    id: btn_gas_tare
+    on_press:
+      - lambda: |-
+          float raw = id(hx711_raw).state;
+          if (!isnan(raw)) {
+            id(hx711_zero_raw) = raw;
+            ESP_LOGI("gas", "Tare: zero_raw=%.0f", raw);
+          }
+
+  - platform: template
+    name: "Dujos: Kalibruoti pagal etalone"
+    id: btn_gas_cal_span
+    on_press:
+      - lambda: |-
+          float raw = id(hx711_raw).state;
+          float ref_kg = id(gas_ref_weight).state;
+          if (!isnan(raw) && ref_kg > 0.1f) {
+            float counts = raw - id(hx711_zero_raw);
+            if (counts > 100) {
+              auto call = id(hx711_kg_per_count)->make_call();
+              call.set_value(ref_kg / counts);
+              call.perform();
+              ESP_LOGI("gas", "Span: %.8f kg/count", ref_kg / counts);
+            } else {
+              ESP_LOGW("gas", "Span cal praleistas: counts per mazas (%.0f)", counts);
+            }
+          }
+
+  - platform: template
+    name: "Vanduo: Nustatyti kaip tuscia"
+    id: btn_water_set_empty
+    on_press:
+      - lambda: |-
+          float cm = id(water_cm).state;
+          if (!isnan(cm)) {
+            auto call = id(tank_fresh_empty)->make_call();
+            call.set_value(cm);
+            call.perform();
+            ESP_LOGI("water", "Tuscias: %.1f cm", cm);
+          }
+
+  - platform: template
+    name: "Vanduo: Nustatyti kaip pilna"
+    id: btn_water_set_full
+    on_press:
+      - lambda: |-
+          float cm = id(water_cm).state;
+          if (!isnan(cm)) {
+            auto call = id(tank_fresh_full)->make_call();
+            call.set_value(cm);
+            call.perform();
+            ESP_LOGI("water", "Pilnas: %.1f cm", cm);
+          }
+
+  - platform: template
+    name: "Sviesos: Isjungti visas"
+    id: btn_lights_all_off
+    on_press:
+      - light.turn_off: sviesa_1
+      - light.turn_off: sviesa_2
+      - light.turn_off: sviesa_3
+      - light.turn_off: sviesa_4
+      - light.turn_off: sviesa_5
+      - light.turn_off: sviesa_6
+      - light.turn_off: sviesa_7
+      - light.turn_off: sviesa_8
+
+# ==========================================
+# 💡 ŠVIESOS RELIAI (PCF8574 pcf_lights, addr 0x24, pinai P0–P7)
+# HTML naudoja /light/sviesa_N/toggle — ID turi tiksliai atitikti
+# ⚠️ inverted: false = PCF HIGH → relė ON. Jei relės veikia atvirkščiai —
+#    pakeisti į inverted: true
+# ==========================================
+output:
+  - platform: gpio
+    id: out_l1
+    pin: { pcf8574: pcf_lights, number: 0, mode: OUTPUT, inverted: false }
+  - platform: gpio
+    id: out_l2
+    pin: { pcf8574: pcf_lights, number: 1, mode: OUTPUT, inverted: false }
+  - platform: gpio
+    id: out_l3
+    pin: { pcf8574: pcf_lights, number: 2, mode: OUTPUT, inverted: false }
+  - platform: gpio
+    id: out_l4
+    pin: { pcf8574: pcf_lights, number: 3, mode: OUTPUT, inverted: false }
+  - platform: gpio
+    id: out_l5
+    pin: { pcf8574: pcf_lights, number: 4, mode: OUTPUT, inverted: false }
+  - platform: gpio
+    id: out_l6
+    pin: { pcf8574: pcf_lights, number: 5, mode: OUTPUT, inverted: false }
+  - platform: gpio
+    id: out_l7
+    pin: { pcf8574: pcf_lights, number: 6, mode: OUTPUT, inverted: false }
+  - platform: gpio
+    id: out_l8
+    pin: { pcf8574: pcf_lights, number: 7, mode: OUTPUT, inverted: false }
+
+light:
+  - platform: binary
+    name: "Sviesa 1"
+    id: sviesa_1
+    output: out_l1
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: binary
+    name: "Sviesa 2"
+    id: sviesa_2
+    output: out_l2
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: binary
+    name: "Sviesa 3"
+    id: sviesa_3
+    output: out_l3
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: binary
+    name: "Sviesa 4"
+    id: sviesa_4
+    output: out_l4
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: binary
+    name: "Sviesa 5"
+    id: sviesa_5
+    output: out_l5
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: binary
+    name: "Sviesa 6"
+    id: sviesa_6
+    output: out_l6
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: binary
+    name: "Sviesa 7"
+    id: sviesa_7
+    output: out_l7
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: binary
+    name: "Sviesa 8"
+    id: sviesa_8
+    output: out_l8
+    restore_mode: RESTORE_DEFAULT_OFF
+
+# ==========================================
+# 📊 SENSORIAI
+# ==========================================
+sensor:
+  # --- HX711 dujų svarstyklės ---
+  - platform: hx711
+    id: hx711_raw
+    internal: true
+    dout_pin: GPIO47
+    clk_pin: GPIO48
+    gain: 128
+    update_interval: 2s
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: template
+    name: "Dujos: Bendras svoris"
+    id: gas_total
+    unit_of_measurement: "kg"
+    accuracy_decimals: 1
+    update_interval: 3s
+    lambda: |-
+      float raw = id(hx711_raw).state;
+      if (isnan(raw)) return NAN;
+      return (raw - id(hx711_zero_raw)) * id(hx711_kg_per_count).state;
+
+  - platform: template
+    name: "Dujos: Likutis (neto)"
+    id: gas_net
+    unit_of_measurement: "kg"
+    accuracy_decimals: 1
+    update_interval: 3s
+    lambda: 'return max(0.0f, id(gas_total).state - id(cylinder_tare).state);'
+
+  - platform: template
+    name: "Dujos: Likutis (%)"
+    id: gas_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 3s
+    lambda: |-
+      float net = id(gas_net).state;
+      float cap = id(gas_full_weight).state - id(cylinder_tare).state;
+      if (isnan(net) || cap < 0.1f) return NAN;
+      return clamp(net / cap * 100.0f, 0.0f, 100.0f);
+
+  # --- Vanduo (VL53L0X) ---
+  - platform: vl53l0x
+    id: water_laser_raw
+    address: 0x29
+    update_interval: 2s
+
+  - platform: template
+    name: "Vanduo: Lygis (cm)"
+    id: water_cm
+    unit_of_measurement: "cm"
+    accuracy_decimals: 1
+    update_interval: 5s
+    lambda: |-
+      if (!id(water_laser_raw)->has_state()) return NAN;
+      return id(water_laser_raw).state * 100.0f;
+
+  - platform: template
+    name: "Vanduo: Uzpildymas (%)"
+    id: water_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      float v_cm = id(water_cm).state;
+      float empty = id(tank_fresh_empty).state;
+      float full  = id(tank_fresh_full).state;
+      if (isnan(v_cm) || abs(empty - full) < 0.1f) return NAN;
+      return clamp((empty - v_cm) / (empty - full) * 100.0f, 0.0f, 100.0f);
+
+  - platform: template
+    name: "Vanduo: Kiekis (L)"
+    id: water_liters
+    unit_of_measurement: "L"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      float pct = id(water_pct).state;
+      if (isnan(pct)) return NAN;
+      return pct / 100.0f * id(tank_volume_liters).state;
+
+  # --- TDS vandens kokybė ---
+  # attenuation: 12db = ~0–3.1V matavimo riba (11db deprecated nuo ESPHome 2025.x)
+  - platform: adc
+    pin: GPIO7
+    id: tds_raw_v
+    attenuation: 12db
+    update_interval: 1s
+    filters:
+      - sliding_window_moving_average:
+          window_size: 5
+          send_every: 1
+
+  - platform: template
+    name: "Vandens kokybe (TDS)"
+    id: water_tds
+    unit_of_measurement: "PPM"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      float v = id(tds_raw_v).state;
+      if (isnan(v) || v <= 0.05f) return 0.0f;
+      if (v > 2.3f) v = 2.3f;
+      return (133.42f * v * v * v - 255.86f * v * v + 857.39f * v) * 0.5f;
+
+  # --- BMP180 (temperatūra ir slėgis) ---
+  - platform: bmp085
+    temperature:
+      id: cabin_temp_raw
+      internal: true
+    pressure:
+      name: "Atmosferos slėgis"
+      id: cabin_pres
+      accuracy_decimals: 1
+    update_interval: 10s
+
+  - platform: template
+    name: "Temperatura (kajute)"
+    id: cabin_temp
+    unit_of_measurement: "C"
+    accuracy_decimals: 1
+    update_interval: 10s
+    lambda: |-
+      if (isnan(id(cabin_temp_raw).state)) return NAN;
+      return id(cabin_temp_raw).state + id(temp_offset).state;
+
+  - platform: template
+    name: "Aukstis (barometrinis)"
+    id: altitude_baro
+    unit_of_measurement: "m"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: |-
+      float p  = id(cabin_pres).state;
+      float p0 = id(sea_level_pressure).state;
+      if (isnan(p) || p <= 0 || p0 <= 0) return NAN;
+      return 44330.0f * (1.0f - pow(p / p0, 0.1903f));
+
+  - platform: template
+    name: "Slegio tendencija (3 val)"
+    id: pressure_trend
+    unit_of_measurement: "hPa"
+    accuracy_decimals: 2
+    update_interval: 60s
+    lambda: |-
+      if (id(pressure_hist_count) < 2) return NAN;
+      int idx = id(pressure_hist_count) - 1;
+      if (idx > 6) idx = 6;
+      float oldest = id(pressure_hist)[idx];
+      float now    = id(cabin_pres).state;
+      if (isnan(now) || oldest <= 0) return NAN;
+      float hours = idx * 0.5f;
+      if (hours < 0.4f) return NAN;
+      return (now - oldest) * (3.0f / hours);
+
+  # --- ESP32-S3 vidinė temperatūra ---
+  - platform: internal_temperature
+    name: "Sistema: ESP temperatura"
+    id: esp_temp
+    update_interval: 30s
+
+  # --- ADXL345 pokrypis ---
+  - platform: template
+    name: "Pokrypis Kaire-Desine"
+    id: roll_sensor
+    unit_of_measurement: "°"
+    accuracy_decimals: 0
+    update_interval: 1s
+    filters:
+      - timeout: 30s
+    lambda: |-
+      static bool prev_ok = true;
+      uint8_t reg = 0x32; uint8_t raw[6];
+      id(i2c_bus)->write(0x53, &reg, 1, false);
+      if (id(i2c_bus)->read(0x53, raw, 6) != 0) {
+        if (prev_ok) ESP_LOGW("tilt", "ADXL345 klaida");
+        prev_ok = false;
+        return {};
+      }
+      if (!prev_ok) { ESP_LOGI("tilt", "ADXL345 atsistate"); prev_ok = true; }
+      int16_t y = (int16_t)(raw[2] | (raw[3] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      float angle = atan2((float)y, (float)z) * 180.0f / M_PI;
+      id(raw_roll) = angle;
+      return angle - id(cal_roll);
+
+  - platform: template
+    name: "Pokrypis Priekis-Galas"
+    id: pitch_sensor
+    unit_of_measurement: "°"
+    accuracy_decimals: 0
+    update_interval: 1s
+    filters:
+      - timeout: 30s
+    lambda: |-
+      uint8_t reg = 0x32; uint8_t raw[6];
+      id(i2c_bus)->write(0x53, &reg, 1, false);
+      if (id(i2c_bus)->read(0x53, raw, 6) != 0) return {};
+      int16_t x = (int16_t)(raw[0] | (raw[1] << 8));
+      int16_t z = (int16_t)(raw[4] | (raw[5] << 8));
+      float angle = atan2((float)x, (float)z) * 180.0f / M_PI;
+      id(raw_pitch) = angle;
+      return angle - id(cal_pitch);
+
+  # --- GPS ---
+  - platform: template
+    name: "GPS: Aukstis"
+    id: gps_alt_sensor
+    unit_of_measurement: "m"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return id(gps_fix) ? id(gps_alt) : NAN;'
+
+  - platform: template
+    name: "GPS: Greitis"
+    id: gps_speed
+    unit_of_measurement: "km/h"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return id(gps_fix) ? id(gps_speed_val) : 0.0f;'
+
+  - platform: template
+    name: "GPS: Kursas"
+    id: gps_course
+    unit_of_measurement: "°"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return id(gps_fix) ? id(gps_course_val) : NAN;'
+
+  - platform: template
+    name: "GPS: Palydovai (viso)"
+    id: gps_sats
+    unit_of_measurement: "vnt"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return (float)(id(gps_sats_gps) + id(gps_sats_glonass) + id(gps_sats_beidou));'
+
+  - platform: template
+    name: "GPS: Palydovai GPS"
+    id: gps_sats_gps_sensor
+    unit_of_measurement: "vnt"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return (float)id(gps_sats_gps);'
+
+  - platform: template
+    name: "GPS: Palydovai GLONASS"
+    id: gps_sats_glonass_sensor
+    unit_of_measurement: "vnt"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return (float)id(gps_sats_glonass);'
+
+  - platform: template
+    name: "GPS: Palydovai BeiDou"
+    id: gps_sats_beidou_sensor
+    unit_of_measurement: "vnt"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return (float)id(gps_sats_beidou);'
+
+  # --- GSM ---
+  - platform: template
+    name: "GSM: Rysio kokybe (%)"
+    id: gsm_signal
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (id(gsm_signal_val) == 99 || id(gsm_signal_val) == 0) return 0.0f;
+      return (id(gsm_signal_val) / 31.0f) * 100.0f;
+
+  - platform: template
+    name: "GSM: RSSI (0-31)"
+    id: gsm_rssi
+    unit_of_measurement: ""
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: 'return (float)id(gsm_signal_val);'
+
+  # --- Odometras ---
+  - platform: template
+    name: "Keliones atstumas"
+    id: odometer
+    unit_of_measurement: "km"
+    accuracy_decimals: 2
+    update_interval: 10s
+    lambda: 'return id(trip_odometer);'
+
+  - platform: uptime
+    name: "Sistema: Darbo laikas"
+    id: uptime_sensor
+    update_interval: 60s
+
+  - platform: debug
+    free:
+      name: "Sistema: Laisva atmintis"
+      id: heap_free
+
+# ==========================================
+# 🔤 TEKSTINIAI SENSORIAI
+# ==========================================
+text_sensor:
+  - platform: template
+    name: "GSM: Operatorius"
+    id: gsm_op
+    update_interval: 10s
+    lambda: 'return id(gsm_operator);'
+
+  - platform: template
+    name: "GSM: Tinklo registracija"
+    id: gsm_creg
+    update_interval: 10s
+    lambda: |-
+      switch (id(gsm_creg_val)) {
+        case 1: return std::string("Registruotas (Home)");
+        case 2: return std::string("Ieskoma...");
+        case 3: return std::string("Atmesta");
+        case 5: return std::string("Roaming");
+        default: return std::string("Neregistruotas");
+      }
+
+  - platform: template
+    name: "SIM statusas"
+    id: sim_status_sensor
+    update_interval: 30s
+    lambda: 'return id(sim_status);'
+
+  - platform: template
+    name: "GPS: Koordinates"
+    id: gps_coords
+    update_interval: 5s
+    lambda: |-
+      if (!id(gps_fix)) return std::string("Ieskoma...");
+      char buf[48];
+      snprintf(buf, sizeof(buf), "%.6f, %.6f", id(gps_lat), id(gps_lon));
+      return std::string(buf);
+
+  - platform: template
+    name: "GPS: Fix statusas"
+    id: gps_fix_text
+    update_interval: 5s
+    lambda: |-
+      if (!id(gps_fix))          return std::string("No fix");
+      if (id(gps_fix_mode) == 2) return std::string("2D fix");
+      if (id(gps_fix_mode) == 3) return std::string("3D fix");
+      return                            std::string("Fix");
+
+  # Orų prognozė — slenkstiniai pagal CLAUDE.md (0.5 / 2 / 4 hPa per 3h)
+  - platform: template
+    name: "Oru prognoze"
+    id: weather_forecast
+    update_interval: 60s
+    lambda: |-
+      if (id(pressure_hist_count) < 2) {
+        char b[32];
+        snprintf(b, sizeof(b), "Kaupiama (%d/7)", id(pressure_hist_count));
+        return std::string(b);
+      }
+      int idx = id(pressure_hist_count) - 1;
+      if (idx > 6) idx = 6;
+      float oldest = id(pressure_hist)[idx];
+      float now    = id(cabin_pres).state;
+      if (isnan(now) || oldest <= 0) return std::string("Nezinoma");
+      float hours = idx * 0.5f;
+      float trend = (now - oldest) * (3.0f / hours);
+      if (trend >  4.0f) return std::string("Sparčiai gerėja");
+      if (trend >  2.0f) return std::string("Gerėja");
+      if (trend >  0.5f) return std::string("Lėtai gerėja");
+      if (trend > -0.5f) return std::string("Stabilu");
+      if (trend > -2.0f) return std::string("Kinta");
+      if (trend > -4.0f) return std::string("Blogėja");
+      return                     std::string("Audra artėja");
+
+  # Domkratų patarimas (roll: ašies atstumas 1800mm, pitch: ratų bazė 3665mm)
+  - platform: template
+    name: "Domkratai: Patarimas"
+    id: jack_advice
+    update_interval: 2s
+    lambda: |-
+      float roll  = id(roll_sensor).state;
+      float pitch = id(pitch_sensor).state;
+      if (isnan(roll) || isnan(pitch)) return std::string("Nezinoma");
+      if (abs(roll) <= 0.5f && abs(pitch) <= 0.5f) return std::string("Lygu");
+      char buf[80];
+      std::string msg = "";
+      if (abs(roll) > 0.5f) {
+        float mm = tan(abs(roll) * M_PI / 180.0f) * 1800.0f;
+        snprintf(buf, sizeof(buf), "Kelti %s %.0fmm",
+                 roll > 0 ? "Kaire" : "Desine", mm);
+        msg += std::string(buf);
+      }
+      if (abs(pitch) > 0.5f) {
+        float mm = tan(abs(pitch) * M_PI / 180.0f) * 3665.0f;
+        if (!msg.empty()) msg += " | ";
+        snprintf(buf, sizeof(buf), "Kelti %s %.0fmm",
+                 pitch > 0 ? "Prieki" : "Gala", mm);
+        msg += std::string(buf);
+      }
+      return msg;
+
+# ==========================================
+# ⚡ BINARY SENSORIAI
+# ==========================================
+# Fiziniai jungikliai (pcf_switches 0x22, P0–P7) — kiekvienas valdo savo šviesą.
+# inverted: true → optoizoliuotas jungiklis aktyvuojamas GND (žemu lygiu).
+# on_press = perėjimas į aktyvią būseną → light.toggle.
+binary_sensor:
+  - platform: gpio
+    id: jungiklis_1
+    name: "Jungiklis 1"
+    pin: { pcf8574: pcf_switches, number: 0, mode: INPUT, inverted: true }
+    on_press:
+      - light.toggle: sviesa_1
+
+  - platform: gpio
+    id: jungiklis_2
+    name: "Jungiklis 2"
+    pin: { pcf8574: pcf_switches, number: 1, mode: INPUT, inverted: true }
+    on_press:
+      - light.toggle: sviesa_2
+
+  - platform: gpio
+    id: jungiklis_3
+    name: "Jungiklis 3"
+    pin: { pcf8574: pcf_switches, number: 2, mode: INPUT, inverted: true }
+    on_press:
+      - light.toggle: sviesa_3
+
+  - platform: gpio
+    id: jungiklis_4
+    name: "Jungiklis 4"
+    pin: { pcf8574: pcf_switches, number: 3, mode: INPUT, inverted: true }
+    on_press:
+      - light.toggle: sviesa_4
+
+  - platform: gpio
+    id: jungiklis_5
+    name: "Jungiklis 5"
+    pin: { pcf8574: pcf_switches, number: 4, mode: INPUT, inverted: true }
+    on_press:
+      - light.toggle: sviesa_5
+
+  - platform: gpio
+    id: jungiklis_6
+    name: "Jungiklis 6"
+    pin: { pcf8574: pcf_switches, number: 5, mode: INPUT, inverted: true }
+    on_press:
+      - light.toggle: sviesa_6
+
+  - platform: gpio
+    id: jungiklis_7
+    name: "Jungiklis 7"
+    pin: { pcf8574: pcf_switches, number: 6, mode: INPUT, inverted: true }
+    on_press:
+      - light.toggle: sviesa_7
+
+  - platform: gpio
+    id: jungiklis_8
+    name: "Jungiklis 8"
+    pin: { pcf8574: pcf_switches, number: 7, mode: INPUT, inverted: true }
+    on_press:
+      - light.toggle: sviesa_8
+
+  - platform: template
+    name: "GPS: Signalas"
+    id: gps_fix_sensor
+    lambda: 'return id(gps_fix);'
+
+# ==========================================
+# ⚙️ SKRIPTAI
+# ==========================================
+script:
+  - id: a7670e_init
+    then:
+      - uart.write: { id: uart_a7670e, data: "AT\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CMGF=1\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CNMI=2,1,0,0,0\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+COPS=3,0\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CREG=1\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CGNSSPWR=1\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CGNSSMODE=3\r\n" }
+
+  - id: send_status_sms
+    parameters:
+      target_num: std::string
+    then:
+      - uart.write:
+          id: uart_a7670e
+          data: !lambda |-
+            std::string cmd = "AT+CMGS=\"" + target_num + "\"\r\n";
+            return std::vector<uint8_t>(cmd.begin(), cmd.end());
+      - delay: 2s
+      - uart.write:
+          id: uart_a7670e
+          data: !lambda |-
+            // ASCII tik, max 160 simboliu
+            char m[200];
+            float ct  = id(cabin_temp).state;
+            float prs = id(cabin_pres).state;
+            float roll  = id(roll_sensor).state;
+            float pitch = id(pitch_sensor).state;
+            float gnet  = id(gas_net).state;
+            float gpct  = id(gas_pct).state;
+            float wpct  = id(water_pct).state;
+            snprintf(m, sizeof(m),
+              "Kemperis OK\n"
+              "GPS: %.6f,%.6f %.0fm\n"
+              "Tilt: %.0fd %.0fd\n"
+              "Dujos: %.1fkg (%.0f%%)\n"
+              "Vanduo: %.0f%%\n"
+              "Temp: %.1fC %.0fhPa\x1A",
+              id(gps_lat), id(gps_lon),
+              id(gps_fix) ? id(gps_alt) : 0.0f,
+              isnan(roll)?0:roll, isnan(pitch)?0:pitch,
+              isnan(gnet)?0:gnet, isnan(gpct)?0:gpct,
+              isnan(wpct)?0:wpct,
+              isnan(ct)?0:ct, isnan(prs)?0:prs);
+            return std::vector<uint8_t>(m, m + strlen(m));
+
+# ==========================================
+# ⏱ INTERVALAI
+# ==========================================
+interval:
+  # --- A7670E UART parseris (200ms) ---
+  - interval: 200ms
+    then:
+      - lambda: |-
+          uint8_t byte;
+          while (id(uart_a7670e)->available() > 0) {
+            if (!id(uart_a7670e)->read_byte(&byte)) break;
+
+            if (id(uart_buf).size() > 1024) {
+              ESP_LOGW("a7670e", "UART buffer overflow");
+              id(uart_buf).clear();
+            }
+
+            char c = (char)byte;
+            if (c != '\r') id(uart_buf) += c;
+            if (c != '\n') continue;
+
+            std::string line = id(uart_buf);
+            id(uart_buf).clear();
+            while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
+              line.pop_back();
+            if (line.empty()) continue;
+
+            // +CMTI → skaitome SMS sąrašą
+            if (line.find("+CMTI:") != std::string::npos) {
+              id(uart_a7670e)->write_str("AT+CMGL=\"ALL\"\r\n");
+              continue;
+            }
+
+            // +CMGL → ištraukiame siuntėją
+            if (line.find("+CMGL:") != std::string::npos) {
+              size_t q1 = line.find("\",\"");
+              size_t q2 = (q1 != std::string::npos) ? line.find("\",\"", q1 + 3) : std::string::npos;
+              if (q1 != std::string::npos && q2 != std::string::npos)
+                id(sms_sender) = line.substr(q1 + 3, q2 - q1 - 3);
+              continue;
+            }
+
+            // "Status?" — case-insensitive
+            if (!id(sms_sender).empty() &&
+                (line.find("Status?") != std::string::npos ||
+                 line.find("status?") != std::string::npos ||
+                 line.find("STATUS?") != std::string::npos)) {
+              id(send_status_sms)->execute(id(sms_sender));
+              id(uart_a7670e)->write_str("AT+CMGD=1,3\r\n");
+              id(sms_sender).clear();
+              continue;
+            }
+
+            // +CSQ → signalo stiprumas
+            size_t csq = line.find("+CSQ:");
+            if (csq != std::string::npos) {
+              size_t s = csq + 5;
+              while (s < line.size() && line[s] == ' ') s++;
+              size_t cm = line.find(',', s);
+              if (cm != std::string::npos)
+                id(gsm_signal_val) = atoi(line.substr(s, cm - s).c_str());
+              continue;
+            }
+
+            // +COPS → operatorius
+            size_t cops = line.find("+COPS:");
+            if (cops != std::string::npos) {
+              size_t q1 = line.find('"', cops);
+              size_t q2 = (q1 != std::string::npos) ? line.find('"', q1 + 1) : std::string::npos;
+              id(gsm_operator) = (q1 != std::string::npos && q2 != std::string::npos)
+                                 ? line.substr(q1 + 1, q2 - q1 - 1)
+                                 : std::string("Neregistruotas");
+              continue;
+            }
+
+            // +CREG → tinklo registracija
+            size_t creg = line.find("+CREG:");
+            if (creg != std::string::npos) {
+              size_t comma = line.find(',', creg);
+              if (comma != std::string::npos)
+                id(gsm_creg_val) = atoi(line.substr(comma + 1, 1).c_str());
+              else
+                id(gsm_creg_val) = atoi(line.substr(creg + 7, 1).c_str());
+              continue;
+            }
+
+            // +CPIN → SIM statusas
+            if (line.find("+CPIN: READY") != std::string::npos)
+              id(sim_status) = "READY";
+            else if (line.find("+CPIN: SIM PIN") != std::string::npos)
+              id(sim_status) = "PIN reikalingas";
+            else if (line.find("+CPIN: SIM PUK") != std::string::npos)
+              id(sim_status) = "PUK reikalingas";
+
+            // +CGNSSINFO → GPS duomenys
+            size_t gn = line.find("+CGNSSINFO:");
+            if (gn != std::string::npos) {
+              std::string d = line.substr(gn + 11);
+              while (!d.empty() && (d[0] == ' ' || d[0] == '\t')) d.erase(0, 1);
+              std::vector<std::string> f;
+              size_t p = 0;
+              while (true) {
+                size_t n = d.find(',', p);
+                if (n == std::string::npos) { f.push_back(d.substr(p)); break; }
+                f.push_back(d.substr(p, n - p));
+                p = n + 1;
+              }
+
+              auto valid_coord = [](const std::string& s) -> bool {
+                for (char c : s) if (c >= '1' && c <= '9') return true;
+                return false;
+              };
+
+              int mode = (f.size() > 0 && !f[0].empty()) ? atoi(f[0].c_str()) : 0;
+              bool has_fix = (mode == 2 || mode == 3) &&
+                             f.size() >= 13 &&
+                             valid_coord(f[4]) && valid_coord(f[6]) &&
+                             (f[5] == "N" || f[5] == "S") &&
+                             (f[7] == "E" || f[7] == "W");
+
+              if (has_fix) {
+                id(gps_fix_mode)     = mode;
+                id(gps_sats_gps)     = atoi(f[1].c_str());
+                id(gps_sats_glonass) = atoi(f[2].c_str());
+                id(gps_sats_beidou)  = atoi(f[3].c_str());
+
+                float lr  = atof(f[4].c_str());
+                int   ld  = (int)(lr / 100.0f);
+                float lat = ld + (lr - ld * 100.0f) / 60.0f;
+                if (f[5] == "S") lat = -lat;
+
+                float lnr = atof(f[6].c_str());
+                int   lnd = (int)(lnr / 100.0f);
+                float lon = lnd + (lnr - lnd * 100.0f) / 60.0f;
+                if (f[7] == "W") lon = -lon;
+
+                if (lat >= -90.0f && lat <= 90.0f && lon >= -180.0f && lon <= 180.0f) {
+                  id(gps_lat) = lat;
+                  id(gps_lon) = lon;
+                  id(gps_fix) = true;
+                  if (!f[10].empty()) {
+                    float alt = atof(f[10].c_str());
+                    if (alt > -500.0f && alt < 10000.0f) id(gps_alt) = alt;
+                  }
+                  if (!f[11].empty()) {
+                    float kmh = atof(f[11].c_str()) * 1.852f;
+                    if (kmh >= 0.0f && kmh < 300.0f) id(gps_speed_val) = kmh;
+                  }
+                  if (!f[12].empty()) {
+                    float crs = atof(f[12].c_str());
+                    if (crs >= 0.0f && crs <= 360.0f) id(gps_course_val) = crs;
+                  }
+                } else {
+                  id(gps_fix) = false;
+                }
+              } else {
+                id(gps_fix)          = false;
+                id(gps_fix_mode)     = 0;
+                id(gps_lat)          = 0.0f;
+                id(gps_lon)          = 0.0f;
+                id(gps_alt)          = 0.0f;
+                id(gps_speed_val)    = 0.0f;
+                id(gps_course_val)   = 0.0f;
+                id(gps_sats_gps)     = 0;
+                id(gps_sats_glonass) = 0;
+                id(gps_sats_beidou)  = 0;
+              }
+              continue;
+            }
+          }
+
+  # --- GPS pozicija (kas 10s) ---
+  - interval: 10s
+    then:
+      - uart.write: { id: uart_a7670e, data: "AT+CGNSSINFO\r\n" }
+
+  # --- GSM statusas (kas 60s — taupom energiją) ---
+  - interval: 60s
+    then:
+      - uart.write: { id: uart_a7670e, data: "AT+CSQ\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+COPS?\r\n" }
+      - delay: 500ms
+      - uart.write: { id: uart_a7670e, data: "AT+CREG?\r\n" }
+
+  # --- Odometras (min greitis 5 km/h — multipath apsauga) ---
+  - interval: 10s
+    then:
+      - lambda: |-
+          if (id(gps_fix) && id(gps_speed_val) > 5.0f)
+            id(trip_odometer) += id(gps_speed_val) * (10.0f / 3600.0f);
+
+  # --- Slėgio istorija (7 × 30min = 3.5h prognozei) ---
+  - interval: 30min
+    then:
+      - lambda: |-
+          float p = id(cabin_pres).state;
+          if (isnan(p) || p <= 0) return;
+          if (id(pressure_hist_count) == 0) {
+            for (int i = 0; i < 7; i++) id(pressure_hist)[i] = p;
+            id(pressure_hist_count) = 1;
+            return;
+          }
+          for (int i = 6; i > 0; i--) id(pressure_hist)[i] = id(pressure_hist)[i-1];
+          id(pressure_hist)[0] = p;
+          if (id(pressure_hist_count) < 7) id(pressure_hist_count)++;

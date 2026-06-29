@@ -1,0 +1,68 @@
+esphome:
+  name: wifi-ble-radar-c3
+  friendly_name: WiFi & BLE Radar C3
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: esp32c3
+
+external_components:
+  - source: github://krzysztofdrygas/esphome-wifi-csi
+
+wifi:
+  ssid: "Telia-D41F43-Greitas"
+  password: "AEB6A6B8B0" # ĮRAŠYK ČIA
+  fast_connect: true
+
+web_server:
+  port: 80
+
+# BŪTINA pakeisti į DEBUG, kad PowerShell ekrane matytum detalų BLE skenavimą
+logger:
+  level: DEBUG
+
+api:
+
+ota:
+  platform: esphome
+
+# --- W I F I   C S I   (Judesys) ---
+sensor:
+  - platform: wifi_csi
+    name: "WiFi Raw Noise"
+    id: csi_data
+    update_interval: 100ms
+
+  - platform: template
+    name: "Apytikslis žmonių skaičius"
+    id: people_count
+    unit_of_measurement: "žm."
+    icon: "mdi:account-group"
+    lambda: |-
+      float noise = id(csi_data).state;
+      if (noise < 8.0) {
+        return 0; // Tuščia
+      } else if (noise < 25.0) {
+        return 1; // 1 žmogus
+      } else if (noise < 50.0) {
+        return 2; // 2 žmonės
+      } else {
+        return 3; // Daug judesio
+      }
+    update_interval: 500ms
+
+binary_sensor:
+  - platform: template
+    name: "Judesys patalpoje"
+    device_class: motion
+    lambda: |-
+      return id(csi_data).state > 10.0;
+
+# --- B L E   S K E N A V I M A S   (Identifikacija) ---
+esp32_ble_tracker:
+  scan_parameters:
+    # Aktyvus skenavimas (BŪTINA, kad ištrauktų telefono pavadinimą ir gamintoją)
+    active: true
+    # Dalinamės radijo laiką su WiFi: skenuoja 100ms kiekvieną sekundę
+    interval: 1000ms
+    window: 100ms

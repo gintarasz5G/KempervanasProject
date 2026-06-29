@@ -1,0 +1,270 @@
+# DEBUG PROBLEMS v16 — Junctek BLE + BME680 Analysis
+# Data: 2026-05-08
+# Tikslas: Atidengti abi problemas su duomenimis ir sprendimais
+
+---
+
+## PROBLEMA 1: JUNCTEK BLE PARSING — Klaidingi Duomenys
+
+### Current State (from web dashboard):
+```
+Akum įtampa: 1.60V         (WRONG — turėtų 14.19V)
+Akum srovė: 21.8A          (WRONG — turėtų 3.70A)
+Akum galia: 3W             (WRONG — turėtų ~52W)
+Akum temp: 20.0°C          (?)
+Akum Ah likutis: 108.7 Ah  (?)
+```
+
+### Known Facts:
+1. Junctek BLE connects successfully → `[I][ble_text_sensor:041]: Connected successfully!`
+2. Junctek raw data shows symbols: `E◆◆◆` (HEX bytes)
+3. Previous v15 config rodė: 11.21V / 0.5A (also wrong, but different values)
+4. Hardware Junctek display: 14.19V / 3.70A (CORRECT reference)
+
+### Root Cause Hypothesis:
+- **BLE Frame Format Unknown** — need actual HEX dump
+- Current parsing assumes voltage at buf[1]/buf[2], but:
+  - Maybe format is different (no 0xC0/0xC1 markers)
+  - Maybe offset is different
+  - Maybe endianness is different
+  - Maybe data is encrypted/encoded differently
+
+### Required Debug Data:
+```
+[JUNCTEK] BLE frame (? bytes):
+  [0]=0x??
+  [1]=0x??
+  [2]=0x??
+  ...
+  [n]=0x??
+[JUNCTEK] Parsed voltage: ?.??V from [1]=0x?? [2]=0x??
+```
+
+**ACTION:** Run with DEBUG logai 5+ frames, save HEX output
+
+### Potential Solutions:
+1. **If 0xC0/0xC1 markers present** → revert to marker-based parsing
+2. **If fixed position** → adjust offset (buf[1]/buf[2] vs buf[3]/buf[4], etc.)
+3. **If BCD encoding wrong** → try different formulas:
+   - Single byte: `val = ((buf[i] >> 4) * 10 + (buf[i] & 0x0F))`
+   - Two bytes: `val = buf[i]*100 + buf[i+1]`
+   - Swapped endian: `buf[2]` first, then `buf[1]`
+4. **If multiplier wrong** → try `/10` instead of `/100`
+
+### Junctek References:
+- [jowser7/Junctek_BLE](https://github.com/jowser7/Junctek_BLE)
+- [chriskomus/ble-sniffer-walkthrough](https://github.com/chriskomus/ble-sniffer-walkthrough)
+- Protocol: Check if 0xC0/0xC1 really exist or different markers
+
+---
+
+## PROBLEMA 2: BME680 KOMUNIKACIJA — Communication Failed
+
+### Current State (from web dashboard):
+```
+Aplinka | Temperatura: NA          (should be 17-20°C)
+Aplinka | Drėgmė: NA              (should be 40-60%)
+Aplinka | Slėgis: NA              (should be 1013 hPa)
+Aplinka | VOC varža: NA           (should be 45000-100000Ω)
+Aplinka | Aukštis: NA             (calculated from pressure)
+Aplinka | Oro kokybė: Matavimas... (waiting for gas_resistance)
+```
+
+### Boot Log Error:
+```
+[15:37:39.192][C][bme680.sensor:214]: BME680:
+[15:37:39.193][C][bme680.sensor:215]:   Address: 0x76
+[15:37:39.193][E][bme680.sensor:217]: Communication failed
+[15:37:39.207][E][component:224]:   bme680.sensor is marked FAILED: unspecified
+```
+
+### I2C Scan Results (Good):
+```
+Found device at address 0x77  ← BME680 IS HERE
+```
+
+### Known Facts:
+1. I2C scan FINDS device at 0x77 → hardware OK
+2. But BME680 configured for 0x77 → Communication failed
+3. Previous v15 had same address 0x77 → WORKED (got temperature readings)
+4. Configuration is identical to working v15
+5. Only change: removed heater/iir_filter, then added back simplified
+
+### Root Cause Hypothesis:
+- **Sensor not initializing properly** — possible causes:
+  1. SDA/SCL pullup resistors missing/weak
+  2. Sensor power supply unstable
+  3. I2C timing issue (frequency 100kHz might be too slow for BME680)
+  4. Sensor bootloader/firmware issue
+  5. Pin conflicts (SDA=GPIO9, SCL=GPIO10 — check if used elsewhere)
+  6. Boot sequence timing — sensor needs power+time before init
+
+### Required Debug Data:
+```
+esphome logs — search for:
+[C][i2c.idf:119]: Found device at address 0x77  ← CONFIRMED
+[C][bme680.sensor:215]:   Address: 0x77
+[E][bme680.sensor:217]: Communication failed      ← WHERE IS ERROR?
+
+Check for:
+- I2C read/write errors
+- Timeout errors
+- GPIO conflicts
+- Power rail issues
+```
+
+### Potential Solutions:
+
+**Option A: Try different I2C frequency**
+```yaml
+i2c:
+  - id: i2c_bus
+    sda: GPIO9
+    scl: GPIO10
+    frequency: 100kHz      # Currently set
+    # Try: 50kHz (slower, more stable)
+    # Try: 200kHz (faster, might help)
+```
+
+**Option B: Add I2C delay/recovery**
+```yaml
+i2c:
+  - id: i2c_bus
+    sda: GPIO9
+    scl: GPIO10
+    frequency: 100kHz
+    scan: true
+    recovery: true  # Auto-recover if bus hangs
+```
+
+**Option C: Check GPIO conflicts**
+- SDA=GPIO9, SCL=GPIO10
+- Search YAML for other uses of GPIO9, GPIO10
+- Confirm no conflicts with UART, SPI, etc.
+
+**Option D: Full BME680 config (with heater properly set)**
+```yaml
+  - platform: bme680
+    i2c_id: i2c_bus
+    address: 0x77
+    update_interval: 30s
+    temperature:
+      name: "Aplinka | Temperatura"
+      id: bme_temp
+      filters: [{ offset: -4.0 }]
+    pressure:
+      name: "Aplinka | Slegis"
+      id: bme_pressure
+    humidity:
+      name: "Aplinka | Dregme"
+      id: bme_humidity
+    gas_resistance:
+      name: "Aplinka | VOC varza"
+      id: bme_voc_ohm
+```
+
+**Option E: Try 0x76 address (if hardware supports SDO pin)**
+```yaml
+address: 0x76  # If SDO pin is connected to GND
+```
+
+### BME680 References:
+- ESPHome: https://esphome.io/components/sensor/bme680.html
+- Datasheet: Bosch BME680 I2C address 0x76 (SDO→GND) or 0x77 (SDO→VCC)
+- Check hardware: which is SDO pin connected to?
+
+---
+
+## ACTION PLAN (Prioritetas)
+
+### 1️⃣ JUNCTEK (PIRMAS)
+Priority: HIGH — data is completely wrong, must understand frame format
+```bash
+# Step 1: Compile with DEBUG logai
+esphome compile kempervanas_v15.yaml
+esphome run kempervanas_v15.yaml
+
+# Step 2: Capture 10+ BLE frames
+esphome logs kempervanas_v15.yaml | grep JUNCTEK
+
+# Step 3: Analyze HEX dump
+# Example output:
+# [JUNCTEK] BLE frame (12 bytes):
+#   [0]=0xBB, [1]=0x14, [2]=0x19, ...
+
+# Step 4: Determine frame format
+# - Are 0xC0/0xC1 markers present?
+# - What is voltage at buf[1]+buf[2]?
+# - What is current format?
+```
+
+### 2️⃣ BME680 (ANTRAS)
+Priority: HIGH — no data at all, but likely hardware/timing issue
+```bash
+# Step 1: Check GPIO conflicts
+# Search YAML for GPIO9, GPIO10 usage elsewhere
+
+# Step 2: Try I2C frequency change
+# Change i2c frequency: 100kHz → 50kHz (slower, more stable)
+
+# Step 3: Check boot logs for I2C errors
+# esphome logs | grep -i "i2c\|bme680"
+
+# Step 4: If still fails, test with simple I2C scanner
+# (Create minimal YAML with just I2C scan, no BME680)
+```
+
+---
+
+## Testing Workflow
+
+### Session 1: Get Junctek HEX dump
+1. Flash with DEBUG logai
+2. Run for 2 minutes (capture 10+ frames)
+3. Save console output
+4. Analyze frame structure
+5. Create new parsing lambda
+
+### Session 2: Fix Junctek based on findings
+1. Update parsing with correct markers/offsets
+2. Flash and verify voltage/current match hardware
+3. Move to BME680 if successful
+
+### Session 3: Debug BME680
+1. Try frequency changes / GPIO checks
+2. If still fails: create minimal I2C test
+3. Possible hardware rework needed
+
+---
+
+## Files & References
+
+**This Document:**
+`DEBUG_PROBLEMS_v16.yaml` — This analysis + action plan
+
+**Related Files:**
+- `kempervanas_v15.yaml` — Main firmware (with DEBUG logai enabled)
+- `JUNCTEK_FIX_v16.md` — Original Junctek analysis (may be outdated)
+- `BME680_FIX_ANALYSIS.md` — Original BME680 analysis (may be outdated)
+
+**Next Steps:**
+1. ✅ Create this document
+2. ⏳ Run Junctek DEBUG session
+3. ⏳ Analyze HEX dump
+4. ⏳ Fix Junctek parsing
+5. ⏳ Debug BME680 (if needed)
+
+---
+
+## Completion Criteria
+
+**Junctek FIXED when:**
+- Web dashboard shows: 14.19V / 3.70A (matches hardware)
+- HEX dump analyzed and parsing logic corrected
+- ✅ Verified multiple times over 5+ minutes
+
+**BME680 FIXED when:**
+- Web dashboard shows: temperature, humidity, pressure (not NA)
+- VOC varža shows 45000-100000Ω (not 12917166.0Ω)
+- Oro kokybė responds to actual air conditions (not "Matavimas...")
+- ✅ Verified multiple times over 10+ minutes

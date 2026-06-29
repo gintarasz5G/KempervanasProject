@@ -438,7 +438,7 @@ text:
     id: txt_app_script_id
     optimistic: true
     restore_value: true
-    initial_value: "AKfycbwavlvHOeFhw0rsnoUQEtBj98mKy4iowtL8U-1fyAetknCbtL4hpKCOfc8swcpW7E4cEQ"
+    initial_value: !secret app_script_id
     mode: text
   - platform: template
     name: "txt_admin_number"
@@ -2670,3 +2670,4 @@ script:
                 then:
                   - lambda: 'id(sms_confirm_after_upload) = false; id(last_sms_send_ms) = millis();'
                   - script.execute: sms_send_status
+
