@@ -2206,7 +2206,7 @@
                 else if (rawId.includes('junc_time_remaining') || rawId.includes('veikimo_laikas')) sensorCache['junc_time_remaining'] = value;
                 else if (rawId.includes('miegamasis___temperatura') || rawId.includes('bedroom_temp')) sensorCache['bedroom_temp'] = value;
                 // #6 FIX: Griežtesnis BME temperatūros filtras (neleidžiame ESP32 lusto temperatūrai 42°C pakliūti čia)
-                else if ((rawId.includes('bme_temp') || rawId.includes('temperat')) && !rawId.includes('miegamasis') && !rawId.includes('esp_') && !rawId.includes('sistema_')) sensorCache['bme_temp'] = value;
+                if ((rawId.includes('bme_temp') || rawId.includes('temperat')) && !rawId.includes('miegamasis') && !rawId.includes('esp_') && !rawId.includes('sistema_')) { if (value > 45.0) return; sensorCache['bme_temp'] = value; }
                 else if (rawId.includes('pressure_altitude') || rawId.includes('aukstis__slegis') || (rawId.includes('aplinka') && rawId.includes('aukstis')) || (rawId.includes('aplinka') && rawId.includes('auks_tis'))) sensorCache['pressure_altitude'] = value;
                 else if (rawId.includes('bme_pressure') || (rawId.includes('sle_gis') && !rawId.includes('auks')) || (rawId.includes('slegis') && !rawId.includes('aukstis'))) sensorCache['bme_pressure'] = value;
                 else if (rawId.includes('vib_level') || rawId.includes('vibracija__ema') || rawId.includes('vibracija_ema')) sensorCache['vib_level'] = value;
@@ -2931,4 +2931,5 @@
 </body>
 </html>
     
+
 
