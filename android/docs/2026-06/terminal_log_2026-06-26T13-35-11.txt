@@ -1,0 +1,42 @@
+[12:48:19] Neprisijungta prie Kemperis-Valdymas — bandoma prisijungti...
+[12:48:19] 📵 Offline režimas — nėra ryšio su ESP32
+[12:48:23] 📊 Offline duomenys iš Sheets gauti
+[12:48:23] Inicijuojamas ryšys su ESP32 (http://192.168.4.1)...
+[12:48:36] ✅ Programėlė yra naujausios versijos.
+[12:48:53] ⚠️ SSE timeout (30s be duomenų) — perkuriamas ryšys...
+[12:48:57] Inicijuojamas ryšys su ESP32 (http://192.168.4.1)...
+[12:49:24] 📊 Offline duomenys iš Sheets gauti
+[12:49:28] ⚠️ SSE timeout (30s be duomenų) — perkuriamas ryšys...
+[12:49:32] Inicijuojamas ryšys su ESP32 (http://192.168.4.1)...
+[16:22:20] 📩 SMS gauta iš Google: G-705915 is your Google verification code. Don't share your code with anyone.
+[16:34:42] ❌ SSE ryšys nutrūko.
+[16:34:42] ⚠️ SSE timeout (30s be duomenų) — perkuriamas ryšys...
+[16:34:45] Inicijuojamas ryšys su ESP32 (http://192.168.4.1)...
+[16:34:46] ✅ Prisijungta prie ESP32!
+[16:34:46] ✅ Online — ryšys atkurtas
+[16:34:46] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 22 88 94 D4 18 EE
+[16:34:46] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[16:34:46] [ESP32] ⚪ [I][gps:2522]: AT+CGNSSINFO issiustas
+[16:34:47] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 22 88 97 D4 21 EE
+[16:34:47] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[16:34:47] 📵 Sheets klaida: Failed to fetch
+[16:34:48] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 22 89 00 D4 71 EE
+[16:34:48] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[16:34:49] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 22 89 02 D4 73 EE
+[16:34:49] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[16:34:49] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 22 89 05 D4 76 EE
+[16:34:50] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[16:34:51] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 22 89 08 D4 79 EE
+[16:34:51] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[16:34:55] [ESP32] ⚪ [I][esp-idf:000][BTU_TASK]: W (1458582734) BT_HCI: hcif disc complete: hdl 0x1, rsn 0x8 dev_find 1
+[16:34:56] [ESP32] ⚪ [I][gps:2522]: AT+CGNSSINFO issiustas
+[16:34:57] [ESP32] ⚪ [I][esp32_ble_client:125]: [0] [38:3B:26:79:DB:64] 0x00 Connecting
+[16:34:58] [ESP32] ⚪ [I][esp32_ble_client:343]: [0] [38:3B:26:79:DB:64] Connection open
+[16:34:58] [ESP32] ⚪ [I][ble_text_sensor:041]: [Energija | Junctek Raw HEX] Connected successfully!
+[16:35:04] [ESP32] ⚪ [I][esp-idf:000][BTU_TASK]: W (1458591450) BT_HCI: hcif disc complete: hdl 0x1, rsn 0x8 dev_find 1
+[16:35:05] [ESP32] ⚪ [I][esp32_ble_client:125]: [0] [38:3B:26:79:DB:64] 0x00 Connecting
+[16:35:06] [ESP32] ⚪ [I][esp32_ble_client:343]: [0] [38:3B:26:79:DB:64] Connection open
+[16:35:06] [ESP32] ⚪ [I][ble_text_sensor:041]: [Energija | Junctek Raw HEX] Connected successfully!
+[16:35:06] [ESP32] 🟡 [W][esp32_ble_client:117]: [0] [38:3B:26:79:DB:64] Connection already in progress, state=CONNECTED
+[16:35:06] [ESP32] ⚪ [I][gps:2522]: AT+CGNSSINFO issiustas
+[16:35:09] ✅ CSV išsaugotas į Downloads/kemperis_diena_2026-06-26.csv (5 eilutės).

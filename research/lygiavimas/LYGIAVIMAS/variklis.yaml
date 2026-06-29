@@ -1,0 +1,59 @@
+esphome:
+  name: lygiavimo-variklis
+  friendly_name: Lygiavimo Variklis
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: esp32c3
+
+logger:
+
+wifi:
+  ap:
+    ssid: "Lygiavimo_Testas"
+    password: "kempervanas"
+
+web_server:
+  port: 80
+  version: 2
+  local: true
+
+stepper:
+  - platform: a4988
+    id: kojele
+    step_pin: GPIO0
+    dir_pin: GPIO1
+    max_speed: 800 steps/s    # Padidintas greitis kompensuoti skaidymą
+    acceleration: 400
+    deceleration: 400
+
+button:
+  - platform: template
+    name: "Sukti Pirmyn (+1 Ratas)"
+    id: sukti_pirmyn
+    on_press:
+      - stepper.report_position:
+          id: kojele
+          position: 0
+      - stepper.set_target:
+          id: kojele
+          target: 800         # 800 impulsų = 1 ratas (pagal tavo TB6600 nustatymą)
+
+  - platform: template
+    name: "Sukti Atgal (-1 Ratas)"
+    id: sukti_atgal
+    on_press:
+      - stepper.report_position:
+          id: kojele
+          position: 0
+      - stepper.set_target:
+          id: kojele
+          target: -800
+
+  - platform: template
+    name: "Sustabdyti"
+    id: sustabdyti
+    on_press:
+      - stepper.set_target:
+          id: kojele
+          target: !lambda "return id(kojele).current_position;"

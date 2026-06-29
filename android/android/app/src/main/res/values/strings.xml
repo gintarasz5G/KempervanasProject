@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kemperis</string>
+    <string name="title_activity_main">Kemperis</string>
+    <string name="package_name">lt.kemperis.app</string>
+    <string name="custom_url_scheme">lt.kemperis.app</string>
+</resources>

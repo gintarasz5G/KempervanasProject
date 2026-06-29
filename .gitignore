@@ -1,0 +1,22 @@
+# Build artifacts
+**/build/
+**/.gradle/
+**/.esphome/
+**/node_modules/
+**/dist/
+**/out/
+
+# APK files
+*.apk
+release/archive/
+
+# SECRETS (NEVER COMMIT)
+**/secrets.yaml
+**/keystore.properties
+**/*.jks
+**/*.keystore
+**/google-services.json
+secrets/
+
+# Data exports
+data/

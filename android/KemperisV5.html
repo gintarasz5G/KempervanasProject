@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kemperis V4 - Pilna diagnostika</title>
+    <style>
+        :root { --bg-dark: #12151b; --bg-light: #f0f2f5; --card-dark: #1e232b; --card-light: #ffffff; --text-dark: #c9d1d9; --text-light: #1f2328; --accent: #4caf50; --accent-light: #66bb6a; --accent-cyan: #00adb5; --border-dark: #30363d; --border-light: #d0d7de; --danger: #e53935; --green: #238636; --red: #da3633; --grey: #30363d; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg-dark); color: var(--text-dark); -webkit-user-select: none; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 16px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .header h1 { font-size: 28px; font-weight: 700; color: #58a6ff; display: flex; align-items: center; gap: 8px; }
+        .header-right { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--card-dark); border-radius: 6px; font-size: 13px; border: 1px solid var(--border-dark); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; box-shadow: 0 0 6px #4caf50; }
+        .status-dot.offline { background: #f44336; box-shadow: 0 0 6px #f44336; }
+        .nav-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .nav-tab { padding: 10px 20px; background: var(--card-dark); border: 1px solid var(--border-dark); color: var(--text-dark); cursor: pointer; border-radius: 6px; font-weight: 600; font-size: 14px; transition: 0.2s; }
+        .nav-tab.active { background: #1f6feb; border-color: #1f6feb; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .card { background: var(--card-dark); border: 1px solid var(--border-dark); border-radius: 8px; padding: 20px; position: relative; }
+        .card h3 { font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 600;}
+        .card-value { font-size: 26px; font-weight: bold; color: var(--text-dark); margin: 4px 0; }
+        .card-unit { font-size: 14px; color: #8b949e; font-weight: normal; margin-left: 2px; }
+        .card-subtext { font-size: 12px; color: #8b949e; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-dark); }
+        .label-row { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; }
+        .section-title { font-size: 15px; font-weight: 600; color: #58a6ff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border-dark); padding-bottom: 6px;}
+        .progress-bar { width: 100%; height: 12px; background: #21262d; border-radius: 6px; overflow: hidden; margin: 10px 0 6px 0; }
+        .progress-fill { height: 100%; transition: width 0.3s ease; }
+        .status-line { font-size: 12px; color: #8b949e; min-height: 16px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .btn { padding: 10px 16px; border: none; color: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; text-transform: uppercase; transition: 0.2s; width: 100%; margin-bottom: 8px;}
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: #1f6feb; } .btn-primary:hover:not(:disabled) { background: #388bfd; }
+        .btn-success { background: #238636; } .btn-success:hover:not(:disabled) { background: #2ea043; }
+        .btn-warning { background: #d29922; } .btn-warning:hover:not(:disabled) { background: #e3b341; }
+        .btn-danger { background: #da3633; } .btn-danger:hover:not(:disabled) { background: #f85149; }
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; font-size: 11px; color: #8b949e; margin-bottom: 4px; text-transform: uppercase; font-weight: 600; }
+        .input-group input { width: 100%; padding: 10px; background: #0d1117; border: 1px solid var(--border-dark); color: var(--text-dark); border-radius: 6px; font-size: 14px; }
+        .input-group input:focus { outline: none; border-color: #58a6ff; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #30363d; transition: .3s; border-radius: 24px; border: 1px solid var(--border-dark); }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: #8b949e; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2ea043; border-color: #2ea043; }
+        input:checked + .slider:before { transform: translateX(20px); background-color: #ffffff; }
+        .priority-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+        .priority-card { background: var(--card-dark); border: 1px solid var(--border-dark); border-left: 4px solid #8b949e; border-radius: 8px; padding: 16px; position: relative; transition: border-left-color 0.3s, background 0.3s, box-shadow 0.3s; }
+        .priority-card h3 { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600; }
+        .priority-card .card-value { font-size: 24px; font-weight: bold; margin: 2px 0; transition: color 0.3s; }
+        .priority-card .card-subtext { font-size: 11px; color: #8b949e; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-dark); }
+        .priority-card.status-good { border-left-color: #2ea043; } .priority-card.status-good .card-value { color: #3fb950; }
+        .priority-card.status-warning { border-left-color: #d29922; } .priority-card.status-warning .card-value { color: #e3b341; }
+        .priority-card.status-danger { border-left-color: #da3633; animation: pulse-danger 2.5s infinite; } .priority-card.status-danger .card-value { color: #f85149; }
+        @keyframes pulse-danger { 0%, 100% { box-shadow: 0 0 0 0 rgba(218, 54, 51, 0.0); } 50% { box-shadow: 0 0 0 4px rgba(218, 54, 51, 0.25); } }
+        @keyframes co2-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+        @keyframes co2-blink-fast { 0%, 100% { opacity: 1; } 50% { opacity: 0.15; } }
+        .co2-blink { animation: co2-blink 1.4s infinite; }
+        .co2-blink-fast { animation: co2-blink-fast 0.55s infinite; }
+        .tilt-grid { display: flex; flex-wrap: nowrap; gap: 16px; justify-content: center; }
+        .lvl-card { background: var(--card-dark); border-radius: 12px; padding: 15px; border: 1px solid var(--border-dark); flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; position: relative; }
+        .lvl-title { font-size: 11px; color: #8b949e; margin-bottom: 10px; align-self: flex-start; text-transform: uppercase; letter-spacing: 1px; }
+        .arc-wrap { width: 100%; height: 260px; position: relative; display: flex; justify-content: center; align-items: flex-end; overflow: visible; margin-top: 10px; }
+        .arc-bg { width: 280px; height: 280px; border: 2px solid #21262d; border-radius: 50%; position: absolute; bottom: -140px; }
+        .angle-top { position: absolute; top: -5px; left: 50%; transform: translateX(-50%); font-size: 28px; font-weight: bold; color: var(--green); text-shadow: 0 0 12px rgba(0,0,0,0.8); transition: color 0.3s; z-index: 10; }
+        .rotating-container { position: absolute; bottom: 0; left: 50%; width: 100%; height: 220px; display: flex; justify-content: center; align-items: flex-end; transform-origin: center bottom; transition: transform 0.15s ease-out; z-index: 5; overflow: visible !important; }
+        .svg-wrapper { position: absolute; bottom: 0; left: 0; width: 100%; height: 180px; display: flex; align-items: flex-end; justify-content: center; z-index: 2; overflow: visible; }
+        .svg-wrapper svg { height: 100% !important; width: auto !important; max-width: 100%; color: var(--text-dark); overflow: visible; }
+        .svg-wrapper svg path { fill: none !important; stroke: currentColor !important; stroke-linejoin: round; }
+        .direction-text { font-size: 13px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px; text-align: center; height: 15px; }
+        .plan-wrap { width: 100%; display: flex; justify-content: center; padding: 40px 0 20px 0; }
+        .plan-box { width: 100px; height: 160px; border: 2px solid #30363d; position: relative; background: rgba(255,255,255,0.02); }
+        .cm { position: absolute; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 16px; min-width: 52px; text-align: center; background: var(--red); color: white; z-index: 10; transition: background 0.3s; }
+        .cm.ok { background: var(--green); }
+        .fl { top: -5px; left: -70px; } .fr { top: -5px; right: -70px; } .rl { bottom: -5px; left: -70px; } .rr { bottom: -5px; right: -70px; }
+        .b-outer { width: 80px; height: 80px; border: 2px solid #30363d; border-radius: 50%; position: relative; margin-top: 10px; background: #0b0f14; box-shadow: inset 0 4px 10px rgba(0,0,0,0.5); }
+        .b-inner { width: 20px; height: 20px; background: var(--accent-cyan); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 12px var(--accent-cyan); transition: transform 0.2s; }
+        .log-container { background: #0d1117; color: #c9d1d9; font-family: monospace; padding: 12px; height: 400px; overflow-y: auto; border-radius: 6px; border: 1px solid var(--border-dark); font-size: 12px; line-height: 1.5; }
+        .sms-terminal { background: #0a0e0a; color: #33ff33; border-color: #1b4f1b; font-family: 'Courier New', monospace; }
+        .sms-line { margin-bottom: 4px; border-bottom: 1px dashed #1b4f1b; padding-bottom: 2px; }
+        .b-ch { position: absolute; top: 50%; left: 6px; right: 6px; height: 1px; background: rgba(255,255,255,0.22); transform: translateY(-50%); pointer-events: none; }
+        .b-cv { position: absolute; left: 50%; top: 6px; bottom: 6px; width: 1px; background: rgba(255,255,255,0.22); transform: translateX(-50%); pointer-events: none; }
+        .vib-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+        .alarm-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+        .alarm-row label { font-size: 12px; color: #8b949e; min-width: 110px; }
+        .alarm-row input[type=text] { flex: 1; min-width: 180px; padding: 6px 8px; background: #0d1117; border: 1px solid var(--border-dark); color: var(--text-dark); border-radius: 6px; font-size: 13px; }
+        .alarm-row input[type=number] { width: 80px; padding: 6px 8px; background: #0d1117; border: 1px solid var(--border-dark); color: var(--text-dark); border-radius: 6px; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🚐 Kemperis</h1>
+        <div class="header-right"></div>
+    </div>
+    <div class="nav-tabs" style="display:flex; gap:8px; align-items:center;">
+        <button class="nav-arrow no-swipe" onclick="swipeTab(-1)" title="Ankstesnė" style="flex:0 0 auto;padding:10px 14px;border-radius:10px;background:#161b22;color:#c9d1d9;border:1px solid #30363d;font-size:18px;cursor:pointer;">‹</button>
+        <select id="tab-select" class="no-swipe" onchange="selectTab(this.value)" style="flex:1 1 auto;padding:12px;border-radius:10px;background:#161b22;color:#c9d1d9;border:1px solid #30363d;font-size:16px;font-weight:700;text-align:center;text-align-last:center;">
+            <option value="overview">📊 Apžvalga</option>
+            <option value="gps">📍 GPS</option>
+            <option value="energy">🔋 Energija</option>
+            <option value="environment">🌡️ Aplinka</option>
+            <option value="comms">📡 Ryšys</option>
+            <option value="leveling">⚖️ Lygiavimas</option>
+            <option value="sms">💬 SMS</option>
+            <option value="settings">⚙️ Nustatymai</option>
+            <option value="alarms">🚨 Aliarmai</option>
+            <option value="logs">🛠️ Logai</option>
+        </select>
+        <button class="nav-arrow no-swipe" onclick="swipeTab(1)" title="Kita" style="flex:0 0 auto;padding:10px 14px;border-radius:10px;background:#161b22;color:#c9d1d9;border:1px solid #30363d;font-size:18px;cursor:pointer;">›</button>
+    </div>
+
+    <!-- ==================== APŽVALGA ==================== -->
+    <div id="overview" class="tab-content active">
+        <div class="section-title">🎯 Svarbiausi Rodikliai</div>
+        <div class="priority-grid">
+            <div class="priority-card" id="pc-soc"><h3>🔋 Akum. įkrova</h3><div class="card-value"><span id="soc_value">0</span>%</div><div class="progress-bar"><div class="progress-fill" id="soc-fill" style="width:0%; background:#238636;"></div></div><div class="card-subtext">Likęs: <span id="ah_remaining">0</span> Ah</div></div>
+            <div class="priority-card" id="pc-bat-status"><h3>⚡ Akum. statusas</h3><div class="card-value" style="font-size: 20px;" id="bat-status">---</div><div class="card-subtext"><span id="power_mini">0</span> W · <span id="current_mini">0.0</span> A</div></div>
+            <div class="priority-card" id="pc-water"><h3>💧 Vanduo</h3><div class="card-value"><span id="water_pct">0</span>%</div><div class="progress-bar"><div class="progress-fill" id="water-fill" style="width:0%; background:#1f6feb;"></div></div><div class="status-line" id="water-status">Tikrinama...</div><div class="card-subtext"><span id="water-mode-status">Tikrinama...</span></div></div>
+            <div class="priority-card" id="pc-gas"><h3>🔥 Dujos</h3><div class="card-value"><span id="gas_pct">0</span>%</div><div class="progress-bar"><div class="progress-fill" id="gas-fill" style="width:0%; background:#d29922;"></div></div></div>
+            <div class="priority-card" id="pc-temp"><h3>🌡️ Temperatūra</h3><div class="card-value"><span id="temp_value">0.0</span><span class="card-unit">°C</span></div></div>
+            <div class="priority-card" id="pc-humid"><h3>💦 Drėgmė</h3><div class="card-value"><span id="humid_value">0</span><span class="card-unit">%</span></div></div>
+            <div class="priority-card" id="pc-air"><h3>🌬️ Oro kokybė</h3><div class="card-value" style="font-size: 18px;" id="air-quality">Matavimas...</div><div class="card-subtext" id="air-advice">---</div></div>
+            <div class="priority-card" id="pc-co2"><h3>🛏️ CO₂ miegamasis</h3><div class="card-value" id="co2-priority-value" style="font-size: 26px;">---</div><div class="card-subtext"><span id="co2-priority-quality">---</span> · <span id="co2-priority-trend">→</span></div></div>
+            <div class="priority-card" id="pc-advice" style="border-left: 3px solid #58a6ff; grid-column: span 2;"><h3>💡 Ką daryti?</h3><div id="advice-box" style="font-size: 13px; margin-top: 6px; line-height: 1.6;">Kaupiami duomenys...</div></div>
+            <div class="priority-card" id="pc-weather"><h3>☁️ Orų prognozė</h3><div class="card-value" style="font-size: 18px;" id="weather">Sukaupimas...</div></div>
+            <div class="priority-card" id="pc-220v"><h3>⚡ 220V</h3><div class="card-value" style="font-size: 20px;" id="overview-220v">---</div><div class="card-subtext" id="overview-220v-sub">Tikrinama...</div></div>
+            <div class="priority-card" id="pc-security" style="border-left: 3px solid #8b949e;"><h3>🔐 Apsauga</h3><div class="card-value" style="font-size: 18px;" id="security-overview-text">---</div></div>
+        </div>
+    </div>
+
+    <!-- ==================== GPS ==================== -->
+    <div id="gps" class="tab-content">
+        <div class="grid">
+            <div class="card" style="grid-column: 1 / -1;"><h3>📍 Koordinatės</h3><div class="card-value" style="font-size: 22px;" id="gps-coords">Ieškoma...</div><div class="card-subtext" id="gps-fix">Satelitai: 0</div></div>
+            <div class="card"><h3>Greitis</h3><div class="card-value"><span id="gps-speed">0</span><span class="card-unit">km/h</span></div></div>
+            <div class="card"><h3>Aukštis (GPS)</h3><div class="card-value"><span id="gps-alt">0</span><span class="card-unit">m</span></div></div>
+            <div class="card"><h3>Kryptis</h3><div class="card-value"><span id="gps-heading">0</span><span class="card-unit">°</span></div></div>
+            <div class="card"><h3>🛰️ Iš viso palydovų</h3><div class="card-value"><span id="gps-sats-total">0</span></div><div class="card-subtext">Visų sistemų suma</div></div>
+        </div>
+        <div class="section-title" style="margin-top: 8px;">🛰️ Palydovų sistemos</div>
+        <div class="grid">
+            <div class="card"><h3>🇺🇸 NAVSTAR GPS (JAV)</h3><div class="card-value"><span id="sats-gps">0</span></div><div class="card-subtext">Amerikos sistema</div></div>
+            <div class="card"><h3>🇷🇺 GLONASS (Rusija)</h3><div class="card-value"><span id="sats-glonass">0</span></div><div class="card-subtext">Rusijos sistema</div></div>
+            <div class="card"><h3>🇨🇳 BeiDou (Kinija)</h3><div class="card-value"><span id="sats-bds">0</span></div><div class="card-subtext">Kinijos sistema</div></div>
+            <div class="card"><h3>🇪🇺 Galileo (Europa)</h3><div class="card-value"><span id="sats-galileo">0</span></div><div class="card-subtext">Europos sistema</div></div>
+        </div>
+    </div>
+
+    <!-- ==================== ENERGIJA ==================== -->
+    <div id="energy" class="tab-content">
+        <div class="grid">
+            <div class="card" style="grid-column: span 2;"><h3>⚡ Akumuliatoriaus statusas</h3><div class="card-value" style="font-size: 28px;" id="bat-status-d">---</div><div class="card-subtext"><span id="power_d">0</span> W · <span id="current_d">0.00</span> A</div></div>
+            <div class="card"><h3>🔋 Įkrova (SOC)</h3><div class="card-value"><span id="soc_d">0</span>%</div><div class="progress-bar"><div class="progress-fill" id="soc-fill-d" style="width:0%; background:#238636;"></div></div></div>
+            <div class="card"><h3>Įtampa</h3><div class="card-value"><span id="voltage">0.00</span><span class="card-unit">V</span></div></div>
+            <div class="card"><h3>Srovė</h3><div class="card-value"><span id="current">0.00</span><span class="card-unit">A</span></div></div>
+            <div class="card"><h3>Galia</h3><div class="card-value"><span id="power">0</span><span class="card-unit">W</span></div></div>
+            <div class="card"><h3>Ah likutis</h3><div class="card-value"><span id="ah_remaining_d">0.0</span><span class="card-unit">Ah</span></div></div>
+            <div class="card"><h3>🌡️ Akum. temperatūra</h3><div class="card-value"><span id="junc_temp_val">---</span><span class="card-unit">°C</span></div></div>
+            <div class="card"><h3>⏳ Likęs veikimas</h3><div class="card-value"><span id="junc_time_val">---</span><span class="card-unit">min</span></div></div>
+        </div>
+        <div class="section-title" style="margin-top: 8px;">⚡ 220V maitinimo šaltinis</div>
+        <div class="grid">
+            <div class="card" style="grid-column: span 2;">
+                <h3>Aktyvus šaltinis</h3>
+                <div class="card-value" style="font-size: 26px;" id="power-source-220">---</div>
+                <div class="card-subtext" id="power-source-220-sub">Tikrinama...</div>
+            </div>
+            <div class="card">
+                <h3>🔌 Išorinė 220V</h3>
+                <div class="card-value" style="font-size: 20px;" id="shore-power-state">---</div>
+            </div>
+            <div class="card">
+                <h3>🔄 Keitiklis</h3>
+                <div class="card-value" style="font-size: 20px;" id="inverter-state">---</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== APLINKA ==================== -->
+    <div id="environment" class="tab-content">
+        <div class="grid">
+            <div class="card"><h3>🌡️ Temperatūra</h3><div class="card-value"><span id="temp_d">0.0</span><span class="card-unit">°C</span></div></div>
+            <div class="card"><h3>💦 Drėgmė</h3><div class="card-value"><span id="humid_d">0</span><span class="card-unit">%</span></div></div>
+            <div class="card"><h3>Atm. slėgis</h3><div class="card-value"><span id="pressure">0</span><span class="card-unit">hPa</span></div><div class="card-subtext">Barom. aukštis: <span id="pressure-alt">0</span> m</div></div>
+            <div class="card"><h3>🌬️ Oro kokybė</h3><div class="card-value" style="font-size: 18px;" id="air-quality-d">Matavimas...</div><div class="card-subtext" id="air-advice-d">---</div></div>
+            <div class="card" id="weather-full-card" style="grid-column: 1 / -1; border-left: 3px solid #58a6ff;"><h3>☁️ Orų prognozė</h3><div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap; margin-top: 4px;"><div><div class="card-value" id="weather-d" style="font-size: 32px; transition: color 0.5s;">Sukaupimas...</div><div style="font-size: 13px; color: #8b949e; margin-top: 2px;">Slėgio tendencija</div></div><div><div style="font-size: 20px; font-weight: 600; color: #58a6ff;" id="weather-pressure-val">---</div><div style="font-size: 13px; color: #8b949e;">hPa dabar</div></div><div style="margin-left: auto; text-align: right;"><div style="font-size: 16px; font-weight: 600;" id="weather-trend-text">→ ---</div><div style="font-size: 11px; color: #8b949e; margin-top: 3px;">hPa / 30 min</div></div></div><div style="margin-top: 10px; height: 5px; border-radius: 3px; background: linear-gradient(to right, #f85149 0%, #e3b341 25%, #58a6ff 45%, #58a6ff 55%, #3fb950 75%, #f0c040 100%); position: relative;"><div id="weather-pressure-marker" style="position: absolute; top: -3px; width: 4px; height: 11px; background: white; border-radius: 2px; box-shadow: 0 0 4px rgba(0,0,0,0.5); left: 50%; transition: left 0.8s ease;"></div></div><div style="display: flex; justify-content: space-between; font-size: 10px; color: #484f58; margin-top: 2px;"><span>⛈️ -3+</span><span>-2</span><span>Stabilu 0</span><span>+1</span><span>☀️ +3</span></div></div>
+            <div class="card"><h3>💧 Vanduo lygis</h3><div class="card-value"><span id="water_pct_d">0</span>%</div><div class="progress-bar"><div class="progress-fill" id="water-fill-d" style="width:0%; background:#1f6feb;"></div></div><div class="status-line" id="water-status-d">Tikrinama...</div></div>
+            <div class="card"><h3>Vandens kokybė (TDS)</h3><div class="card-value"><span id="tds">0</span><span class="card-unit">ppm</span></div><div class="card-subtext" id="water-quality">---</div></div>
+            <div class="card"><h3>🔥 Dujos likutis</h3><div class="card-value"><span id="gas_pct_d">0</span>%</div><div class="progress-bar"><div class="progress-fill" id="gas-fill-d" style="width:0%; background:#d29922;"></div></div></div>
+            <div class="card" id="bedroom-co2-card" style="grid-column: 1 / -1; border-left: 3px solid #3fb950;">
+                <h3>🛏️ Miegamasis — oro kokybė</h3>
+                <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap; margin-top: 4px;">
+                    <div>
+                        <div class="card-value" id="bedroom-co2-value" style="font-size: 42px; transition: color 0.5s;">---</div>
+                        <div style="font-size: 13px; color: #8b949e; margin-top: 2px;">ppm CO₂</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 22px; font-weight: 600;" id="bedroom-co2-quality">---</div>
+                        <div style="font-size: 18px; color: #8b949e; margin-top: 4px;" id="bedroom-co2-trend-arrow">→</div>
+                    </div>
+                    <div style="margin-left: auto; text-align: right;">
+                        <div style="font-size: 15px; color: #8b949e;">🌡️ <span id="bedroom-temp-val" style="color: #e3b341;">---</span> °C</div>
+                        <div style="font-size: 15px; color: #8b949e; margin-top: 4px;">💧 <span id="bedroom-humid-val" style="color: #58a6ff;">---</span> %</div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; height: 5px; border-radius: 3px; background: linear-gradient(to right, #3fb950 0%, #3fb950 32%, #e3b341 42%, #d29922 55%, #f85149 75%, #f85149 100%); position: relative;">
+                    <div id="bedroom-co2-marker" style="position: absolute; top: -3px; width: 4px; height: 11px; background: white; border-radius: 2px; box-shadow: 0 0 4px rgba(0,0,0,0.5); left: 0%; transition: left 0.8s ease;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #484f58; margin-top: 2px;">
+                    <span>0</span><span>800</span><span>1200</span><span>1800</span><span>2500</span><span>3000+</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== RYŠYS ==================== -->
+    <div id="comms" class="tab-content">
+        <div class="grid">
+            <div class="card"><h3>📡 GSM Operatorius</h3><div class="card-value" style="font-size: 20px;" id="gsm-operator">---</div><div class="card-subtext">Tinklas: <span id="gsm-network">---</span></div></div>
+            <div class="card"><h3>🌍 Tinklo registracija</h3><div class="card-value" style="font-size: 20px;" id="gsm-roaming">---</div><div class="card-subtext" id="gsm-roaming-sub">Tikrinama...</div></div>
+            <div class="card"><h3>GSM Signalas</h3><div class="card-value"><span id="gsm-signal">0</span>%</div><div class="progress-bar"><div class="progress-fill" id="gsm-fill" style="width:0%; background:#58a6ff;"></div></div><div class="card-subtext" id="gsm-dbm">0 dBm</div></div>
+            <div class="card"><h3>📤 Google buferis</h3><div class="card-value" style="font-size: 18px;" id="google-buffer">--- B / 10000</div><div class="card-subtext">Laukia siuntimo į Sheets</div></div>
+            <div class="card"><h3>📤 Rankinis siuntimas</h3><button class="btn btn-success" style="margin-top: 8px;" onclick="sendButton('btn_force_send_google')">📤 SIŲSTI Į GOOGLE</button><div class="card-subtext">Iškart išsiunčia buferį</div></div>
+        </div>
+    </div>
+
+    <!-- ==================== LYGIACIMAS ==================== -->
+    <div id="leveling" class="tab-content">
+        <div class="tilt-grid">
+            <div class="lvl-card">
+                <div class="lvl-title">Šoninis posvyris (K/D)</div>
+                <div class="arc-wrap">
+                    <div class="angle-top" id="txt-s-top">0.0°</div>
+                    <div class="arc-bg"></div>
+                    <div class="rotating-container" id="ptr-s-container" style="transform: translateX(-50%) rotate(0deg);">
+                        <div class="svg-wrapper">
+                            <svg width="1920.00" height="1440.00" viewBox="0.00 0.00 1920.00 1440.00" xmlns="http://www.w3.org/2000/svg"><g stroke-linecap="round"><path d="M757.86,215.21 Q688.90,239.92 619.00,571.00" stroke-width="5px"/><path d="M618.81,570.66 Q536.85,662.86 550.17,902.60" stroke-width="5px"/><path d="M549.96,900.83 Q537.94,963.94 572.50,1036.81" stroke-width="5px"/><path d="M573.25,1036.81 Q565.74,1114.20 686.70,1117.96" stroke-width="5px"/><path d="M685.20,1117.96 Q712.25,1106.69 712.25,1106.69" stroke-width="5px"/><path d="M1206.03,215.84 Q1273.07,248.26 1341.00,570.00" stroke-width="5px"/><path d="M1341.19,569.66 Q1423.15,661.86 1409.83,901.60" stroke-width="5px"/><path d="M1410.04,899.83 Q1422.06,962.94 1387.50,1035.81" stroke-width="5px"/><path d="M1386.75,1035.81 Q1394.26,1113.20 1273.30,1116.96" stroke-width="5px"/><path d="M1274.80,1116.96 Q1258.18,1110.03 1251.80,1107.37" stroke-width="5px"/><path d="M758.18,214.55 Q982.73,197.73 1207.27,215.91" stroke-width="5px"/><path d="M710.30,1106.06 Q982.42,1129.70 1253.33,1107.27" stroke-width="5px"/><path d="M698.72,749.95 L724.68,961.00" stroke-width="5px"/><path d="M724.27,960.56 Q739.29,1051.47 818.56,1051.84" stroke-width="5px"/><path d="M1262.28,748.95 L1236.32,960.00" stroke-width="5px"/><path d="M1236.73,959.56 Q1221.71,1050.47 1142.44,1050.84" stroke-width="5px"/><path d="M698.07,749.86 Q971.90,762.53 1262.81,747.66" stroke-width="5px"/><path d="M818.18,1051.47 Q973.70,1053.72 1149.14,1050.34" stroke-width="5px"/><path d="M590.00,960.50 Q584.00,1005.50 650.50,1021.25" stroke-width="5px"/><path d="M589.75,960.00 Q622.00,970.50 662.75,973.00" stroke-width="5px"/><path d="M662.25,972.50 Q666.50,1010.00 666.50,1010.25" stroke-width="5px"/><path d="M648.76,1020.85 Q668.29,1028.74 666.79,1009.58" stroke-width="5px"/><path d="M642.37,734.79 Q639.37,690.08 581.89,656.27" stroke-width="5px"/><path d="M581.89,655.90 Q555.22,702.86 566.87,871.90" stroke-width="5px"/><path d="M642.00,733.66 Q650.64,866.27 650.64,866.27" stroke-width="5px"/><path d="M566.87,870.77 Q637.12,885.05 637.12,885.05" stroke-width="5px"/><path d="M635.99,884.67 Q654.02,888.81 650.64,864.76" stroke-width="5px"/><path d="M740.39,580.56 Q729.12,581.07 734.41,586.71" stroke-width="5px"/><path d="M733.39,586.20 Q749.27,598.83 749.10,598.66" stroke-width="5px"/><path d="M748.92,598.83 Q754.05,602.93 762.58,601.56" stroke-width="5px"/><path d="M719.75,327.00 Q698.00,327.50 692.00,354.00" stroke-width="5px"/><path d="M691.94,352.05 Q632.81,566.25 632.81,565.92" stroke-width="5px"/><path d="M1369.00,958.50 Q1375.00,1003.50 1308.50,1019.25" stroke-width="5px"/><path d="M1369.25,958.00 Q1337.00,968.50 1296.25,971.00" stroke-width="5px"/><path d="M1296.75,970.50 Q1292.50,1008.00 1292.50,1008.25" stroke-width="5px"/><path d="M1310.24,1018.85 Q1290.71,1026.74 1292.21,1007.58" stroke-width="5px"/><path d="M1316.63,732.79 Q1319.63,688.08 1377.11,654.27" stroke-width="5px"/><path d="M1377.11,653.90 Q1403.78,700.86 1392.13,869.90" stroke-width="5px"/><path d="M1317.00,731.66 Q1308.36,864.27 1308.36,864.27" stroke-width="5px"/><path d="M1392.13,868.77 Q1321.88,883.05 1321.88,883.05" stroke-width="5px"/><path d="M1323.01,882.67 Q1304.98,886.81 1308.36,862.76" stroke-width="5px"/><path d="M1218.61,578.56 Q1229.88,579.07 1224.59,584.71" stroke-width="5px"/><path d="M1225.61,584.20 Q1209.73,596.83 1209.90,596.66" stroke-width="5px"/><path d="M1210.08,596.83 Q1204.95,600.93 1196.42,599.56" stroke-width="5px"/><path d="M1239.25,325.00 Q1261.00,325.50 1267.00,352.00" stroke-width="5px"/><path d="M1267.06,350.05 Q1326.19,564.25 1326.19,563.92" stroke-width="5px"/><path d="M760.45,601.36 L1201.82,600.00" stroke-width="5px"/><path d="M738.64,580.00 L1220.00,578.64" stroke-width="5px"/><path d="M632.51,566.39 L1326.17,561.98" stroke-width="5px"/><path d="M716.80,327.27 Q1028.65,307.44 1249.04,326.17" stroke-width="5px"/><path d="M701.82,338.18 Q698.41,327.50 852.73,324.09" stroke-width="5px"/><path d="M853.41,324.32 Q881.36,324.09 898.64,322.27" stroke-width="5px"/><path d="M877.95,338.86 Q888.64,352.50 912.50,349.32" stroke-width="5px"/><path d="M877.27,338.41 Q873.18,328.41 843.41,322.73" stroke-width="5px"/><path d="M899.17,321.28 Q957.44,320.66 957.44,320.66" stroke-width="5px"/><path d="M957.02,321.07 Q912.60,346.69 911.57,350.21" stroke-width="5px"/><path d="M870.25,326.45 Q891.74,347.11 910.33,344.83" stroke-width="5px"/><path d="M875.21,325.62 Q899.59,341.94 916.32,342.15" stroke-width="5px"/><path d="M884.71,325.83 Q907.44,339.46 920.87,340.08" stroke-width="5px"/><path d="M892.15,326.65 Q935.33,326.45 942.56,325.21" stroke-width="5px"/><path d="M935.95,327.48 Q918.60,335.95 918.80,335.95" stroke-width="5px"/><path d="M900.83,329.55 Q917.36,333.88 917.56,334.30" stroke-width="5px"/><path d="M916.53,330.58 Q923.55,329.34 923.55,329.34" stroke-width="5px"/><path d="M834.50,327.50 Q711.00,327.50 700.00,341.50" stroke-width="5px"/><path d="M830.95,327.39 Q840.16,327.01 870.21,328.32" stroke-width="5px"/><path d="M728.04,334.96 Q698.66,341.89 687.50,373.07" stroke-width="5px"/><path d="M717.91,337.27 Q699.82,345.36 689.81,364.09" stroke-width="5px"/><path d="M717.65,336.89 Q699.43,345.10 692.12,358.18" stroke-width="5px"/><path d="M707.90,339.33 Q694.69,350.74 693.66,353.57" stroke-width="5px"/><path d="M701.23,340.74 Q694.94,350.74 695.07,349.46" stroke-width="5px"/><path d="M722.25,331.00 Q710.12,332.88 710.12,332.88" stroke-width="5px"/><path d="M707.38,337.38 Q699.88,343.75 700.25,343.62" stroke-width="5px"/><path d="M697.25,343.38 Q695.00,352.50 695.00,352.50" stroke-width="5px"/><path d="M691.25,359.88 Q693.88,353.12 693.88,353.00" stroke-width="5px"/><path d="M689.25,364.25 Q695.12,350.12 689.88,362.88" stroke-width="5px"/><path d="M1258.18,336.18 Q1261.59,325.50 1107.27,322.09" stroke-width="5px"/><path d="M1106.59,322.32 Q1078.64,322.09 1061.36,320.27" stroke-width="5px"/><path d="M1082.05,336.86 Q1071.36,350.50 1047.50,347.32" stroke-width="5px"/><path d="M1082.73,336.41 Q1086.82,326.41 1116.59,320.73" stroke-width="5px"/><path d="M1060.83,319.28 Q1002.56,318.66 1002.56,318.66" stroke-width="5px"/><path d="M1002.98,319.07 Q1047.40,344.69 1048.43,348.21" stroke-width="5px"/><path d="M1089.75,324.45 Q1068.26,345.11 1049.67,342.83" stroke-width="5px"/><path d="M1084.79,323.62 Q1060.41,339.94 1043.68,340.15" stroke-width="5px"/><path d="M1075.29,323.83 Q1052.56,337.46 1039.13,338.08" stroke-width="5px"/><path d="M1067.85,324.65 Q1024.67,324.45 1017.44,323.21" stroke-width="5px"/><path d="M1024.05,325.48 Q1041.40,333.95 1041.20,333.95" stroke-width="5px"/><path d="M1059.17,327.55 Q1042.64,331.88 1042.44,332.30" stroke-width="5px"/><path d="M1043.47,328.58 Q1036.45,327.34 1036.45,327.34" stroke-width="5px"/><path d="M1125.50,325.50 Q1249.00,325.50 1260.00,339.50" stroke-width="5px"/><path d="M1129.05,325.39 Q1119.84,325.01 1089.79,326.32" stroke-width="5px"/><path d="M1231.96,332.96 Q1261.34,339.89 1272.50,371.07" stroke-width="5px"/><path d="M1242.09,335.27 Q1260.18,343.36 1270.19,362.09" stroke-width="5px"/><path d="M1242.35,334.89 Q1260.57,343.10 1267.88,356.18" stroke-width="5px"/><path d="M1252.10,337.33 Q1265.31,348.74 1266.34,351.57" stroke-width="5px"/><path d="M1258.77,338.74 Q1265.06,348.74 1264.93,347.46" stroke-width="5px"/><path d="M912.47,351.43 Q1050.15,349.74 1050.71,349.55" stroke-width="5px"/><path d="M954.92,320.81 Q999.25,322.13 1006.20,322.50" stroke-width="5px"/><path d="M939.14,329.64 Q1016.15,327.57 1016.15,327.57" stroke-width="5px"/><path d="M930.69,336.78 Q1029.30,333.58 1028.74,333.77" stroke-width="5px"/><path d="M922.24,343.54 Q1041.89,342.41 1041.51,342.79" stroke-width="5px"/><path d="M913.04,345.42 Q1045.45,344.67 1045.08,344.67" stroke-width="5px"/><path d="M622.00,534.75 Q611.50,534.50 611.75,534.00" stroke-width="5px"/><path d="M611.75,533.25 Q610.50,485.00 610.50,485.00" stroke-width="5px"/><path d="M586.50,469.25 Q609.50,468.75 610.75,485.25" stroke-width="5px"/><path d="M587.00,469.75 Q555.75,467.00 556.75,490.25" stroke-width="5px"/><path d="M599.75,586.75 Q575.00,586.50 575.25,586.50" stroke-width="5px"/><path d="M576.75,586.50 Q554.75,590.75 552.50,550.25" stroke-width="5px"/><path d="M557.00,487.75 Q552.50,545.00 552.75,554.00" stroke-width="5px"/><path d="M1334.00,529.75 Q1344.50,529.50 1344.25,529.00" stroke-width="5px"/><path d="M1344.25,528.25 Q1345.50,480.00 1345.50,480.00" stroke-width="5px"/><path d="M1369.50,464.25 Q1346.50,463.75 1345.25,480.25" stroke-width="5px"/><path d="M1369.00,464.75 Q1400.25,462.00 1399.25,485.25" stroke-width="5px"/><path d="M1356.25,581.75 Q1381.00,581.50 1380.75,581.50" stroke-width="5px"/><path d="M1379.25,581.50 Q1401.25,585.75 1403.50,545.25" stroke-width="5px"/><path d="M1399.00,482.75 Q1403.50,540.00 1403.25,549.00" stroke-width="5px"/><path d="M741.05,762.78 Q976.03,773.55 1217.84,761.59" stroke-width="5px"/><path d="M746.00,807.50 Q834.32,810.42 924.31,810.99" stroke-width="5px"/><path d="M1031.27,810.84 Q1119.84,810.04 1210.00,807.00" stroke-width="5px"/><path d="M753.00,862.00 Q836.10,864.94 918.92,865.65" stroke-width="5px"/><path d="M1036.43,865.54 Q1119.85,864.66 1203.00,861.50" stroke-width="5px"/><path d="M762.50,916.50 Q986.00,923.50 1197.00,916.50" stroke-width="5px"/><path d="M768.50,966.00 Q976.50,981.50 1193.00,969.50" stroke-width="5px"/><path d="M770.00,972.50 Q798.50,1023.00 828.00,1027.00" stroke-width="5px"/><path d="M829.50,1028.50 Q906.00,1010.50 1002.00,979.00" stroke-width="5px"/><path d="M795.00,985.50 Q909.00,991.00 939.00,991.50" stroke-width="5px"/><path d="M805.50,1002.50 Q874.50,1005.00 874.00,1005.50" stroke-width="5px"/><path d="M1016.96,963.19 Q1017.83,962.56 1018.70,961.94" stroke-width="5px"/><path d="M1195.50,969.00 Q1080.57,977.56 963.04,977.73 Q956.29,972.86 949.54,968.00" stroke-width="5px"/><path d="M1194.00,975.50 Q1165.50,1026.00 1136.00,1030.00" stroke-width="5px"/><path d="M1134.50,1031.50 Q1058.00,1013.50 962.00,982.00" stroke-width="5px"/><path d="M1169.00,988.50 Q1055.00,994.00 1025.00,994.50" stroke-width="5px"/><path d="M1158.50,1005.50 Q1089.50,1008.00 1090.00,1008.50" stroke-width="5px"/><path d="M829.03,1029.56 Q1126.08,1030.30 1139.54,1031.05" stroke-width="5px"/><path d="M924.06,1010.85 Q1031.05,1013.09 1031.05,1013.09" stroke-width="5px"/><path d="M944.01,811.89 C946.29,809.52 952.60,804.75 955.94,802.86 C959.20,801.06 966.36,798.66 970.02,797.97 C974.14,797.22 980.71,797.06 984.86,797.62 C988.54,798.15 995.81,800.21 999.15,801.85 C1002.58,803.58 1009.10,808.05 1011.49,810.31 C1013.85,812.59 1018.63,818.89 1020.51,822.24 C1022.31,825.49 1024.71,832.66 1025.41,836.31 C1026.16,840.44 1026.31,847.00 1025.75,851.16 C1025.23,854.84 1023.17,862.11 1021.52,865.45 C1019.80,868.87 1015.32,875.40 1013.07,877.78 C1010.79,880.15 1004.48,884.92 1001.14,886.81 C997.88,888.61 990.72,891.01 987.06,891.70 C982.94,892.46 976.37,892.61 972.22,892.05 C968.54,891.53 961.27,889.47 957.93,887.82 C954.50,886.09 947.98,881.62 945.59,879.36 C943.23,877.08 938.45,870.78 936.57,867.43 C934.77,864.18 932.37,857.01 931.67,853.36 C930.92,849.23 930.77,842.67 931.33,838.51 C931.85,834.83 933.91,827.56 935.56,824.23 C937.28,820.80 941.76,814.27 944.01,811.89 Z" fill="black" /></g></svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="direction-text" id="dir-s">Lygu</div>
+            </div>
+            <div class="lvl-card">
+                <div class="lvl-title">Išilginis posvyris (P/G)</div>
+                <div class="arc-wrap">
+                    <div class="angle-top" id="txt-f-top">0.0°</div>
+                    <div class="arc-bg"></div>
+                    <div class="rotating-container" id="ptr-f-container" style="transform: translateX(-50%) rotate(0deg);">
+                        <div class="svg-wrapper">
+								<svg width="8160.00" height="6144.00" viewBox="0.00 0.00 8160.00 6144.00" xmlns="http://www.w3.org/2000/svg"><g stroke-linecap="round"><path d="M981.16,1904.85 Q1014.00,1732.43 1264.43,1748.85" stroke-width="26.80"/><path d="M982.00,1906.00 Q904.00,2316.00 914.00,2958.00" stroke-width="26.80"/><path d="M914.55,2959.09 Q917.27,3000.91 936.36,3026.36" stroke-width="26.80"/><path d="M936.51,3027.05 Q920.74,3222.01 971.45,3386.55" stroke-width="26.80"/><path d="M941.33,3410.00 Q970.00,3386.67 969.33,3386.67" stroke-width="26.80"/><path d="M940.91,3407.72 Q949.09,3516.81 992.73,3638.17" stroke-width="26.80"/><path d="M1131.82,3724.08 Q1022.73,3710.45 988.63,3631.36" stroke-width="26.80"/><path d="M1256.20,1748.76 Q5041.32,1626.45 5041.32,1626.45" stroke-width="26.80"/><path d="M5039.82,1625.09 Q5402.70,1620.58 5740.79,1972.20" stroke-width="26.80"/><path d="M5741.82,1972.73 Q6480.00,2669.09 6480.00,2669.09" stroke-width="26.80"/><path d="M6482.34,2668.67 Q6811.41,2764.84 7143.50,2903.08" stroke-width="26.80"/><path d="M7131.31,2900.11 Q7349.04,2980.92 7362.51,3203.14" stroke-width="26.80"/><path d="M7361.98,3200.00 Q7370.25,3403.31 7335.54,3634.71" stroke-width="26.80"/><path d="M7336.49,3633.00 Q7306.49,3834.00 7204.49,3837.00" stroke-width="26.80"/><path d="M6929.99,3871.50 Q7225.49,3834.00 7225.49,3834.00" stroke-width="26.80"/><path d="M6932.00,3864.00 C6930.15,3843.57 6925.73,3793.99 6923.17,3764.84 C6921.62,3746.99 6917.90,3705.55 6915.79,3690.88 C6914.23,3681.57 6910.48,3663.31 6908.29,3654.37 C6905.90,3645.55 6900.50,3628.27 6897.49,3619.82 C6894.27,3611.48 6887.21,3595.19 6883.37,3587.22 C6879.33,3579.38 6870.62,3564.06 6865.95,3556.58 C6859.02,3546.13 6853.80,3539.01 6847.15,3530.75 C6842.52,3525.25 6832.84,3514.52 6827.78,3509.29 C6822.59,3504.14 6811.79,3494.10 6806.18,3489.21 C6800.43,3484.41 6788.51,3475.06 6782.34,3470.52 C6776.03,3466.06 6762.99,3457.41 6756.26,3453.21 C6742.52,3444.99 6713.10,3429.77 6697.40,3422.76 C6681.64,3416.00 6650.09,3404.44 6634.31,3399.63 C6618.52,3395.09 6586.93,3387.97 6571.13,3385.38 C6555.32,3383.07 6523.69,3380.38 6507.87,3380.02 C6492.31,3379.93 6461.71,3381.58 6446.45,3383.30 C6431.20,3385.28 6400.68,3391.05 6385.41,3394.83 C6370.13,3398.87 6339.57,3408.75 6324.28,3414.59 C6312.05,3419.47 6278.44,3434.66 6263.77,3442.29 C6249.30,3450.09 6221.72,3466.91 6208.61,3475.93 C6195.70,3485.12 6171.24,3504.72 6159.69,3515.13 C6148.34,3525.72 6125.20,3550.02 6116.41,3560.79 C6110.95,3567.68 6100.39,3581.77 6095.29,3588.97 C6090.31,3596.28 6080.73,3611.21 6076.12,3618.83 C6071.63,3626.56 6063.03,3642.33 6058.91,3650.37 C6054.91,3658.51 6047.28,3675.11 6043.65,3683.57 C6036.63,3700.69 6025.75,3732.14 6018.97,3754.74 C6009.39,3786.81 5992.38,3843.68 5984.94,3868.46 C5982.02,3878.12 5977.55,3892.89 5976.00,3898.00" stroke-width="26.80"/><path d="M5974.55,3894.55 L2742.75,3823.20 L2740.47,3821.39" stroke-width="26.80"/><path d="M1132.73,3723.64 Q1440.15,3785.44 1793.15,3805.81 Q1801.10,3814.21 1809.05,3822.62" stroke-width="26.80"/><path d="M5010.02,1633.64 Q5004.57,1638.21 4999.12,1642.78" stroke-width="10.40"/><path d="M5001.84,3864.56" stroke-width="10.40"/><path d="M3501.14,1670.93 Q3500.82,1677.03 3500.52,1683.19" stroke-width="10.40"/><path d="M3546.22,3837.73" stroke-width="10.40"/><path d="M1792.55,3803.58 Q1784.12,3793.91 1775.69,3784.24" stroke-width="26.80"/><path d="M1790.45,3796.11 C1792.08,3775.65 1795.94,3726.03 1798.18,3696.85 C1799.53,3678.99 1802.79,3637.51 1804.74,3622.81 C1806.20,3613.49 1809.74,3595.19 1811.83,3586.22 C1814.12,3577.38 1819.33,3560.04 1822.25,3551.55 C1825.37,3543.19 1832.25,3526.81 1836.00,3518.80 C1839.96,3510.92 1848.50,3495.50 1853.08,3487.97 C1859.89,3477.44 1865.03,3470.27 1871.59,3461.93 C1876.16,3456.38 1885.72,3445.55 1890.72,3440.25 C1895.85,3435.05 1906.54,3424.89 1912.10,3419.94 C1917.79,3415.07 1929.61,3405.59 1935.73,3400.98 C1941.99,3396.46 1954.93,3387.66 1961.61,3383.39 C1975.26,3375.02 2004.51,3359.46 2020.13,3352.28 C2035.81,3345.35 2067.23,3333.43 2082.96,3328.45 C2098.69,3323.74 2130.20,3316.26 2145.98,3313.50 C2161.75,3311.01 2193.35,3307.98 2209.17,3307.43 C2224.73,3307.17 2255.35,3308.48 2270.62,3310.03 C2285.90,3311.84 2316.48,3317.27 2331.79,3320.88 C2347.11,3324.75 2377.78,3334.29 2393.13,3339.96 C2405.42,3344.70 2439.20,3359.52 2453.95,3366.98 C2468.50,3374.62 2496.27,3391.14 2509.48,3400.01 C2522.49,3409.06 2547.17,3428.38 2558.83,3438.67 C2570.30,3449.12 2593.71,3473.17 2602.62,3483.83 C2608.16,3490.66 2618.88,3504.64 2624.05,3511.78 C2629.11,3519.04 2638.86,3533.86 2643.55,3541.43 C2648.13,3549.11 2656.91,3564.77 2661.12,3572.77 C2665.20,3580.87 2673.02,3597.38 2676.74,3605.80 C2683.95,3622.85 2695.18,3654.17 2702.22,3676.69 C2712.15,3708.66 2729.79,3765.33 2737.50,3790.03 C2740.53,3799.65 2745.16,3814.37 2746.77,3819.46" stroke-width="26.80"/><path d="M2748.19,3815.99 L2755.26,3798.47" stroke-width="26.80"/><path d="M2229.38,4075.68 C2225.57,4075.46 2206.46,4073.30 2198.79,4072.15 C2191.11,4070.82 2175.85,4067.66 2168.34,4065.84 C2160.90,4063.86 2149.27,4060.43 2139.09,4056.67 C2131.93,4053.84 2117.71,4047.65 2110.66,4044.29 C2103.69,4040.79 2090.12,4033.38 2083.50,4029.47 C2076.98,4025.47 2064.49,4016.58 2058.35,4011.91 C2052.28,4007.08 2040.40,3996.96 2034.66,3991.72 C2029.06,3986.39 2016.10,3973.11 2013.22,3969.72 C2008.32,3963.82 1998.87,3951.62 1994.32,3945.32 C1989.88,3938.89 1981.49,3925.80 1977.55,3919.17 C1971.89,3909.13 1968.46,3902.32 1963.76,3891.80 C1960.77,3884.69 1955.25,3870.16 1952.71,3862.77 C1950.35,3855.36 1946.17,3840.51 1944.34,3833.06 C1943.32,3828.73 1940.37,3810.41 1939.41,3802.74 C1938.62,3795.00 1937.55,3779.43 1937.27,3771.69 C1937.17,3763.97 1937.46,3748.64 1938.12,3741.02 C1938.91,3733.38 1941.03,3718.06 1942.36,3710.38 C1943.86,3702.71 1947.34,3687.60 1949.32,3680.16 C1952.36,3669.74 1956.51,3658.35 1959.35,3651.19 C1962.35,3644.07 1968.89,3629.92 1972.39,3622.96 C1976.03,3616.11 1985.66,3599.46 1987.75,3596.27 C1989.84,3593.08 2001.27,3577.61 2006.10,3571.55 C2011.09,3565.56 2021.46,3553.92 2026.79,3548.32 C2032.23,3542.87 2041.01,3534.52 2049.36,3527.58 C2055.39,3522.80 2067.86,3513.58 2074.30,3509.15 C2080.81,3504.87 2094.02,3496.82 2100.71,3493.04 C2107.43,3489.40 2121.38,3483.02 2128.49,3480.04 C2135.71,3477.20 2150.41,3471.97 2157.82,3469.62 C2165.24,3467.43 2183.22,3462.85 2187.60,3462.05 C2195.16,3460.75 2210.45,3458.67 2218.18,3457.88 C2225.97,3457.26 2241.50,3456.54 2249.21,3456.44 C2260.73,3456.55 2268.34,3456.98 2279.80,3458.18 C2287.46,3459.15 2302.81,3461.62 2310.47,3463.12 C2318.07,3464.78 2333.02,3468.59 2340.38,3470.73 C2344.65,3472.02 2361.99,3478.61 2369.11,3481.62 C2376.20,3484.80 2390.22,3491.66 2397.07,3495.29 C2403.80,3499.07 2416.94,3506.98 2423.21,3511.36 C2429.43,3515.87 2441.64,3525.37 2447.62,3530.36 C2453.51,3535.49 2464.86,3546.06 2470.31,3551.49 C2477.82,3559.33 2485.60,3568.63 2490.38,3574.66 C2495.05,3580.82 2504.03,3593.56 2508.31,3600.08 C2512.42,3606.65 2522.03,3623.31 2523.75,3626.72 C2525.46,3630.12 2533.14,3647.76 2535.98,3654.97 C2538.67,3662.29 2543.57,3677.08 2545.75,3684.50 C2547.75,3691.94 2550.59,3703.72 2552.43,3714.42 C2553.55,3722.04 2555.30,3737.44 2555.92,3745.23 C2556.37,3753.01 2556.74,3768.47 2556.67,3776.15 C2556.46,3783.80 2555.01,3799.07 2554.04,3806.72 C2552.89,3814.39 2550.06,3829.74 2548.40,3837.33 C2546.58,3844.85 2541.56,3862.71 2540.06,3866.90 C2537.40,3874.09 2531.56,3888.38 2528.38,3895.47 C2525.03,3902.52 2517.89,3916.33 2514.12,3923.06 C2508.26,3932.99 2504.08,3939.36 2497.31,3948.69 C2492.65,3954.83 2482.83,3966.89 2477.69,3972.78 C2472.46,3978.52 2461.69,3989.57 2456.15,3994.88 C2452.91,3997.93 2438.52,4009.65 2432.36,4014.31 C2426.06,4018.86 2413.11,4027.58 2406.53,4031.69 C2399.90,4035.63 2386.48,4043.05 2379.55,4046.29 C2372.54,4049.42 2358.21,4055.25 2350.89,4057.94 C2343.50,4060.47 2328.68,4065.01 2321.25,4067.01 C2310.70,4069.60 2298.76,4071.69 2291.15,4072.82 C2283.47,4073.78 2267.95,4075.19 2260.17,4075.64 C2252.42,4075.91 2233.19,4075.89 2229.38,4075.68 Z" stroke-width="35.57"/><path d="M6472.38,4117.68 C6468.57,4117.46 6449.46,4115.30 6441.79,4114.15 C6434.11,4112.82 6418.85,4109.66 6411.34,4107.84 C6403.90,4105.86 6392.27,4102.43 6382.09,4098.67 C6374.93,4095.84 6360.71,4089.65 6353.66,4086.29 C6346.69,4082.79 6333.12,4075.38 6326.50,4071.47 C6319.98,4067.47 6307.49,4058.58 6301.35,4053.91 C6295.28,4049.08 6283.40,4038.96 6277.66,4033.72 C6272.06,4028.39 6259.10,4015.11 6256.22,4011.72 C6251.32,4005.82 6241.87,3993.62 6237.32,3987.32 C6232.88,3980.89 6224.49,3967.80 6220.55,3961.17 C6214.89,3951.13 6211.46,3944.32 6206.76,3933.80 C6203.77,3926.69 6198.25,3912.16 6195.71,3904.77 C6193.35,3897.36 6189.17,3882.51 6187.34,3875.06 C6186.32,3870.73 6183.37,3852.41 6182.41,3844.74 C6181.62,3837.00 6180.55,3821.43 6180.27,3813.69 C6180.17,3805.97 6180.46,3790.64 6181.12,3783.02 C6181.91,3775.38 6184.03,3760.06 6185.36,3752.38 C6186.86,3744.71 6190.34,3729.60 6192.32,3722.16 C6195.36,3711.74 6199.51,3700.35 6202.35,3693.19 C6205.35,3686.07 6211.89,3671.92 6215.39,3664.96 C6219.03,3658.11 6228.66,3641.46 6230.75,3638.27 C6232.84,3635.08 6244.27,3619.61 6249.10,3613.55 C6254.09,3607.56 6264.46,3595.92 6269.79,3590.32 C6275.23,3584.87 6284.01,3576.52 6292.36,3569.58 C6298.39,3564.80 6310.86,3555.58 6317.30,3551.15 C6323.81,3546.87 6337.02,3538.82 6343.71,3535.04 C6350.43,3531.40 6364.38,3525.02 6371.49,3522.04 C6378.71,3519.20 6393.41,3513.97 6400.82,3511.62 C6408.24,3509.43 6426.22,3504.85 6430.60,3504.05 C6438.16,3502.75 6453.45,3500.67 6461.18,3499.88 C6468.97,3499.26 6484.50,3498.54 6492.21,3498.44 C6503.73,3498.55 6511.34,3498.98 6522.80,3500.18 C6530.46,3501.15 6545.81,3503.62 6553.47,3505.12 C6561.07,3506.78 6576.02,3510.59 6583.38,3512.73 C6587.65,3514.02 6604.99,3520.61 6612.11,3523.62 C6619.20,3526.80 6633.22,3533.66 6640.07,3537.29 C6646.80,3541.07 6659.94,3548.98 6666.21,3553.36 C6672.43,3557.87 6684.64,3567.37 6690.62,3572.36 C6696.51,3577.49 6707.86,3588.06 6713.31,3593.49 C6720.82,3601.33 6728.60,3610.63 6733.38,3616.66 C6738.05,3622.82 6747.03,3635.56 6751.31,3642.08 C6755.42,3648.65 6765.03,3665.31 6766.75,3668.72 C6768.46,3672.12 6776.14,3689.76 6778.98,3696.97 C6781.67,3704.29 6786.57,3719.08 6788.75,3726.50 C6790.75,3733.94 6793.59,3745.72 6795.43,3756.42 C6796.55,3764.04 6798.30,3779.44 6798.92,3787.23 C6799.37,3795.01 6799.74,3810.47 6799.67,3818.15 C6799.46,3825.80 6798.01,3841.07 6797.04,3848.72 C6795.89,3856.39 6793.06,3871.74 6791.40,3879.33 C6789.58,3886.85 6784.56,3904.71 6783.06,3908.90 C6780.40,3916.09 6774.56,3930.38 6771.38,3937.47 C6768.03,3944.52 6760.89,3958.33 6757.12,3965.06 C6751.26,3974.99 6747.08,3981.36 6740.31,3990.69 C6735.65,3996.83 6725.83,4008.89 6720.69,4014.78 C6715.46,4020.52 6704.69,4031.57 6699.15,4036.88 C6695.91,4039.93 6681.52,4051.65 6675.36,4056.31 C6669.06,4060.86 6656.11,4069.58 6649.53,4073.69 C6642.90,4077.63 6629.48,4085.05 6622.55,4088.29 C6615.54,4091.42 6601.21,4097.25 6593.89,4099.94 C6586.50,4102.47 6571.68,4107.01 6564.25,4109.01 C6553.70,4111.60 6541.76,4113.69 6534.15,4114.82 C6526.47,4115.78 6510.95,4117.19 6503.17,4117.64 C6495.42,4117.91 6476.19,4117.89 6472.38,4117.68 Z" stroke-width="35.57"/><path d="M6398.16,3795.15 C6398.87,3788.40 6403.13,3772.59 6406.14,3765.54 C6409.15,3758.54 6417.59,3745.78 6422.77,3739.92 C6428.46,3733.54 6438.98,3724.96 6446.38,3720.69 C6453.17,3716.80 6467.37,3711.12 6474.84,3709.58 C6482.35,3708.07 6498.69,3707.10 6505.45,3707.77 C6512.20,3708.48 6528.01,3712.74 6535.06,3715.74 C6542.06,3718.76 6554.82,3727.20 6560.68,3732.38 C6567.06,3738.06 6575.63,3748.59 6579.90,3755.99 C6583.80,3762.78 6589.47,3776.98 6591.01,3784.45 C6592.53,3791.96 6593.50,3808.30 6592.82,3815.06 C6592.12,3821.81 6587.86,3837.62 6584.85,3844.67 C6581.83,3851.67 6573.40,3864.42 6568.21,3870.29 C6562.53,3876.67 6552.00,3885.24 6544.61,3889.51 C6537.82,3893.40 6523.62,3899.08 6516.15,3900.62 C6508.63,3902.14 6492.29,3903.11 6485.54,3902.43 C6478.79,3901.73 6462.98,3897.47 6455.93,3894.46 C6448.93,3891.44 6436.17,3883.01 6430.31,3877.82 C6423.93,3872.14 6415.36,3861.61 6411.08,3854.22 C6407.19,3847.42 6401.52,3833.23 6399.98,3825.76 C6398.46,3818.24 6397.49,3801.90 6398.16,3795.15 Z" stroke-width="399.89"/><path d="M2154.04,3755.05 C2154.74,3748.31 2159.00,3732.52 2162.00,3725.48 C2165.01,3718.48 2173.44,3705.74 2178.62,3699.89 C2184.29,3693.52 2194.81,3684.95 2202.20,3680.68 C2208.98,3676.80 2223.16,3671.13 2230.62,3669.59 C2238.13,3668.08 2254.45,3667.10 2261.20,3667.78 C2267.94,3668.48 2283.73,3672.74 2290.78,3675.74 C2297.77,3678.76 2310.51,3687.18 2316.36,3692.36 C2322.74,3698.04 2331.30,3708.55 2335.57,3715.94 C2339.45,3722.72 2345.12,3736.91 2346.66,3744.36 C2348.18,3751.87 2349.15,3768.19 2348.47,3774.94 C2347.77,3781.69 2343.51,3797.47 2340.51,3804.52 C2337.49,3811.51 2329.07,3824.25 2323.89,3830.11 C2318.22,3836.48 2307.70,3845.04 2300.31,3849.31 C2293.53,3853.20 2279.35,3858.87 2271.89,3860.41 C2264.38,3861.92 2248.06,3862.89 2241.31,3862.22 C2234.57,3861.51 2218.78,3857.26 2211.73,3854.25 C2204.74,3851.24 2192.00,3842.81 2186.14,3837.63 C2179.77,3831.96 2171.21,3821.44 2166.94,3814.05 C2163.05,3807.27 2157.38,3793.09 2155.85,3785.63 C2154.33,3778.12 2153.36,3761.80 2154.04,3755.05 Z" stroke-width="399.43"/><path d="M3496.00,2112.00 Q4756.00,2086.00 4756.00,2086.00" stroke-width="16.70"/><path d="M3490.00,2112.00 Q3504.00,2862.00 3504.00,2862.00" stroke-width="16.70"/><path d="M3504.00,2862.00 Q4640.00,2874.00 4640.00,2874.00" stroke-width="16.70"/><path d="M4755.82,2084.90 Q4893.31,2082.64 4894.44,2191.96" stroke-width="16.70"/><path d="M4640.87,2872.65 Q4833.58,2867.02 4844.85,2656.27" stroke-width="16.70"/><path d="M4894.21,2189.25 Q4842.14,2690.08 4842.14,2690.08" stroke-width="16.70"/><path d="M5257.83,2087.97 Q5116.45,2074.31 5152.65,2215.01" stroke-width="16.70"/><path d="M5256.47,2087.29 Q5663.54,2135.10 5663.54,2135.10" stroke-width="16.70"/><path d="M5660.00,2134.55 Q5750.00,2142.73 5870.91,2272.73" stroke-width="16.70"/><path d="M5868.59,2269.83 Q6428.92,2856.20 6441.32,2883.47" stroke-width="16.70"/><path d="M6441.32,2880.99 Q6498.34,2946.69 6423.96,2924.38" stroke-width="16.70"/><path d="M6425.20,2925.62 Q5365.28,2742.15 5365.28,2742.15" stroke-width="16.70"/><path d="M5366.52,2742.15 Q5249.99,2723.55 5207.85,2593.39" stroke-width="16.70"/><path d="M5149.58,2209.09 Q5209.09,2599.58 5209.09,2600.82" stroke-width="16.70"/><path d="M5741.92,2170.55 Q5816.30,2811.79 5816.30,2811.79" stroke-width="16.70"/><path d="M5009.97,1653.11 Q5005.02,3674.20 5002.33,3848.18" stroke-width="10.40"/><path d="M3499.48,1704.94 Q3467.26,2401.16 3545.06,3816.72" stroke-width="10.40"/><path d="M3489.01,2109.01 Q1332.00,2157.01 1332.00,2154.01" /><path d="M1332.00,2154.01 Q1104.00,2148.01 1104.00,2313.01" /><path d="M1104.00,2301.01 Q1080.00,2748.01 1077.00,2871.01" /><path d="M1074.00,2871.01 Q3528.01,2862.01 3528.01,2862.01" /><path d="M918.59,2887.19 Q1017.77,2883.47 1017.77,2883.47" /><path d="M1016.53,2888.43 Q1021.49,3164.87 1085.95,3396.69" /><path d="M971.90,3383.05 Q994.21,3399.17 1085.95,3392.97" /><path d="M7027.00,2941.00 Q7311.00,3014.00 7296.00,3359.00" /><path d="M7024.00,2939.00 Q7347.00,2959.00 7325.00,3283.00" /><path d="M7294.00,3359.00 Q7317.00,3346.00 7327.00,3273.00" /><path d="M6225.62,2657.02 Q6238.02,2795.04 6225.62,2888.43" /><path d="M6257.85,2731.40 Q6376.86,2881.82 6376.86,2881.82" stroke-width="84.30"/><path d="M6261.98,2861.98 Q6276.86,2790.91 6278.51,2790.08" stroke-width="84.30"/><path d="M6262.81,2864.46 Q6396.69,2881.82 6396.69,2881.82" stroke-width="84.30"/><path d="M6241.32,2683.47 Q6247.93,2703.31 6247.93,2703.31" stroke-width="20.50"/><path d="M6451.99,2917.71 Q6431.50,2900.32 6420.01,2902.81" stroke-width="20.50"/><path d="M3671.67,2290.01 L4724.26,2271.97" stroke-width="371.20"/><path d="M4507.89,2697.97 L3678.91,2681.35 L3664.91,2395.94 L4685.94,2405.08 L4649.88,2706.99" stroke-width="371.20"/><path d="M4767.27,2096.36 Q4878.18,2130.91 4878.18,2192.73" stroke-width="40.20"/><path d="M3500.00,2207.00 Q3513.00,2144.00 3589.00,2124.00" stroke-width="40.20"/><path d="M3501.00,2150.00 Q3528.00,2126.00 3528.00,2126.00" stroke-width="40.20"/><path d="M3508.64,2762.79 Q3525.71,2845.43 3597.43,2846.80" stroke-width="40.20"/><path d="M3513.42,2828.36 Q3528.44,2850.90 3528.44,2850.90" stroke-width="40.20"/><path d="M940.91,2902.73 L999.09,3372.73" stroke-width="56.30"/><path d="M988.18,2899.09 L1045.45,3373.64" stroke-width="56.30"/><path d="M7121.00,2968.00 Q7333.00,3060.00 7306.00,3307.00" stroke-width="40.20"/><path d="M1245.82,1736.56 Q1230.45,1631.04 1277.58,1628.99" stroke-width="40.00"/><path d="M1276.36,1629.09 Q5014.55,1505.45 5014.55,1505.45" stroke-width="40.00"/><path d="M5015.77,1505.63 Q5030.80,1586.78 4993.23,1621.34" stroke-width="40.00"/><path d="M4694.35,2965.99 Q4937.16,2971.11 4936.14,2971.11" stroke-width="40.00"/><path d="M5156.41,2975.21 Q5404.34,2977.25 5404.34,2977.25" stroke-width="40.00"/><path d="M1099.10,3403.65 Q1876.37,3428.20 1914.55,3422.74" stroke-width="28.60"/><path d="M2550.01,3430.92 Q6226.39,3460.92 6226.39,3460.92" stroke-width="28.60"/><path d="M1207.27,3574.55 Q1803.64,3592.73 1803.64,3592.73" stroke-width="28.60"/><path d="M2669.09,3603.64 Q6065.45,3636.36 6065.45,3636.36" stroke-width="28.60"/><path d="M1096.24,3401.40 Q1071.65,3564.64 1209.62,3574.21" stroke-width="28.60"/><path d="M5884.49,3891.00 Q5912.99,3621.00 6057.74,3439.50 Q6202.49,3258.00 6461.24,3240.00 Q6719.99,3222.00 6967.49,3454.50" stroke-width="28.60"/><path d="M6815.99,3484.50 Q6965.99,3454.50 6965.99,3454.50" stroke-width="28.60"/><path d="M6965.99,3454.50 Q7318.49,3472.50 7351.49,3394.50" stroke-width="28.60"/><path d="M6921.80,3664.08 Q7244.98,3655.90 7244.98,3655.90" stroke-width="28.60"/><path d="M2857.69,3805.65 Q2817.03,3537.21 2664.23,3362.44 Q2511.43,3187.66 2252.13,3181.36 Q1992.83,3175.07 1756.09,3418.51" stroke-width="28.60"/></g></svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="direction-text" id="dir-f">Lygu</div>
+            </div>
+        </div>
+        <div class="lvl-card">
+            <div class="plan-wrap"><div class="plan-box"><div id="v-fl" class="cm fl">0.0</div><div id="v-fr" class="cm fr">0.0</div><div id="v-rl" class="cm rl">0.0</div><div id="v-rr" class="cm rr">0.0</div></div></div>
+            <div class="b-outer"><div class="b-ch"></div><div class="b-cv"></div><div id="bubble" class="b-inner"></div></div>
+            <div style="margin-top: 24px; color: #8b949e; font-size: 13px; text-align:center;" id="jack-advice">
+                <span id="jack-recommendation-text">---</span>
+            </div>
+        </div>
+        <button class="btn btn-success" style="padding:16px; font-size:14px; margin-top: 16px;" onclick="sendButton('btn_adxl_zero')">🎯 KALIBRUOTI NULINĘ PADĖTĮ (Dabartinė Pozicija)</button>
+    </div>
+
+    <!-- ==================== SMS ==================== -->
+    <div id="sms" class="tab-content">
+        <div class="card">
+            <h3>💬 Gautos SMS žinutės (istorija)</h3>
+            <div class="log-container sms-terminal" id="sms-terminal">Laukiame SMS žinučių...</div>
+            <button class="btn btn-warning" style="width:auto; margin-top:12px;" onclick="sendButton('btn_clear_sms')">🗑 Išvalyti SMS istoriją (ESP)</button>
+        </div>
+    </div>
+
+    <!-- ==================== NUSTATYMAI ==================== -->
+    <div id="settings" class="tab-content">
+        <div class="grid">
+            <div class="card"><h3>🌐 ESP32 IP adresas</h3><div class="input-group"><label>ESP IP (pvz. 192.168.4.1):</label><input type="text" id="esp_ip_input" placeholder="192.168.4.1"></div><button class="btn btn-primary" onclick="saveEspIp(document.getElementById('esp_ip_input').value)">💾 Išsaugoti ir perkrauti ryšį</button><div class="card-subtext" style="margin-top:8px;">Naudokite kai ESP prisijungia prie kemperio maršrutizatoriaus (kitas IP).</div></div>
+            <div class="card"><h3>🔊 Balso pranešimų kalba</h3><div class="input-group"><label>TTS kalba:</label><select id="tts_lang_select" onchange="setTtsLang(this.value)" style="width:100%;padding:10px;border-radius:8px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;font-size:14px;"><option value="en">English (EN)</option><option value="lt">Lietuvių (LT)</option></select></div><button class="btn btn-success" onclick="speakText(I18N_TEST[ttsLang])">🔊 Testuoti balsą</button><div class="card-subtext" style="margin-top:8px;">EN dažnai aiškiau ištaria nei LT variklis.</div></div>
+            <div class="card"><h3>🔊 Garsumas ir pyptelėjimas</h3><div class="input-group"><label>Pranešimų garsas: <span id="tts_vol_label">80</span>%</label><input type="range" id="tts_vol_range" min="0" max="100" step="5" oninput="onVolRangeInput(this.value)" style="width:100%;"></div><div class="card-subtext" style="margin-bottom:10px;">Prieš pranešimą garsas pakeliamas iki šio lygio, po jo grąžinamas. (Reikia native snippeto — žr. README.)</div><div class="input-group"><label>Pyptelėjimas prieš pranešimą:</label><select id="chime_select" onchange="setChimeType(this.value)" style="width:100%;padding:10px;border-radius:8px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;font-size:14px;"><option value="none">Be pyptelėjimo</option><option value="single">Vienas pyptelėjimas</option><option value="double">Dvigubas (rekom.)</option><option value="siren">Kylanti sirena</option></select></div><button class="btn btn-success" onclick="playChime()">🔔 Testuoti pyptelėjimą</button><button class="btn btn-primary" style="margin-left:6px;" onclick="speakText(I18N_TEST[ttsLang], true)">🔊 Testuoti pilną</button></div>
+            <div class="card"><h3>🔐 Prieigos apsauga (PIN)</h3><div class="input-group"><label>Naujas PIN kodas:</label><input type="password" id="new_pin_input" inputmode="numeric" maxlength="8" placeholder="••••"></div><button class="btn btn-warning" onclick="changeSystemPIN()">🔑 Keisti PIN</button><div class="card-subtext" style="margin-top:8px;">Saugo „Nustatymai" ir „Aliarmai" skiltis. Numatytas: 0000. Atrakinama 5 min.</div></div>
+            <div class="card"><h3>🌐 Google Sheets (Cloud)</h3><div style="display:flex; align-items:center; gap: 10px; margin-bottom:16px;"><label class="switch"><input type="checkbox" id="chk_google_upload" onchange="toggleGoogleUpload(this)"><span class="slider round"></span></label><span id="google_upload_text" style="font-weight:bold; font-size:14px;">Nežinoma</span></div><div class="input-group"><label>Apps Script ID:</label><input type="text" id="txt_app_script_id" onchange="saveAppScriptId()" placeholder="AKfycb..."></div><div class="card-subtext" style="margin-bottom:8px;">Buferis: <span id="google-buffer-set">--- B / 10000</span></div><button class="btn btn-success" onclick="sendButton('btn_force_send_google')">📤 SIŲSTI DUOMENIS (ESPHome)</button></div>
+            <div class="card"><h3>🌍 Vietinių Duomenų Sinchronizacija</h3><button class="btn btn-warning" onclick="checkInternetAndEnableUpload()">1. Tikrinti internetą</button><button class="btn btn-primary" id="btn-upload-google" onclick="uploadLocalDataToGoogle()" disabled style="margin-top: 8px;">2. Įkelti lokalią CSV į Google</button><div class="card-subtext">Leidžia išsiųsti naršyklėje sukauptus įrašus neturint pastovaus ryšio.</div></div>
+            <div class="card"><h3>⏰ Laiko juosta</h3><div class="input-group"><label>UTC poslinkis (h):</label><input type="number" id="num_timezone_offset" step="1" onchange="setNumber('num_timezone_offset', this.value)"></div></div>
+            <div class="card"><h3>💧 Vanduo</h3><button class="btn btn-primary" onclick="sendButton('btn_water_empty')">Užfiksuoti TUŠČIĄ (dabar)</button><button class="btn btn-success" onclick="sendButton('btn_water_full')">Užfiksuoti PILNĄ (dabar)</button><div class="input-group" style="margin-top: 16px;"><label>Tuščio bako atstumas (cm):</label><input type="number" id="num_water_empty_cm" step="0.5" onchange="setNumber('num_water_empty_cm', this.value)"></div><div class="input-group"><label>Pilno bako atstumas (cm):</label><input type="number" id="num_water_full_cm" step="0.5" onchange="setNumber('num_water_full_cm', this.value)"></div></div>
+            <div class="card"><h3>🔥 Dujos</h3><button class="btn btn-warning" onclick="sendButton('btn_gas_tare')">🔧 Svarstyklių Tare (dabar tuščia)</button><div class="input-group" style="margin-top: 16px;"><label>Tuščio baliono svoris (kg):</label><input type="number" id="num_gas_empty_kg" step="0.1" onchange="setNumber('num_gas_empty_kg', this.value)"></div><div class="input-group"><label>Pilno baliono svoris (kg):</label><input type="number" id="num_gas_full_kg" step="0.1" onchange="setNumber('num_gas_full_kg', this.value)"></div><div class="input-group"><label>Svarstyklių faktorius (Scale):</label><input type="number" id="num_hx711_scale" step="100" onchange="setNumber('num_hx711_scale', this.value)"></div><div class="input-group"><label>Svorio korekcija (kg):</label><input type="number" id="num_gas_weight_offset" step="0.05" onchange="setNumber('num_gas_weight_offset', this.value)"></div></div>
+            <div class="card"><h3>⚖️ Pokrypio Kalibravimas</h3><div class="input-group"><label>Šoninis Zero Offset (°):</label><input type="number" id="num_roll_cal" step="0.5" onchange="setNumber('num_roll_cal', this.value)"></div><div class="input-group"><label>Išilginis Zero Offset (°):</label><input type="number" id="num_pitch_cal" step="0.5" onchange="setNumber('num_pitch_cal', this.value)"></div><div class="input-group"><label>Ratlankis (cm):</label><input type="number" id="num_wheelbase_cm" step="1" onchange="setNumber('num_wheelbase_cm', this.value)"></div><div class="input-group"><label>Tarpuvėžė (cm):</label><input type="number" id="num_track_cm" step="1" onchange="setNumber('num_track_cm', this.value)"></div></div>
+            <div class="card"><h3>⚙️ Sistema & Aplinka</h3><div class="input-group"><label>Baterijos Talpa (Ah):</label><input type="number" id="num_bat_capacity" step="1" onchange="setNumber('num_bat_capacity', this.value)"></div><div class="input-group"><label>Temperatūros Offset (°C):</label><input type="number" id="num_temp_offset" step="0.1" onchange="setNumber('num_temp_offset', this.value)"></div><div class="input-group"><label>Drėgmės Offset (%):</label><input type="number" id="num_humid_offset" step="0.5" onchange="setNumber('num_humid_offset', this.value)"></div><div class="input-group"><label>Vandens atstumo offset (cm):</label><input type="number" id="num_water_offset" step="0.1" onchange="setNumber('num_water_offset', this.value)"></div></div>
+            <div class="card"><h3>📳 Vibracija / Judėjimas</h3><div class="vib-row"><div><div style="font-size:11px; color:#8b949e; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Dabartinis lygis (EMA)</div><div class="card-value" style="font-size:22px;"><span id="vib-current">---</span></div></div></div><div class="input-group" style="margin-top:14px;"><label>Judėjimo slenkstis (EMA vienetai):</label><input type="number" id="num_vib_threshold" min="5" max="200" step="1" onchange="setNumber('num_vib_threshold', this.value)"></div></div>
+            <div class="card"><h3>📱 Apsauga / SMS</h3><div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><label class="switch"><input type="checkbox" id="chk_security_armed" onchange="toggleSecurity(this)"><span class="slider round"></span></label><span id="security_armed_text" style="font-weight:bold; font-size:14px;">Nežinoma</span></div><div class="input-group"><label>Administratoriaus telefono nr.:</label><input type="text" id="txt_admin_number_input" placeholder="+37060000000" onchange="setText('txt_admin_number', this.value)"></div><button class="btn btn-warning" style="margin-top:8px;" onclick="sendButton('btn_wake_up')">📡 BUDINTI ESP32 (Wake-up)</button></div>
+            <div class="card"><h3>🌐 Mobiliojo ryšio APN</h3><div class="input-group"><label>APN (pvz. internet, data.omnitel.net):</label><input type="text" id="txt_apn_input" placeholder="internet" onchange="setText('txt_apn', this.value)"></div><div class="card-subtext">Pakeitus APN reikia iš naujo paleisti GSM modemą.</div></div>
+        </div>
+    </div>
+
+    <!-- ==================== ALIARMAI ==================== -->
+<div id="alarms" class="tab-content">
+    <div class="section-title">🚨 Balso aliarmų nustatymai</div>
+    <p style="color:#8b949e;font-size:13px;margin-bottom:16px;">Pakeitimai išsaugomi naršyklėje automatiškai. 🔊 – iškart pabandote frazę.</p>
+    <div class="grid" id="alarm-config-grid"></div>
+    <button class="btn btn-warning" style="margin-top:8px;" onclick="resetAlarmsToDefault()">🔄 Atstatyti numatytuosius</button>
+
+    <div class="section-title" style="margin-top:28px;">🚨 Vagystės balso tekstai (kalba: <span id="theft-lang-label">EN</span>)</div>
+    <p style="color:#8b949e;font-size:13px;margin-bottom:16px;">Kalbą keiskite per ⚙️ Nustatymai → 🔊 Balso pranešimų kalba. Kiekvienai kalbai (LT ir EN) tekstai saugomi atskirai. 1-as tekstas sakomas iškart ir po 30 s; 2-as — kartojamas (stovint kas 30 s, važiuojant kas 2 min).</p>
+    <div class="grid">
+        <div class="card"><h3>🅿️ Stovint (judėjimas viduje)</h3>
+            <div class="input-group"><label>1-as tekstas (iškart + po 30 s):</label><input type="text" id="theft_first_idle" onchange="saveTheftText('first_idle', this.value)"></div>
+            <div class="input-group"><label>2-as tekstas (kartojamas kas 30 s):</label><input type="text" id="theft_repeat_idle" onchange="saveTheftText('repeat_idle', this.value)"></div>
+            <button class="btn btn-success" onclick="speakText(document.getElementById('theft_first_idle').value)">🔊 Testuoti 1</button>
+            <button class="btn btn-success" style="margin-left:6px;" onclick="speakText(document.getElementById('theft_repeat_idle').value)">🔊 Testuoti 2</button>
+        </div>
+        <div class="card"><h3>🚚 Važiuojant</h3>
+            <div class="input-group"><label>1-as tekstas (iškart + po 30 s):</label><input type="text" id="theft_first_drive" onchange="saveTheftText('first_drive', this.value)"></div>
+            <div class="input-group"><label>2-as tekstas (kartojamas kas 2 min):</label><input type="text" id="theft_repeat_drive" onchange="saveTheftText('repeat_drive', this.value)"></div>
+            <button class="btn btn-success" onclick="speakText(document.getElementById('theft_first_drive').value)">🔊 Testuoti 1</button>
+            <button class="btn btn-success" style="margin-left:6px;" onclick="speakText(document.getElementById('theft_repeat_drive').value)">🔊 Testuoti 2</button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== LOGAI ==================== -->
+    <div id="logs" class="tab-content">
+        <div class="grid">
+            <div class="card" style="grid-column: 1 / -1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <h3>📋 Vietinis kaupiklis (CSV)</h3>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-success" id="btn-start-log" onclick="startAutoLocalLog()" style="width: auto; padding: 6px 12px;">▶ Pradėti (10s)</button>
+                        <button class="btn btn-warning" id="btn-stop-log" onclick="stopAutoLocalLog()" style="width: auto; padding: 6px 12px;" disabled>⏹ Stabdyti</button>
+                        <button class="btn btn-primary" onclick="downloadLocalCSV()" style="width: auto; padding: 6px 12px;">💾 Atsisiųsti CSV</button>
+                        <button class="btn btn-danger" onclick="clearLocalLog()" style="width: auto; padding: 6px 12px;">🗑 Išvalyti</button>
+                    </div>
+                </div>
+                <div class="card-subtext">Įrašytų eilučių: <span id="log-count" style="font-weight:bold; color:var(--text-dark);">0</span>. (Saugoma naršyklės atmintyje, auto-saugojimas kas 10min.)</div>
+            </div>
+            <div class="card" style="grid-column: 1 / -1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3>🖥️ Sistemos terminalas (Diagnostika)</h3>
+                    <div><button class="btn btn-primary" style="width: auto; padding: 6px 12px; margin-right: 8px;" onclick="clearTerminal()">🧹 Išvalyti</button><button class="btn btn-success" style="width: auto; padding: 6px 12px;" onclick="saveTerminal()">💾 Išsaugoti logą</button></div>
+                </div>
+                <div id="sys-log-output" class="log-container"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sistemos diagnostikos juosta -->
+<div style="background:var(--bg-card); border-top:1px solid var(--border); padding:8px 16px; display:flex; flex-wrap:wrap; gap:16px; align-items:center; font-size:0.78rem; color:var(--text-muted);">
+    <span style="display:inline-flex; align-items:center; gap:6px;"><span class="status-dot" id="status-dot" style="display:inline-block;"></span><span id="status-text" style="color:var(--text-dark);">Jungiamasi...</span></span>
+    <span style="display:inline-flex; align-items:center; gap:6px;"><span class="status-dot" id="google-status-dot" style="display:inline-block; background:#8b949e; box-shadow:none;"></span><span id="header_google_status" style="color:var(--text-dark);">📤 Siuntimas: Nežinoma</span></span>
+    <span style="font-weight:600; color:var(--text-dark);">⚙️ Sistema:</span>
+    <span>🧠 RAM: <strong id="diag-ram" style="color:var(--text-dark);">---</strong></span>
+    <span>🌡️ ESP: <strong id="diag-esp-temp" style="color:var(--text-dark);">---</strong></span>
+    <span>⏱️ Uptime: <strong id="diag-uptime" style="color:var(--text-dark);">---</strong></span>
+</div>
+
+<script>
+    // === A. Dinaminis ESP32 IP adresas (saugomas localStorage, fallback 192.168.4.1) ===
+    let ESP_IP = localStorage.getItem('esp_ip') || '192.168.4.1';
+    let ESPHOME_URL = 'http://' + ESP_IP;
+    // ESP WiFi AP duomenys (turi atitikti YAML: wifi -> ap). Galima keisti per localStorage.
+    let ESP_WIFI_SSID = localStorage.getItem('esp_ssid') || 'Kemperis-Valdymas';
+    let ESP_WIFI_PASS = localStorage.getItem('esp_pass') || 'kemperis123';
+    function saveEspIp(ip) {
+        ip = (ip || '').trim();
+        if (!ip) return;
+        ESP_IP = ip;
+        ESPHOME_URL = 'http://' + ip;
+        localStorage.setItem('esp_ip', ip);
+        if (typeof sysLog === 'function') sysLog('ESP IP pakeistas į ' + ip + ' — perkraunama...', 'success');
+        setTimeout(() => location.reload(), 600);
+    }
+    let sensorCache = {};
+
+    // Sensorių ID → cache rakto žemėlapis (tik aiškaus id: turintys sensoriai).
+    // Naujas jutiklis: tiesiog pridėk vieną eilutę čia.
+    // Formatas: 'esphome_id': 'cache_key'  (dažniausiai sutampa)
+    const SENSOR_ID_MAP = {
+        // Junctek BLE
+        'junc_soc': 'junc_soc', 'junc_v': 'junc_v', 'junc_a': 'junc_a',
+        'junc_power': 'junc_power', 'junc_ah_remaining': 'junc_ah_remaining',
+        'junc_temp': 'junc_temp', 'junc_time_remaining': 'junc_time_remaining',
+        // BME680
+        'bme_temp': 'bme_temp', 'bme_pressure': 'bme_pressure',
+        'bme_humidity': 'bme_humidity', 'pressure_altitude': 'pressure_altitude',
+        'weather_forecast': 'weather_forecast',
+        'pressure_trend_hpa': 'pressure_trend_hpa',
+        // SCD41 miegamasis
+        'bedroom_co2': 'bedroom_co2', 'bedroom_temp': 'bedroom_temp',
+        'bedroom_humidity': 'bedroom_humidity', 'bedroom_co2_trend': 'bedroom_co2_trend',
+        'bedroom_air_quality': 'bedroom_air_quality',
+        // Aplinka / sistema
+        'system_advice': 'system_advice', 'vib_level_sensor': 'vib_level',
+        'google_buffer_status': 'google_buffer_status',
+        'power_source_220': 'power_source_220',
+        // Sauga / vagystė (ESP: "Sauga | Judejimo aliarmas")
+        'alert_movement_sent_sensor': 'alert_movement_sent',
+        // Vanduo / dujos / TDS (cache raktas skiriasi nuo ID)
+        'water_level_pct': 'water_pct', 'tds_ppm': 'tds_ppm',
+        'gas_remaining_pct': 'gas_pct', 'water_distance': 'water_distance',
+        'water_offset': 'water_offset', 'water_empty_cm': 'water_empty_cm',
+        'water_full_cm': 'water_full_cm', 'gas_empty_weight': 'gas_empty_weight',
+        'gas_full_weight': 'gas_full_weight',
+        // ADXL345
+        'roll_sensor': 'roll_sensor', 'pitch_sensor': 'pitch_sensor',
+        // GPS
+        'gps_coords_sensor': 'gps_coords_sensor', 'gps_speed_sensor': 'gps_speed_sensor',
+        'gps_alt_sensor': 'gps_alt_sensor', 'gps_heading_sensor': 'gps_heading_sensor',
+        'gps_sats_total_sensor': 'gps_sats_total_sensor',
+        'gps_sats_gps_used': 'sats_gps', 'gps_sats_glonass_used': 'sats_glonass',
+        'gps_sats_bds_used': 'sats_bds', 'gps_sats_galileo_used': 'sats_galileo',
+        // GSM
+        'gsm_signal_pct': 'gsm_signal_pct', 'gsm_operator_sensor': 'gsm_operator_sensor',
+        'gsm_network_sensor': 'gsm_network_sensor', 'gsm_roaming_sensor': 'gsm_roaming_sensor',
+        // Sistemos diagnostika
+        'sys_free_ram': 'sys_free_ram', 'sys_esp_temp': 'sys_esp_temp', 'sys_uptime': 'sys_uptime',
+        // ESP temp galimi slugifikuoti pavadinimo variantai ("Sistema | ESP temperatūra")
+        'sistema___esp_temperat_ra': 'sys_esp_temp', 'sistema___esp_temperatura': 'sys_esp_temp', 'sistema___esp_temperatra': 'sys_esp_temp',
+        // SMS istorija
+        'sms_1': 'sms_1', 'sms_2': 'sms_2', 'sms_3': 'sms_3', 'sms_4': 'sms_4', 'sms_5': 'sms_5',
+    };
+
+    let localLogEnabled = false;
+    let manualLocalLogStop = false;
+    let localLogInterval = null;
+    let localLogRows = [];
+    const localLogHeader = "Laikas,,Platuma,Ilguma,Aukštis,Greitis,Kryptis,SOC,Įtampa,Srovė,Vanduo%,TDS,Dujos%,Temp,Drėgmė,Slėgis,CO2";
+    let lastDataLogTime = 0;
+    let autoSaveInterval = null;
+
+    function sysLog(msg, type = 'info') {
+        const out = document.getElementById('sys-log-output');
+        if (!out) return;
+        const now = new Date().toLocaleTimeString('lt-LT');
+        let color = '#c9d1d9';
+        if (type === 'error') color = '#ff7b72';
+        else if (type === 'success') color = '#3fb950';
+        else if (type === 'warn') color = '#d29922';
+        else if (type === 'data') color = '#58a6ff';
+        out.innerHTML += `<div style="color: ${color}">[${now}] ${msg}</div>`;
+        out.scrollTop = out.scrollHeight;
+        if (out.children.length > 500) out.removeChild(out.children[0]);
+    }
+
+    function clearTerminal() { document.getElementById('sys-log-output').innerHTML = ''; sysLog('Terminalas išvalytas.', 'warn'); }
+    function saveTerminal() {
+        const content = document.getElementById('sys-log-output').innerText;
+        const blob = new Blob([content], {type: 'text/plain'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `terminal_log_${new Date().toISOString().slice(0,19)}.txt`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        sysLog('Terminalo logas išsaugotas.', 'success');
+    }
+
+    function loadLocalLogFromStorage() {
+        const stored = localStorage.getItem('kemper_local_log');
+        if (stored) { try { localLogRows = JSON.parse(stored); } catch(e) { localLogRows = []; } }
+        updateLocalLogCounter();
+    }
+    function saveLocalLogToStorage() { localStorage.setItem('kemper_local_log', JSON.stringify(localLogRows)); }
+    function updateLocalLogCounter() { document.getElementById('log-count').innerText = localLogRows.length; }
+
+    function startAutoLocalLog(isManual = true) {
+        if (isManual) manualLocalLogStop = false;
+        if (localLogInterval) return;
+        localLogEnabled = true;
+        document.getElementById('btn-start-log').disabled = true;
+        document.getElementById('btn-stop-log').disabled = false;
+        sysLog('▶ Vietinis įrašymas (kas 10s) ĮJUNGTAS.', 'success');
+        localLogInterval = setInterval(() => { addLocalLogRow(); }, 10000);
+        if (!autoSaveInterval) {
+            autoSaveInterval = setInterval(() => { autoDownloadAndClear(); }, 600000);
+            sysLog('⏲️ Auto-saugojimas kas 10 min. aktyvus.', 'info');
+        }
+    }
+    function stopAutoLocalLog(isManual = true) {
+        if (isManual) manualLocalLogStop = true;
+        if (!localLogInterval) return;
+        clearInterval(localLogInterval); localLogInterval = null;
+        localLogEnabled = false;
+        document.getElementById('btn-start-log').disabled = false;
+        document.getElementById('btn-stop-log').disabled = true;
+        sysLog('⏹ Vietinis įrašymas IŠJUNGTAS.', 'warn');
+        if (autoSaveInterval) { clearInterval(autoSaveInterval); autoSaveInterval = null; sysLog('⏲️ Auto-saugojimas sustabdytas.', 'info'); }
+    }
+    function autoDownloadAndClear() {
+        if (localLogRows.length === 0) return;
+        sysLog(`⏲️ Automatinis CSV atsisiuntimas (${localLogRows.length} eilutės)`, 'info');
+        downloadLocalCSV(true);
+        clearLocalLog();
+    }
+    function addLocalLogRow() {
+        if (!localLogEnabled) return;
+        const now = new Date().toISOString();
+        const row = `${now},,${getCache('gps_lat',0).toFixed(6)},${getCache('gps_lon',0).toFixed(6)},${getCache('gps_alt_sensor',0).toFixed(1)},${getCache('gps_speed_sensor',0).toFixed(1)},${getCache('gps_heading_sensor',0).toFixed(1)},${getCache('junc_soc',0).toFixed(0)},${getCache('junc_v',0).toFixed(2)},${getCache('junc_a',0).toFixed(2)},${getCache('water_pct',0).toFixed(0)},${getCache('tds_ppm',0).toFixed(0)},${getCache('gas_pct',0).toFixed(0)},${getCache('bme_temp',0).toFixed(1)},${getCache('bme_humidity',0).toFixed(1)},${getCache('bme_pressure',0).toFixed(1)},${getCache('bedroom_co2',0).toFixed(0)}`;
+        localLogRows.push(row);
+        if (localLogRows.length > 10000) localLogRows.shift();
+        saveLocalLogToStorage();
+        updateLocalLogCounter();
+    }
+    function clearLocalLog() { localLogRows = []; saveLocalLogToStorage(); updateLocalLogCounter(); sysLog('🧹 Vietinis CSV kaupiklis išvalytas.', 'info'); }
+    function downloadLocalCSV(isAuto = false) {
+        if (localLogRows.length === 0) { if (!isAuto) alert('Nėra įrašytų duomenų.'); return; }
+        let csvContent = localLogHeader + "\n" + localLogRows.join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `kemperis_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        if (!isAuto) sysLog(`Failas atsisiųstas (${localLogRows.length} eilutės).`, 'success');
+    }
+
+    function updateSmsTerminal() {
+        const term = document.getElementById('sms-terminal');
+        if (!term) return;
+        let content = '';
+        for (let i = 1; i <= 5; i++) {
+            const msg = sensorCache[`sms_${i}`] || '---';
+            if (msg !== '---') content += `<div class="sms-line">📩 ${msg}</div>`;
+        }
+        if (content === '') content = 'Laukiame SMS žinučių...';
+        term.innerHTML = content;
+    }
+
+    // Native tinklo atrišimas/pririšimas: kai app pririštas prie ESP WiFi (be interneto),
+    // prieš kreipiantis į Google reikia laikinai atsirišti, po to vėl pririšti prie ESP.
+    function netUnbindForInternet() { try { if (window.KemperisWifi && KemperisWifi.unbindNetwork) { KemperisWifi.unbindNetwork(); return true; } } catch(e){} return false; }
+    function netRebindEsp() { try { if (window.KemperisWifi && KemperisWifi.rebindNetwork) KemperisWifi.rebindNetwork(); } catch(e){} }
+
+    async function checkInternetAndEnableUpload() {
+        sysLog('Tikrinamas interneto ryšys...', 'info');
+        const unbound = netUnbindForInternet();
+        if (unbound) await new Promise(r => setTimeout(r, 800)); // leisti tinklui persijungti
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            await fetch('https://www.google.com', { mode: 'no-cors', signal: controller.signal });
+            clearTimeout(timeoutId);
+            sysLog('✅ Internetas veikia.', 'success');
+            document.getElementById('btn-upload-google').disabled = false;
+        } catch(e) {
+            sysLog('❌ Nėra interneto.', 'error');
+            document.getElementById('btn-upload-google').disabled = true;
+        } finally {
+            netRebindEsp();
+        }
+    }
+    async function uploadLocalDataToGoogle() {
+        if(localLogRows.length === 0) { sysLog('Nėra duomenų.', 'warn'); return; }
+        const scriptId = document.getElementById('txt_app_script_id').value;
+        if(!scriptId || scriptId.includes('...')) { sysLog('Nenurodytas Script ID.', 'error'); return; }
+        const csvContent = localLogHeader + "\n" + localLogRows.join("\n");
+        const url = `https://script.google.com/macros/s/${scriptId}/exec`;
+        sysLog(`Siunčiama ${localLogRows.length} eilučių...`, 'info');
+        document.getElementById('btn-upload-google').disabled = true;
+        const unbound = netUnbindForInternet();
+        if (unbound) await new Promise(r => setTimeout(r, 800)); // leisti tinklui persijungti
+        try {
+            await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: csvContent });
+            sysLog('✅ Duomenys išsiųsti.', 'success');
+        } catch(e) {
+            sysLog(`❌ Klaida: ${e.message}`, 'error');
+        } finally {
+            netRebindEsp();   // vėl prie ESP, kad atsinaujintų gyvi duomenys
+            document.getElementById('btn-upload-google').disabled = false;
+        }
+    }
+    async function toggleSecurity(cb) {
+        const action = cb.checked ? 'turn_on' : 'turn_off';
+        sysLog(`Apsaugos komanda: ${action}`, 'info');
+        try {
+            await fetch(`${ESPHOME_URL}/switch/sw_security_armed/${action}`, { method: 'POST' });
+            sysLog('✅ Apsaugos būsena pakeista.', 'success');
+        } catch(e) {
+            sysLog(`❌ Klaida: ${e.message}`, 'error');
+            cb.checked = !cb.checked;
+        }
+    }
+
+    async function toggleGoogleUpload(cb) {
+        const action = cb.checked ? 'turn_on' : 'turn_off';
+        sysLog(`Google siuntimo komanda: ${action}`, 'info');
+        try {
+            await fetch(`${ESPHOME_URL}/switch/sw_google_upload/${action}`, { method: 'POST' });
+            sysLog('✅ Būsena pakeista.', 'success');
+        } catch(e) {
+            sysLog(`❌ Klaida: ${e.message}`, 'error');
+            cb.checked = !cb.checked;
+        }
+    }
+    function saveAppScriptId() {
+        const val = document.getElementById('txt_app_script_id').value;
+        localStorage.setItem('app_script_id', val);
+        sysLog('✅ Script ID išsaugotas.', 'success');
+    }
+
+    function getCache(id, def=0) { let v = sensorCache[id]; return (v !== undefined && v !== null && !isNaN(v)) ? parseFloat(v) : def; }
+
+    async function sendButton(entityName) {
+        sysLog(`Siunčiama komanda: ${entityName}`, 'info');
+        try { await fetch(`${ESPHOME_URL}/button/${entityName}/press`, {method:'POST'}); sysLog('✅ Mygtukas nuspaustas.', 'success'); }
+        catch(e){ sysLog(`❌ Klaida: ${e.message}`, 'error'); }
+    }
+    async function setNumber(entityName, value) {
+        let v = parseFloat(value); if(isNaN(v)) return;
+        sysLog(`Keičiama ${entityName} -> ${v}`, 'info');
+        try { 
+            await fetch(`${ESPHOME_URL}/number/${entityName}/set?value=${v}`, {method:'POST'}); 
+            sysLog('✅ Pakeista.', 'success'); 
+            sensorCache[entityName] = v;
+            updateUI();
+        }
+        catch(e){ sysLog(`❌ Klaida: ${e.message}`, 'error'); }
+    }
+
+    async function setText(entityName, value) {
+        sysLog(`Nustatoma ${entityName} → "${value}"`, 'info');
+        try {
+            await fetch(`${ESPHOME_URL}/text/${entityName}/set?value=${encodeURIComponent(value)}`, {method:'POST'});
+            sysLog('✅ Pakeista.', 'success');
+            sensorCache[entityName] = value;
+        } catch(e) { sysLog(`❌ Klaida: ${e.message}`, 'error'); }
+    }
+
+    // === D. Nustatymų / Aliarmų PIN apsauga ===
+    let isSettingsUnlocked = false;
+    let systemPIN = localStorage.getItem('system_pin') || '0000';
+    let pinTimeout = null;
+    const PIN_PROTECTED = ['settings', 'alarms'];
+    const PIN_UNLOCK_MS = 300000; // 5 min
+
+    function unlockProtected() {
+        isSettingsUnlocked = true;
+        if (pinTimeout) clearTimeout(pinTimeout);
+        pinTimeout = setTimeout(() => {
+            isSettingsUnlocked = false;
+            if (typeof sysLog === 'function') sysLog('🔒 Prieiga prie nustatymų vėl užrakinta.', 'warn');
+        }, PIN_UNLOCK_MS);
+    }
+    function changeSystemPIN() {
+        const el = document.getElementById('new_pin_input');
+        const v = (el ? el.value : '').trim();
+        if (!/^\d{4,8}$/.test(v)) { alert('PIN turi būti 4–8 skaitmenys.'); return; }
+        systemPIN = v;
+        localStorage.setItem('system_pin', v);
+        if (el) el.value = '';
+        alert('PIN kodas pakeistas.');
+    }
+
+    // === Skirtukai: dropdown + rodyklės + swipe ===
+    // Swipe cikle praleidžiame PIN-saugomas skiltis (settings, alarms) — jas renkamės per sąrašą.
+    const SWIPE_TABS = ['overview','gps','energy','environment','comms','leveling','sms','logs'];
+    let currentTab = 'overview';
+
+    function syncTabSelect() { const s = document.getElementById('tab-select'); if (s) s.value = currentTab; }
+
+    function selectTab(tabName) {
+        // PIN patikra saugomoms skiltims
+        if (PIN_PROTECTED.includes(tabName) && !isSettingsUnlocked) {
+            const entry = prompt('Įveskite PIN kodą:');
+            if (entry === null) { syncTabSelect(); return; }            // atšaukta
+            if (entry !== systemPIN) { alert('Neteisingas PIN.'); syncTabSelect(); return; }
+            unlockProtected();
+        }
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        const el = document.getElementById(tabName);
+        if (el) el.classList.add('active');
+        currentTab = tabName;
+        syncTabSelect();
+        try { window.scrollTo(0, 0); } catch (e) {}
+    }
+    // Senas pavadinimas — suderinamumui su bet kokiais vidiniais kvietimais
+    function switchTab(tabName, btn) { selectTab(tabName); }
+
+    // Perjungimas: dir = 1 -> kita kortelė, dir = -1 -> ankstesnė
+    function swipeTab(dir) {
+        let idx = SWIPE_TABS.indexOf(currentTab);
+        if (idx === -1) { selectTab(SWIPE_TABS[0]); return; }  // iš settings/alarms -> į apžvalgą
+        let ni = idx + (dir > 0 ? 1 : -1);
+        ni = Math.max(0, Math.min(SWIPE_TABS.length - 1, ni));
+        if (ni !== idx) selectTab(SWIPE_TABS[ni]);
+    }
+
+    // Lietimo (swipe) gestai — horizontalus brūkštelėjimas perjungia kortelę
+    (function () {
+        let x0 = null, y0 = null;
+        document.addEventListener('touchstart', function (e) {
+            if (e.touches.length !== 1) { x0 = null; return; }
+            const t = e.target;
+            // Nereaguojam, jei brūkštelima per valdiklius (slankiklis, sąrašas, mygtukas, žemėlapis)
+            if (t.closest && t.closest('input,select,textarea,button,.no-swipe,canvas')) { x0 = null; return; }
+            x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+        }, { passive: true });
+        document.addEventListener('touchend', function (e) {
+            if (x0 === null) return;
+            const dx = e.changedTouches[0].clientX - x0;
+            const dy = e.changedTouches[0].clientY - y0;
+            x0 = null;
+            if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // tik aiškus horizontalus
+            swipeTab(dx < 0 ? 1 : -1);   // brūkšt kairėn -> kita; dešinėn -> ankstesnė
+        }, { passive: true });
+    })();
+
+    function updateUI() {
+        let coordStr = sensorCache['gps_coords_sensor'];
+        if (coordStr && coordStr !== 'Ieškoma...' && coordStr.includes(',')) {
+            let parts = coordStr.split(',');
+            sensorCache['gps_lat'] = parseFloat(parts[0]);
+            sensorCache['gps_lon'] = parseFloat(parts[1]);
+        } else {
+            sensorCache['gps_lat'] = 0;
+            sensorCache['gps_lon'] = 0;
+        }
+
+        // water_pct gaunamas tiesiogiai iš ESP (water_level_pct sensor) per SSE — neskaičiuojame čia iš naujo
+
+        setSensorValue('junc_soc', 'soc_value', v=>Math.round(v)); setSensorValue('junc_soc', 'soc_d', v=>Math.round(v));
+        setSensorValue('junc_ah_remaining', 'ah_remaining', v=>parseFloat(v).toFixed(1)); setSensorValue('junc_ah_remaining', 'ah_remaining_d', v=>parseFloat(v).toFixed(1));
+        setSensorValue('water_pct', 'water_pct', v=>Math.round(v)); setSensorValue('water_pct', 'water_pct_d', v=>Math.round(v));
+        setSensorValue('gas_pct', 'gas_pct', v=>Math.round(v)); setSensorValue('gas_pct', 'gas_pct_d', v=>Math.round(v));
+        setSensorValue('bme_temp', 'temp_value', v=>parseFloat(v).toFixed(1)); setSensorValue('bme_temp', 'temp_d', v=>parseFloat(v).toFixed(1));
+        setSensorValue('bme_humidity', 'humid_value', v=>Math.round(v)); setSensorValue('bme_humidity', 'humid_d', v=>Math.round(v));
+        setSensorValue('bme_pressure', 'pressure', v=>Math.round(v)); setSensorValue('pressure_altitude', 'pressure-alt', v=>Math.round(v));
+        // TDS — vandens kokybė + tuščio bako aptikimas
+        // Logiką: jei TDS = NaN (sausas/atjungtas daviklis) → "Vandens nėra"
+        // Nepasitikime water_pct nes VL53L0X gali būti nekalibruotas (rodo 0 net kai vanduo yra)
+        (function() {
+            const tds = parseFloat(sensorCache['tds_ppm']);
+            const tdsEl = document.getElementById('tds');
+            const qualEl = document.getElementById('water-quality');
+            const tdsNA = isNaN(tds) || tds <= 0;
+            if (tdsEl) tdsEl.textContent = tdsNA ? '---' : Math.round(tds);
+            if (qualEl) {
+                if (tdsNA) {
+                    qualEl.textContent = 'Vandens nėra';
+                    qualEl.style.color = '#8b949e';
+                } else if (tds < 100) {
+                    qualEl.textContent = '💧 Puikus';
+                    qualEl.style.color = '#3fb950';
+                } else if (tds < 300) {
+                    qualEl.textContent = '✅ Geras';
+                    qualEl.style.color = '#3fb950';
+                } else if (tds < 600) {
+                    qualEl.textContent = '⚠️ Vidutinis';
+                    qualEl.style.color = '#e3b341';
+                } else {
+                    qualEl.textContent = '❌ Blogas';
+                    qualEl.style.color = '#f85149';
+                }
+            }
+        })();
+        setSensorValue('gsm_signal_pct', 'gsm-signal', v=>Math.round(v)); setSensorValue('gsm_operator_sensor', 'gsm-operator'); setSensorValue('gsm_network_sensor', 'gsm-network');
+        setSensorValue('gsm_signal_pct', 'gsm-dbm', v=>{ let dbm = Math.round(-113 + v * 0.63); return dbm + ' dBm'; });
+        setSensorValue('gsm_roaming_sensor', 'gsm-roaming', v => {
+            let el = document.getElementById('gsm-roaming');
+            let sub = document.getElementById('gsm-roaming-sub');
+            if (v === 'Roaming') {
+                el.style.color = '#e3b341'; if (sub) sub.textContent = '⚠️ Papildomos išlaidos galimos';
+            } else if (v === 'Namu tinklas') {
+                el.style.color = '#3fb950'; if (sub) sub.textContent = '✅ Namų operatoriaus tinklas';
+            } else {
+                el.style.color = '#8b949e'; if (sub) sub.textContent = '';
+            }
+            return v;
+        });
+        setSensorValue('weather_forecast', 'weather'); setSensorValue('weather_forecast', 'weather-d');
+        setSensorValue('bedroom_air_quality', 'air-quality'); setSensorValue('bedroom_air_quality', 'air-quality-d');
+        setSensorValue('system_advice', 'advice-box');
+
+        // === ORŲ PROGNOZĖ: slėgio tendencijos kortelė ===
+        (function() {
+            const dp = parseFloat(sensorCache['pressure_trend_hpa']);
+            const pressure = parseFloat(sensorCache['bme_pressure']);
+
+            // Esamas slėgis (rodo šalia prognozės)
+            const pvEl = document.getElementById('weather-pressure-val');
+            if (pvEl) pvEl.textContent = isNaN(pressure) ? '---' : pressure.toFixed(1);
+
+            // Tendencijos rodyklė + hPa reikšmė
+            const tEl = document.getElementById('weather-trend-text');
+            if (tEl) {
+                if (isNaN(dp)) {
+                    tEl.textContent = '→ ---';
+                    tEl.style.color = '#8b949e';
+                } else {
+                    const arrow = dp > 0.5 ? '↑' : dp < -0.5 ? '↓' : '→';
+                    tEl.textContent = arrow + ' ' + (dp >= 0 ? '+' : '') + dp.toFixed(2);
+                    tEl.style.color = dp > 1.5 ? '#3fb950' : dp < -1.5 ? '#f85149' : '#58a6ff';
+                }
+            }
+
+            // Slankiklis nuo -3 iki +3 hPa
+            const marker = document.getElementById('weather-pressure-marker');
+            if (marker && !isNaN(dp)) {
+                const clamped = Math.max(-3, Math.min(3, dp));
+                const pct = ((clamped + 3) / 6) * 100;
+                marker.style.left = pct + '%';
+            }
+        })();
+
+        // === MIEGAMASIS CO2 ===
+        (function() {
+            const co2 = parseFloat(sensorCache['bedroom_co2']);
+            const trend = parseFloat(sensorCache['bedroom_co2_trend']);
+            const quality = sensorCache['bedroom_air_quality'] || '---';
+            const temp = sensorCache['bedroom_temp'];
+            const humid = sensorCache['bedroom_humidity'];
+
+            // CO2 spalva ir mirkėjimas
+            let co2Color = '#8b949e';
+            let blinkClass = '';
+            let cardBorder = '#8b949e';
+            if (!isNaN(co2)) {
+                if      (co2 < 800)  { co2Color = '#3fb950'; cardBorder = '#3fb950'; }
+                else if (co2 < 1200) { co2Color = '#e3b341'; cardBorder = '#e3b341'; }
+                else if (co2 < 1800) { co2Color = '#d29922'; cardBorder = '#d29922'; }
+                else if (co2 < 2500) { co2Color = '#f85149'; cardBorder = '#da3633'; blinkClass = 'co2-blink'; }
+                else                 { co2Color = '#f85149'; cardBorder = '#da3633'; blinkClass = 'co2-blink-fast'; }
+            }
+
+            // Rodmuo
+            const valEls = ['bedroom-co2-value', 'co2-priority-value'];
+            valEls.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.textContent = isNaN(co2) ? '---' : Math.round(co2) + ' ppm';
+                el.style.color = co2Color;
+                el.className = blinkClass;
+            });
+
+            // Kortelės kairioji juosta
+            const card = document.getElementById('bedroom-co2-card');
+            const pcCard = document.getElementById('pc-co2');
+            if (card) card.style.borderLeft = '3px solid ' + cardBorder;
+            if (pcCard) pcCard.style.borderLeft = '3px solid ' + cardBorder;
+
+            // Oro kokybės tekstas
+            ['bedroom-co2-quality', 'co2-priority-quality'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.textContent = quality; el.style.color = co2Color; }
+            });
+
+            // Tendencija (ppm/2min)
+            let trendText = '→', trendColor = '#8b949e';
+            if (!isNaN(trend)) {
+                const t = Math.round(trend);
+                if      (t > 50)  { trendText = `↑↑ +${t}`; trendColor = '#f85149'; }
+                else if (t > 15)  { trendText = `↑ +${t}`;  trendColor = '#d29922'; }
+                else if (t > 5)   { trendText = `↗ +${t}`;  trendColor = '#e3b341'; }
+                else if (t < -50) { trendText = `↓↓ ${t}`;  trendColor = '#58a6ff'; }
+                else if (t < -15) { trendText = `↓ ${t}`;   trendColor = '#58a6ff'; }
+                else if (t < -5)  { trendText = `↘ ${t}`;   trendColor = '#8b949e'; }
+                else              { trendText = `→ ${t > 0 ? '+' : ''}${t}`; trendColor = '#3fb950'; }
+            }
+            ['bedroom-co2-trend-arrow', 'co2-priority-trend'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.textContent = trendText; el.style.color = trendColor; }
+            });
+
+            // Temp + drėgmė
+            const tEl = document.getElementById('bedroom-temp-val');
+            const hEl = document.getElementById('bedroom-humid-val');
+            if (tEl) tEl.textContent = temp ? parseFloat(temp).toFixed(1) : '---';
+            if (hEl) hEl.textContent = humid ? Math.round(humid) : '---';
+
+            // Gradiento žymeklis (0–3000 ppm → 0–100%)
+            const marker = document.getElementById('bedroom-co2-marker');
+            if (marker && !isNaN(co2)) {
+                const pct = Math.max(0, Math.min(100, co2 / 3000 * 100));
+                marker.style.left = pct + '%';
+            }
+        })();
+        setSensorValue('gps_coords_sensor', 'gps-coords');
+        setSensorValue('gps_sats_total_sensor', 'gps-fix', v=>`Satelitai: ${v}`);
+        setSensorValue('gps_speed_sensor', 'gps-speed', v=>parseFloat(v).toFixed(1)); setSensorValue('gps_alt_sensor', 'gps-alt', v=>Math.round(v));
+        setSensorValue('gps_heading_sensor', 'gps-heading', v=>Math.round(v)); setSensorValue('gps_sats_total_sensor', 'gps-sats-total');
+        setSensorValue('sats_gps', 'sats-gps'); setSensorValue('sats_glonass', 'sats-glonass');
+        setSensorValue('sats_bds', 'sats-bds'); setSensorValue('sats_galileo', 'sats-galileo');
+        setSensorValue('junc_v', 'voltage', v=>parseFloat(v).toFixed(2)); setSensorValue('junc_a', 'current', v=>parseFloat(v).toFixed(2));
+        setSensorValue('junc_power', 'power', v=>Math.round(v)); setSensorValue('junc_power', 'power_d', v=>Math.round(v));
+        setSensorValue('junc_a', 'current_d', v=>parseFloat(v).toFixed(2)); setSensorValue('junc_a', 'current_mini', v=>parseFloat(v).toFixed(2));
+        setSensorValue('junc_power', 'power_mini', v=>Math.round(v));
+        setSensorValue('junc_temp', 'junc_temp_val', v=>parseFloat(v).toFixed(1));
+        setSensorValue('junc_time_remaining', 'junc_time_val', v=>Math.round(v));
+        setSensorValue('google_buffer_status', 'google-buffer');
+        setSensorValue('google_buffer_status', 'google-buffer-set');
+        // Sistemos diagnostika
+        setSensorValue('sys_free_ram', 'diag-ram', v => `${Math.round(v)} KB`);
+        setSensorValue('sys_esp_temp', 'diag-esp-temp', v => `${Math.round(v)}°C`);
+        setSensorValue('sys_uptime', 'diag-uptime');
+
+        // Google siuntimo statuso indikatorius antraštėje + Nustatymai kortelėje
+        let gUpload = sensorCache['sw_google_upload'];
+        let gDot = document.getElementById('google-status-dot');
+        let gTxt = document.getElementById('header_google_status');
+        let gTxtSet = document.getElementById('google_upload_text');
+        let gChk = document.getElementById('chk_google_upload');
+        if (gUpload === 'on' || gUpload === true) {
+            gDot.style.background = '#4caf50'; gDot.style.boxShadow = '0 0 6px #4caf50';
+            gTxt.textContent = '📤 Siuntimas: Įjungtas';
+            if (gTxtSet) gTxtSet.textContent = 'Įjungtas ✓';
+            if (gChk && document.activeElement !== gChk) gChk.checked = true;
+        } else if (gUpload === 'off' || gUpload === false) {
+            gDot.style.background = '#f44336'; gDot.style.boxShadow = '0 0 6px #f44336';
+            gTxt.textContent = '📤 Siuntimas: Išjungtas';
+            if (gTxtSet) gTxtSet.textContent = 'Išjungtas';
+            if (gChk && document.activeElement !== gChk) gChk.checked = false;
+        }
+
+        // Apsaugos jungiklio būsena
+        let secArmed = sensorCache['sw_security_armed'];
+        let secTxt = document.getElementById('security_armed_text');
+        let secChk = document.getElementById('chk_security_armed');
+        let secOv = document.getElementById('security-overview-text');
+        let secCard = document.getElementById('pc-security');
+        if (secArmed === 'on' || secArmed === true) {
+            if (secTxt) secTxt.textContent = '🔒 Įjungta';
+            if (secTxt) secTxt.style.color = '#4caf50';
+            if (secChk && document.activeElement !== secChk) secChk.checked = true;
+            if (secOv) { secOv.textContent = '🔒 ĮJUNGTA'; secOv.style.color = '#3fb950'; }
+            if (secCard) secCard.style.borderLeft = '3px solid #3fb950';
+        } else if (secArmed === 'off' || secArmed === false) {
+            if (secTxt) secTxt.textContent = '🔓 Išjungta';
+            if (secTxt) secTxt.style.color = '#f44336';
+            if (secChk && document.activeElement !== secChk) secChk.checked = false;
+            if (secOv) { secOv.textContent = '🔓 Išjungta'; secOv.style.color = '#8b949e'; }
+            if (secCard) secCard.style.borderLeft = '3px solid #8b949e';
+        }
+
+        // 220V maitinimo šaltinis
+        let src220 = sensorCache['power_source_220'];
+        let srcEl = document.getElementById('power-source-220');
+        let srcSub = document.getElementById('power-source-220-sub');
+        let shoreEl = document.getElementById('shore-power-state');
+        let invEl = document.getElementById('inverter-state');
+        let ov220El = document.getElementById('overview-220v');
+        let ov220Sub = document.getElementById('overview-220v-sub');
+        if (src220 === 'Isorine 220V') {
+            srcEl.textContent = '🔌 Išorinė 220V';
+            srcEl.style.color = '#3fb950';
+            if (srcSub) srcSub.textContent = 'Campingo/namų tinklas prijungtas';
+            if (shoreEl) { shoreEl.textContent = '✅ Prijungta'; shoreEl.style.color = '#3fb950'; }
+            if (invEl)   { invEl.textContent = '⏹ Išjungtas'; invEl.style.color = '#8b949e'; }
+            if (ov220El) { ov220El.textContent = '🔌 Išorinė'; ov220El.style.color = '#3fb950'; }
+            if (ov220Sub) ov220Sub.textContent = 'Campingo tinklas';
+        } else if (src220 === 'Keitiklis') {
+            srcEl.textContent = '🔄 Keitiklis';
+            srcEl.style.color = '#58a6ff';
+            if (srcSub) srcSub.textContent = 'Veikia iš akumuliatoriaus';
+            if (shoreEl) { shoreEl.textContent = '❌ Neprijungta'; shoreEl.style.color = '#f85149'; }
+            if (invEl)   { invEl.textContent = '✅ Veikia'; invEl.style.color = '#3fb950'; }
+            if (ov220El) { ov220El.textContent = '🔄 Keitiklis'; ov220El.style.color = '#58a6ff'; }
+            if (ov220Sub) ov220Sub.textContent = 'Iš akumuliatoriaus';
+        } else if (src220 === 'Nera 220V') {
+            srcEl.textContent = '⭕ Nėra 220V';
+            srcEl.style.color = '#8b949e';
+            if (srcSub) srcSub.textContent = 'Keitiklis išjungtas';
+            if (shoreEl) { shoreEl.textContent = '❌ Neprijungta'; shoreEl.style.color = '#f85149'; }
+            if (invEl)   { invEl.textContent = '⏹ Išjungtas'; invEl.style.color = '#8b949e'; }
+            if (ov220El) { ov220El.textContent = '⭕ Išjungta'; ov220El.style.color = '#8b949e'; }
+            if (ov220Sub) ov220Sub.textContent = 'Nėra maitinimo';
+        }
+
+        // Progreso juostos — tiesiogiai, be tekstinio turinio
+        let _soc = getCache('junc_soc', 0);
+        document.getElementById('soc-fill').style.width = Math.max(0,Math.min(100,_soc))+'%';
+        document.getElementById('soc-fill-d').style.width = Math.max(0,Math.min(100,_soc))+'%';
+        let _water = getCache('water_pct', 0);
+        document.getElementById('water-fill').style.width = Math.max(0,Math.min(100,_water))+'%';
+        document.getElementById('water-fill-d').style.width = Math.max(0,Math.min(100,_water))+'%';
+        let _gas = getCache('gas_pct', 0);
+        document.getElementById('gas-fill').style.width = Math.max(0,Math.min(100,_gas))+'%';
+        document.getElementById('gas-fill-d').style.width = Math.max(0,Math.min(100,_gas))+'%';
+        let _gsm = getCache('gsm_signal_pct', 0);
+        document.getElementById('gsm-fill').style.width = Math.max(0,Math.min(100,_gsm))+'%';
+
+        setSensorValue('junc_a', 'bat-status', v=>{ let a=parseFloat(v); if(a>0.1) return '⚡ KRAUNASI'; else if(a<-0.1) return '🔻 IŠSIKRAUNA'; else return '⏸ STOVI'; });
+        setSensorValue('junc_a', 'bat-status-d', v=>{ let a=parseFloat(v); if(a>0.1) return '⚡ KRAUNASI'; else if(a<-0.1) return '🔻 IŠSIKRAUNA'; else return '⏸ STOVI'; });
+        setSensorValue('water_pct', 'water-status', v => { 
+            if (v >= 70) return 'Pilnas'; 
+            if (v >= 30) return 'Vidutinis'; 
+            if (v >= 10) return 'Mažai'; 
+            return 'Tuščias'; 
+        });
+        setSensorValue('water_pct', 'water-status-d', v => { 
+            if (v >= 70) return 'Pilnas'; 
+            if (v >= 30) return 'Vidutinis'; 
+            if (v >= 10) return 'Mažai'; 
+            return 'Tuščias'; 
+        });
+
+        let roll = getCache('roll_sensor', 0), pitch = getCache('pitch_sensor', 0);
+        let track = getCache('track_cm', 180);
+        let wheelbase = getCache('wheelbase_cm', 350);
+
+        let ptrS = document.getElementById('ptr-s-container');
+        if (ptrS) ptrS.style.transform = `translateX(-50%) rotate(${roll}deg)`;
+        document.getElementById('txt-s-top').innerHTML = Math.abs(roll).toFixed(1) + '°';
+        document.getElementById('dir-s').innerHTML = roll > 0.5 ? 'Kairė žemiau' : (roll < -0.5 ? 'Dešinė žemiau' : 'Lygu');
+
+        let ptrF = document.getElementById('ptr-f-container');
+        if (ptrF) ptrF.style.transform = `translateX(-50%) rotate(${pitch}deg)`;
+        document.getElementById('txt-f-top').innerHTML = Math.abs(pitch).toFixed(1) + '°';
+        document.getElementById('dir-f').innerHTML = pitch > 0.5 ? 'Priekis žemiau' : (pitch < -0.5 ? 'Galas žemiau' : 'Lygu');
+
+        let rollRad = roll * Math.PI / 180;
+        let pitchRad = pitch * Math.PI / 180;
+        let fl = (roll > 0 ? Math.tan(rollRad) * track : 0) + (pitch > 0 ? Math.tan(pitchRad) * wheelbase : 0);
+        let fr = (roll < 0 ? Math.tan(-rollRad) * track : 0) + (pitch > 0 ? Math.tan(pitchRad) * wheelbase : 0);
+        let rl = (roll > 0 ? Math.tan(rollRad) * track : 0) + (pitch < 0 ? Math.tan(-pitchRad) * wheelbase : 0);
+        let rr = (roll < 0 ? Math.tan(-rollRad) * track : 0) + (pitch < 0 ? Math.tan(-pitchRad) * wheelbase : 0);
+        document.getElementById('v-fl').textContent = fl.toFixed(1);
+        document.getElementById('v-fr').textContent = fr.toFixed(1);
+        document.getElementById('v-rl').textContent = rl.toFixed(1);
+        document.getElementById('v-rr').textContent = rr.toFixed(1);
+
+        // Domkratų rekomendacija (generuojama JS, ne iš ESP sensoriaus)
+        (function() {
+            const el = document.getElementById('jack-recommendation-text');
+            if (!el) return;
+            const absR = Math.abs(roll), absP = Math.abs(pitch);
+            if (absR < 0.5 && absP < 0.5) { el.textContent = '✅ Lygu ±0.5°'; return; }
+            let parts = [];
+            if (absR >= 0.5) {
+                const cm = Math.abs(Math.tan(rollRad) * track).toFixed(1);
+                parts.push((roll > 0 ? 'K' : 'D') + ' kelti +' + cm + ' cm');
+            }
+            if (absP >= 0.5) {
+                const cm = Math.abs(Math.tan(pitchRad) * wheelbase).toFixed(1);
+                parts.push((pitch > 0 ? 'P' : 'G') + ' kelti +' + cm + ' cm');
+            }
+            el.textContent = parts.join('  ·  ');
+        })();
+
+        let bubble = document.getElementById('bubble');
+        if (bubble) {
+            let bx = roll * 2.0, by = pitch * 2.0;
+            let dist = Math.sqrt(bx*bx + by*by);
+            const maxR = 28;
+            if (dist > maxR) { bx = bx/dist*maxR; by = by/dist*maxR; }
+            bubble.style.transform = `translate(calc(-50% + ${Math.round(bx)}px), calc(-50% + ${Math.round(by)}px))`;
+        }
+
+        // Water mode status in overview card
+        let waterModeEl = document.getElementById('water-mode-status');
+        if (waterModeEl) {
+            let wd = getCache('water_distance', 0);
+            waterModeEl.textContent = wd > 0.5 ? 'Lazeris: ' + wd.toFixed(1) + ' cm' : 'Tikrinama...';
+        }
+
+        // Vibration current level
+        setSensorValue('vib_level', 'vib-current', v => parseFloat(v).toFixed(1));
+
+        setInputValue('num_water_empty_cm', getCache('num_water_empty_cm'));
+        setInputValue('num_water_full_cm', getCache('num_water_full_cm'));
+        setInputValue('num_gas_empty_kg', getCache('num_gas_empty_kg'));
+        setInputValue('num_gas_full_kg', getCache('num_gas_full_kg'));
+        setInputValue('num_hx711_scale', getCache('num_hx711_scale'));
+        setInputValue('num_gas_weight_offset', getCache('num_gas_weight_offset'));
+        setInputValue('num_roll_cal', getCache('num_roll_cal'));
+        setInputValue('num_pitch_cal', getCache('num_pitch_cal'));
+        setInputValue('num_wheelbase_cm', getCache('num_wheelbase_cm'));
+        setInputValue('num_track_cm', getCache('num_track_cm'));
+        setInputValue('num_bat_capacity', getCache('num_bat_capacity'));
+        setInputValue('num_temp_offset', getCache('num_temp_offset'));
+        setInputValue('num_humid_offset', getCache('num_humid_offset'));
+        setInputValue('num_water_offset', getCache('num_water_offset'));
+        setInputValue('num_timezone_offset', getCache('num_timezone_offset'));
+
+        // Sync text inputs for txt entities
+        let adminEl = document.getElementById('txt_admin_number_input');
+        if (adminEl && document.activeElement !== adminEl && sensorCache['txt_admin_number'] !== undefined) adminEl.value = sensorCache['txt_admin_number'];
+        let apnEl = document.getElementById('txt_apn_input');
+        if (apnEl && document.activeElement !== apnEl && sensorCache['txt_apn'] !== undefined) apnEl.value = sensorCache['txt_apn'];
+
+        setInputValue('num_vib_threshold', getCache('num_vib_threshold', 35));
+
+        updateSmsTerminal();
+        checkAlarms(sensorCache);
+    }
+
+    function setInputValue(id, value) {
+        const el = document.getElementById(id);
+        if (!el || value === undefined || value === null) return;
+        if (document.activeElement !== el) el.value = value;
+    }
+    function getSensorValue(id) { return sensorCache[id] !== undefined ? sensorCache[id] : null; }
+    function setSensorValue(esphomeId, elementId, formatter = null, isInput = false) {
+        const v = getSensorValue(esphomeId);
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        if (v === null || v === 'NaN' || v === 'nan' || v === 'unavailable' || v === 'unknown') { if (isInput && document.activeElement !== el) el.value = ''; else if (!isInput) el.textContent = '---'; }
+        else { const disp = formatter ? formatter(v) : v; if (isInput && document.activeElement !== el) el.value = disp; else if (!isInput) el.textContent = disp; }
+    }
+
+    async function loadAllTexts() {
+        const textIds = ['txt_admin_number', 'txt_apn', 'txt_app_script_id'];
+        for (const id of textIds) {
+            try {
+                const r = await fetch(`/text/${id}`);
+                if (!r.ok) continue;
+                const data = await r.json();
+                const val = data.value ?? '';
+                // txt_admin_number → #txt_admin_number_input, kiti → #id_input arba #id
+                const el = document.getElementById(id + '_input') || document.getElementById(id);
+                if (el) el.value = val;
+            } catch(e) {}
+        }
+    }
+
+    async function loadAllNumbers() {
+        const numberIds = [
+            'num_timezone_offset', 'num_water_empty_cm', 'num_water_full_cm',
+            'num_gas_empty_kg', 'num_gas_full_kg', 'num_hx711_scale',
+            'num_gas_weight_offset', 'num_roll_cal', 'num_pitch_cal',
+            'num_wheelbase_cm', 'num_track_cm', 'num_bat_capacity',
+            'num_temp_offset', 'num_humid_offset', 'num_water_offset',
+            'num_vib_threshold'
+        ];
+        for (const id of numberIds) {
+            try {
+                const resp = await fetch(`${ESPHOME_URL}/number/${id}`);
+                if (resp.ok) {
+                    const json = await resp.json();
+                    if (json && json.value !== undefined) {
+                        sensorCache[id] = json.value;
+                        sysLog(`✅ Gauta ${id} = ${json.value}`, 'info');
+                    }
+                }
+            } catch(e) {
+                sysLog(`❌ Nepavyko gauti ${id}: ${e.message}`, 'error');
+            }
+        }
+        updateUI();
+    }
+
+    function init() {
+        loadLocalLogFromStorage();
+        let savedScriptId = localStorage.getItem('app_script_id');
+        if (savedScriptId && document.getElementById('txt_app_script_id')) document.getElementById('txt_app_script_id').value = savedScriptId;
+
+        // Pradinės reikšmės naujiems Nustatymų laukeliams
+        const ipIn = document.getElementById('esp_ip_input'); if (ipIn) ipIn.value = ESP_IP;
+        const langSel = document.getElementById('tts_lang_select'); if (langSel) langSel.value = ttsLang;
+        const volR = document.getElementById('tts_vol_range'); if (volR) volR.value = getTtsVolPct();
+        const volL = document.getElementById('tts_vol_label'); if (volL) volL.textContent = getTtsVolPct();
+        const chS = document.getElementById('chime_select'); if (chS) chS.value = getChimeType();
+        renderTheftTexts(); // užpildyti vagystės tekstų laukelius
+
+        // Nuolatinis aliarmų tikrinimas (kas 5 s) — kad pakartojimai (CO2 kas 1 min,
+        // vagystė) veiktų ir kai SSE tyli, ir (su background-mode) kai ekranas išjungtas.
+        // checkAlarms() pats iškviečia checkTheftVoice() pabaigoje.
+        setInterval(() => { try { checkAlarms(sensorCache); } catch(e){} }, 5000);
+
+        // WiFi paleidžiant: jei NEprisijungę prie Kemperio AP — bandom prisijungti; jei
+        // prisijungę — surišam srautą su WiFi (kad pasiektų 192.168.4.1 net su įjungtais
+        // mobiliais duomenimis; kitaip Android srautą siunčia per mobilų internetą).
+        try {
+            if (window.KemperisWifi) {
+                let curSsid = (KemperisWifi.getCurrentSSID && KemperisWifi.getCurrentSSID()) || '';
+                if (curSsid.indexOf(ESP_WIFI_SSID) === -1) {
+                    sysLog('Neprisijungta prie ' + ESP_WIFI_SSID + ' — bandoma prisijungti...', 'warn');
+                    if (KemperisWifi.connectToWifi) KemperisWifi.connectToWifi(ESP_WIFI_SSID, ESP_WIFI_PASS);
+                } else {
+                    if (KemperisWifi.bindToWifi) KemperisWifi.bindToWifi();
+                }
+            }
+        } catch(e){}
+
+        sysLog(`Inicijuojamas ryšys su ESP32 (${ESPHOME_URL})...`, 'warn');
+        const source = new EventSource(ESPHOME_URL + '/events');
+        source.addEventListener('state', function(e) {
+            let data;
+            try {
+                data = JSON.parse(e.data);
+            } catch(err) {
+                return; // praleidžiame nevaliduotas SSE žinutes (pvz. junctek raw binary)
+            }
+            let rawId = data.id.toLowerCase();
+            let value = (data.value !== undefined ? data.value : data.state);
+            console.log('[SSE]', rawId, '=', value);
+            if (value === 'null' || value === 'undefined') value = null;
+
+            if (rawId.startsWith('number-')) {
+                sensorCache[rawId.substring(7)] = value;
+            } else if (rawId.startsWith('text-')) {
+                sensorCache[rawId.substring(5)] = value;
+                 } else if (rawId.startsWith('switch-')) {
+                sensorCache[rawId.substring(7)] = value;
+            } else if (rawId.startsWith('text_sensor-') || rawId.startsWith('sensor-')) {
+                // 1. Greitas Map paieška sensoriai su aiškiu id: (deterministiniai)
+                const stripped = rawId.replace(/^(text_sensor-|sensor-)/, '');
+                if (SENSOR_ID_MAP[stripped] !== undefined) {
+                    sensorCache[SENSOR_ID_MAP[stripped]] = value;
+                // 2. NFKD atsarginė grandinė (lietuviški pavadinimai be id:)
+                } else if (rawId.includes('junc_soc') || rawId.includes('akum_soc')) sensorCache['junc_soc'] = value;
+                else if (rawId.includes('junc_v') || rawId.includes('akum___tampa') || rawId.includes('akum_i_tampa') || rawId.includes('akum__tampa') || rawId.includes('akum_itampa') || rawId.includes('akum_tampa')) sensorCache['junc_v'] = value;
+                else if (rawId.includes('junc_a') || rawId.includes('akum_srov')) sensorCache['junc_a'] = value;
+                else if (rawId.includes('junc_power') || rawId.includes('akum_galia')) sensorCache['junc_power'] = value;
+                else if (rawId.includes('junc_ah_remaining') || rawId.includes('ah_likutis')) sensorCache['junc_ah_remaining'] = value;
+                else if (rawId.includes('junc_temp') || rawId.includes('akum_temp')) sensorCache['junc_temp'] = value;
+                else if (rawId.includes('junc_time_remaining') || rawId.includes('veikimo_laikas')) sensorCache['junc_time_remaining'] = value;
+                else if (rawId.includes('miegamasis___temperatura') || rawId.includes('bedroom_temp')) sensorCache['bedroom_temp'] = value;
+                else if ((rawId.includes('bme_temp') || rawId.includes('temperat')) && !rawId.includes('miegamasis')) sensorCache['bme_temp'] = value;
+                else if (rawId.includes('pressure_altitude') || rawId.includes('aukstis__slegis') || (rawId.includes('aplinka') && rawId.includes('aukstis')) || (rawId.includes('aplinka') && rawId.includes('auks_tis'))) sensorCache['pressure_altitude'] = value;
+                else if (rawId.includes('bme_pressure') || (rawId.includes('sle_gis') && !rawId.includes('auks')) || (rawId.includes('slegis') && !rawId.includes('aukstis'))) sensorCache['bme_pressure'] = value;
+                else if (rawId.includes('vib_level') || rawId.includes('vibracija__ema') || rawId.includes('vibracija_ema')) sensorCache['vib_level'] = value;
+                else if (rawId.includes('miegamasis___dregme') || rawId.includes('bedroom_humidity')) sensorCache['bedroom_humidity'] = value;
+                else if ((rawId.includes('bme_humidity') || rawId.includes('dre_gme') || rawId.includes('dregme')) && !rawId.includes('miegamasis')) sensorCache['bme_humidity'] = value;
+                else if (rawId.includes('weather_forecast') || rawId.includes('prognoz')) sensorCache['weather_forecast'] = value;
+                else if (rawId.includes('pressure_trend_hpa') || rawId.includes('slegio_tendencija') || rawId.includes('sle_gio_tendencija') || rawId.includes('slegis_tendencija')) sensorCache['pressure_trend_hpa'] = value;
+                else if (rawId.includes('system_advice') || rawId.includes('sistema__patarimai') || rawId.includes('sistema___patarimai')) sensorCache['system_advice'] = value;
+                else if (rawId.includes('alert_movement') || rawId.includes('judejimo_aliarmas') || rawId.includes('judejim') || (rawId.includes('sauga') && rawId.includes('aliarm'))) sensorCache['alert_movement_sent'] = value;
+                else if (rawId.includes('water_distance') || rawId.includes('vandens_atstumas')) sensorCache['water_distance'] = value;
+                else if (rawId.includes('water_offset') || rawId.includes('vandens_atstumo_offset')) sensorCache['water_offset'] = value;
+                else if (rawId.includes('water_level_pct') || rawId.includes('vandens_lygis') || rawId.includes('vanduo_lygis')) sensorCache['water_pct'] = value;
+                else if (rawId.includes('tds_ppm') || rawId.includes('vandens_tds')) sensorCache['tds_ppm'] = value;
+                else if (rawId.includes('gas_remaining_pct') || rawId.includes('duju_likutis') || rawId.includes('dujos_likutis')) sensorCache['gas_pct'] = value;
+                else if (rawId.includes('roll_sensor') || rawId.includes('soninis_k-d') || rawId.includes('soninis_k_d')) sensorCache['roll_sensor'] = value;
+                else if (rawId.includes('pitch_sensor') || rawId.includes('is_ilginis') || rawId.includes('isilginis_p-g') || rawId.includes('isilginis_p_g')) sensorCache['pitch_sensor'] = value;
+                else if (rawId.includes('gps_coords_sensor') || rawId.includes('koordinat')) sensorCache['gps_coords_sensor'] = value;
+                else if (rawId.includes('gps_speed_sensor') || rawId.includes('gps___greitis')) sensorCache['gps_speed_sensor'] = value;
+                else if (rawId.includes('gps_alt_sensor') || rawId.includes('gps___aukstis')) sensorCache['gps_alt_sensor'] = value;
+                else if (rawId.includes('gps_heading_sensor') || rawId.includes('gps___kryptis')) sensorCache['gps_heading_sensor'] = value;
+                else if (rawId.includes('gps_sats_total_sensor') || rawId.includes('visi_palydovai')) sensorCache['gps_sats_total_sensor'] = value;
+                else if (rawId.includes('gsm_signal_pct') || rawId.includes('signalas____')) sensorCache['gsm_signal_pct'] = value;
+                else if (rawId.includes('gsm_operator_sensor') || rawId.includes('operatorius')) sensorCache['gsm_operator_sensor'] = value;
+                else if (rawId.includes('gsm_network_sensor') || rawId.includes('gsm___tinklas') || rawId.includes('gsm_tinklas')) sensorCache['gsm_network_sensor'] = value;
+                else if (rawId.includes('gsm_roaming_sensor') || rawId.includes('roaming_statusas')) sensorCache['gsm_roaming_sensor'] = value;
+                else if (rawId.includes('power_source_220') || rawId.includes('altinis')) sensorCache['power_source_220'] = value;
+                else if (rawId.includes('gps_sats_gps_used') || rawId.includes('navstar')) sensorCache['sats_gps'] = value;
+                else if (rawId.includes('gps_sats_glonass_used') || rawId.includes('glonass')) sensorCache['sats_glonass'] = value;
+                else if (rawId.includes('gps_sats_bds_used') || rawId.includes('beidou')) sensorCache['sats_bds'] = value;
+                else if (rawId.includes('gps_sats_galileo_used') || rawId.includes('galileo')) sensorCache['sats_galileo'] = value;
+                else if (rawId.includes('google_buffer_status') || rawId.includes('google_buferis')) sensorCache['google_buffer_status'] = value;
+                else if (rawId.includes('water_empty_cm')) sensorCache['water_empty_cm'] = value;
+                else if (rawId.includes('water_full_cm')) sensorCache['water_full_cm'] = value;
+                else if (rawId.includes('gas_empty_weight')) sensorCache['gas_empty_weight'] = value;
+                else if (rawId.includes('gas_full_weight')) sensorCache['gas_full_weight'] = value;
+                else if (rawId.includes('bedroom_co2_trend') || rawId.includes('co2_tendencija') || rawId.includes('miegamasis___co2_tendencija')) sensorCache['bedroom_co2_trend'] = value;
+                else if (rawId.includes('bedroom_air_quality') || rawId.includes('miegamasis___oro_kokybe')) sensorCache['bedroom_air_quality'] = value;
+                else if (rawId.includes('bedroom_co2') || rawId.includes('miegamasis___co2')) sensorCache['bedroom_co2'] = value;
+                /* bedroom_temp handled above */
+                /* bedroom_humidity handled above */
+                else if (rawId.includes('hx711_scale')) sensorCache['hx711_scale'] = value;
+                else if (rawId.includes('gas_weight_offset')) sensorCache['gas_weight_offset'] = value;
+                else if (rawId.includes('cal_roll')) sensorCache['cal_roll'] = value;
+                else if (rawId.includes('cal_pitch')) sensorCache['cal_pitch'] = value;
+                else if (rawId.includes('wheelbase_cm')) sensorCache['wheelbase_cm'] = value;
+                else if (rawId.includes('track_cm')) sensorCache['track_cm'] = value;
+                else if (rawId.includes('bat_capacity_ah')) sensorCache['bat_capacity_ah'] = value;
+                else if (rawId.includes('temp_offset')) sensorCache['temp_offset'] = value;
+                else if (rawId.includes('humid_offset')) sensorCache['humid_offset'] = value;
+                else if (rawId.includes('timezone_offset')) sensorCache['timezone_offset'] = value;
+                else if (rawId.includes('sms_1')) sensorCache['sms_1'] = value;
+                else if (rawId.includes('sms_2')) sensorCache['sms_2'] = value;
+                else if (rawId.includes('sms_3')) sensorCache['sms_3'] = value;
+                else if (rawId.includes('sms_4')) sensorCache['sms_4'] = value;
+                else if (rawId.includes('sms_5')) sensorCache['sms_5'] = value;
+                else if (rawId.includes('sys_free_ram') || rawId.includes('sistema___laisva_ram') || rawId.includes('laisva_ram')) sensorCache['sys_free_ram'] = value;
+                else if (rawId.includes('sys_esp_temp') || rawId.includes('sistema___esp_temperat') || rawId.includes('esp_temperat') || rawId.includes('esp_temp')) sensorCache['sys_esp_temp'] = value;
+                else if (rawId.includes('sys_uptime') || rawId.includes('sistema___uptime') || rawId.includes('_uptime')) sensorCache['sys_uptime'] = value;
+                else { console.warn('[SSE UNMATCHED]', rawId, '=', value); }
+            }
+
+            updateUI();
+        });
+        source.onopen = () => { document.getElementById('status-dot').classList.remove('offline'); document.getElementById('status-text').textContent = 'Prisijungta'; sysLog('✅ Prisijungta prie ESP32!', 'success'); };
+        source.onerror = () => { document.getElementById('status-dot').classList.add('offline'); document.getElementById('status-text').textContent = 'Neprisijungta'; sysLog('❌ Ryšys nutrūko.', 'error'); };
+
+        loadAllNumbers();
+        loadAllTexts();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // BALSO ALIARMAI – dinaminiai (keičiami per skirtuką „Aliarmai")
+    // ═══════════════════════════════════════════════════════════════════
+
+    // Pagalbinė funkcija: gauti reikšmę iš cache su numatytąja verte
+    function getFromCache(cache, key, def) {
+        const v = parseFloat(cache[key]);
+        return isNaN(v) ? def : v;
+    }
+
+    // Numatytieji aliarmai — šaltinis atkūrimui
+    const DEFAULT_ALARMS = [
+        { id: 'water_critical', title: '💧 Vanduo – kritinis',   sensorKey: 'water_pct', threshold: 5,
+          condition: (c,t) => getFromCache(c,'water_pct',100) < t,
+          reset:     (c,t) => getFromCache(c,'water_pct',100) >= t+3,
+          message: 'Warning! Water tank is almost empty.' },
+        { id: 'water_low',      title: '💧 Vanduo – žemas',      sensorKey: 'water_pct', threshold: 15,
+          condition: (c,t) => getFromCache(c,'water_pct',100) < t,
+          reset:     (c,t) => getFromCache(c,'water_pct',100) >= t+5,
+          message: 'Warning! Water level dropped below fifteen percent.' },
+        { id: 'co2_danger',     title: '🛏️ CO₂ – pavojingas',   sensorKey: 'bedroom_co2',     threshold: 2500,
+          condition: (c,t) => getFromCache(c,'bedroom_co2',0) > t,
+          reset:     (c,t) => getFromCache(c,'bedroom_co2',0) < t-500,
+          repeatInterval: 60000,   // kartoti kas 1 min kol vėdinama
+          messageI18n: { en: 'Danger! CO2 level is dangerously high. Ventilate immediately!', lt: 'Pavojus! CO2 lygis pavojingai aukštas. Nedelsiant vėdinkite!' },
+          message: 'Danger! CO2 level exceeds safe limit. Ventilate immediately!' },
+        { id: 'co2_elevated',   title: '🛏️ CO₂ – padidėjęs',   sensorKey: 'bedroom_co2',     threshold: 1800,
+          condition: (c,t) => getFromCache(c,'bedroom_co2',0) > t && getFromCache(c,'bedroom_co2',0) <= 2500,
+          reset:     (c,t) => getFromCache(c,'bedroom_co2',0) < t-300,
+          repeatInterval: 60000,   // kartoti kas 1 min kol padidėjęs
+          messageI18n: { en: 'Warning. CO2 level is elevated. Ventilation recommended.', lt: 'Dėmesio. CO2 lygis padidėjęs. Rekomenduojama vėdinti.' },
+          message: 'CO2 level elevated. Ventilation recommended.' },
+        { id: 'soc_critical',   title: '🔋 SOC – kritinis',      sensorKey: 'junc_soc',        threshold: 15,
+          condition: (c,t) => getFromCache(c,'junc_soc',100) < t,
+          reset:     (c,t) => getFromCache(c,'junc_soc',100) >= t+3,
+          message: 'Warning! Battery charge critically low.' },
+        { id: 'soc_low',        title: '🔋 SOC – žemas',         sensorKey: 'junc_soc',        threshold: 25,
+          condition: (c,t) => getFromCache(c,'junc_soc',100) < t && getFromCache(c,'junc_soc',100) >= 15,
+          reset:     (c,t) => getFromCache(c,'junc_soc',100) >= t+3,
+          message: 'Battery charge below twenty-five percent.' },
+        { id: 'gas_low',        title: '🔥 Dujos – žemas',       sensorKey: 'gas_pct', threshold: 10,
+          condition: (c,t) => getFromCache(c,'gas_pct',100) < t,
+          reset:     (c,t) => getFromCache(c,'gas_pct',100) >= t+5,
+          message: 'Less than ten percent of gas remaining.' },
+        { id: 'theft_alarm',    title: '🚨 Vagystė',             sensorKey: null, threshold: null,
+          repeatInterval: 120000,  // pakartojimas važiuojant (ms); tiksli logika -> checkTheftVoice()
+          condition: (c) => c['alert_movement_sent'] === 'true' || c['alert_movement_sent'] === true,
+          reset:     (c) => !c['alert_movement_sent'] || c['alert_movement_sent'] === 'false',
+          message: 'Attention! The camper is moving. Theft alert!' },
+        { id: 'condensation',   title: '💧 Kondensatas',          sensorKey: null, threshold: null,
+          condition: (c) => getFromCache(c,'bme_temp',20) < 8 && getFromCache(c,'bme_humidity',0) > 65,
+          reset:     (c) => getFromCache(c,'bme_temp',20) >= 10 || getFromCache(c,'bme_humidity',0) <= 60,
+          message: 'Warning. Low temperature and high humidity. Condensation risk.' },
+    ];
+
+    // Įkrauname iš localStorage arba naudojame numatytuosius
+    function loadAlarmConfig() {
+        const saved = localStorage.getItem('kemper_alarm_config');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                return DEFAULT_ALARMS.map(def => {
+                    const o = parsed.find(p => p.id === def.id);
+                    return o ? { ...def, threshold: o.threshold ?? def.threshold, message: o.message ?? def.message } : { ...def };
+                });
+            } catch(e) {}
+        }
+        return DEFAULT_ALARMS.map(a => ({ ...a }));
+    }
+    let ALARM_CONFIG = loadAlarmConfig();
+
+    function saveAlarmConfig() {
+        localStorage.setItem('kemper_alarm_config', JSON.stringify(
+            ALARM_CONFIG.map(a => ({ id: a.id, threshold: a.threshold ?? null, message: a.message }))
+        ));
+    }
+    function resetAlarmsToDefault() {
+        localStorage.removeItem('kemper_alarm_config');
+        ALARM_CONFIG = DEFAULT_ALARMS.map(a => ({ ...a }));
+        renderAlarmSettings();
+        if (typeof sysLog === 'function') sysLog('✅ Aliarmų nustatymai atstatyti.', 'success');
+    }
+
+    // Aliarmo vėliavėlių saugykla
+    const alarmFlags = {};
+    DEFAULT_ALARMS.forEach(a => alarmFlags[a.id] = false);
+
+
+    // === C. Universalus TTS (Capacitor native + naršyklės fallback) ===
+    // Kalbos pasirinkimas: 'en' arba 'lt' (saugomas localStorage)
+    let ttsLang = localStorage.getItem('tts_lang') || 'en';
+    const TTS_LANG_CODE = { en: 'en-US', lt: 'lt-LT' };
+    const I18N_TEST = { en: 'Voice notifications are active.', lt: 'Balso pranešimai aktyvūs.' };
+    function setTtsLang(l) {
+        ttsLang = (l === 'lt') ? 'lt' : 'en';
+        localStorage.setItem('tts_lang', ttsLang);
+        if (typeof renderTheftTexts === 'function') renderTheftTexts(); // perpiešti vagystės tekstus nauja kalba
+        if (typeof sysLog === 'function') sysLog('Balso kalba: ' + ttsLang.toUpperCase(), 'success');
+    }
+    // Ar veikia native Capacitor TTS įskiepis?
+    function hasNativeTTS() {
+        return !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.TextToSpeech);
+    }
+
+    // Naršyklės atrakinimas (reikalingas TIK web fallback'ui, ne native Capacitor)
+    let speechUnlocked = false;
+    function unlockSpeech() {
+        if (speechUnlocked) return;
+        speechUnlocked = true;
+        try {
+            // Realus (ne tuščias) trumpas garsas mažu garsumu — patikimiau atrakina nei tuščia frazė.
+            const u = new SpeechSynthesisUtterance('.');
+            u.volume = 0.01;   // rate=0 buvo NEGALIOJANTIS — pašalinta
+            window.speechSynthesis.speak(u);
+            console.log('Balso sintezė atrakinta (web).');
+        } catch (e) { /* ignore */ }
+    }
+    document.addEventListener('click', unlockSpeech, { once: false });
+    document.addEventListener('keydown', unlockSpeech, { once: false });
+
+    // --- Garso lygis (%) — vartotojas nustato Nustatymuose ---
+    function getTtsVolPct() {
+        let p = parseInt(localStorage.getItem('tts_volume_pct') || '80', 10);
+        if (isNaN(p)) p = 80;
+        return Math.max(0, Math.min(100, p));
+    }
+    function onVolRangeInput(v) {
+        const p = Math.max(0, Math.min(100, parseInt(v, 10) || 0));
+        localStorage.setItem('tts_volume_pct', String(p));
+        const lbl = document.getElementById('tts_vol_label'); if (lbl) lbl.textContent = p;
+    }
+    // Native media garso valdymas per AudioManager (reikalingas MainActivity snippetas — žr. README).
+    // window.KemperisVol pateikia Android pusė; naršyklėje jo nėra (saugiai praleidžiama).
+    function nativeVolGet() { try { return (window.KemperisVol && KemperisVol.getVolumePct) ? KemperisVol.getVolumePct() : null; } catch (e) { return null; } }
+    function nativeVolSet(p) { try { if (window.KemperisVol && KemperisVol.setVolumePct) KemperisVol.setVolumePct(Math.round(p)); } catch (e) {} }
+
+    // --- Dėmesio „pyptelėjimas" (chime) per Web Audio API ---
+    let _audioCtx = null;
+    function getAudioCtx() { if (!_audioCtx) { try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } return _audioCtx; }
+    function getChimeType() { return localStorage.getItem('chime_type') || 'double'; }
+    function setChimeType(t) { localStorage.setItem('chime_type', t); if (typeof sysLog === 'function') sysLog('Pyptelėjimas: ' + t, 'success'); }
+    function playChime(force) {
+        return new Promise(resolve => {
+            const type = force || getChimeType();
+            if (type === 'none') { resolve(); return; }
+            const ctx = getAudioCtx(); if (!ctx) { resolve(); return; }
+            if (ctx.state === 'suspended') ctx.resume();
+            const now = ctx.currentTime;
+            function beep(start, freq, dur) {
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.type = 'square'; o.frequency.value = freq;
+                g.gain.setValueAtTime(0.0001, start);
+                g.gain.exponentialRampToValueAtTime(0.9, start + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+                o.connect(g); g.connect(ctx.destination);
+                o.start(start); o.stop(start + dur + 0.03);
+            }
+            let total = 0.5;
+            if (type === 'single')      { beep(now, 880, 0.25); total = 0.35; }
+            else if (type === 'double') { beep(now, 880, 0.18); beep(now + 0.24, 1180, 0.18); total = 0.5; }
+            else if (type === 'siren')  { beep(now, 700, 0.2); beep(now + 0.22, 1000, 0.2); beep(now + 0.44, 1300, 0.25); total = 0.75; }
+            else { resolve(); return; }
+            setTimeout(resolve, Math.round(total * 1000));
+        });
+    }
+
+    // Pati sintezė (be garso valdymo) — grąžina Promise, išsisprendžia pabaigus kalbėti.
+    function speakNow(text, langCode, pct) {
+        return new Promise(resolve => {
+            if (hasNativeTTS()) {
+                try {
+                    window.Capacitor.Plugins.TextToSpeech.speak({
+                        text: text, lang: langCode, rate: 1.0, pitch: 1.0, volume: 1.0,
+                        category: 'playback'   // iOS; Android plugin prašo audio focus -> ducking
+                    }).then(() => resolve()).catch(e => { console.error('Native TTS klaida:', e); resolve(); });
+                } catch (e) { console.error('Native TTS exception:', e); resolve(); }
+                return;
+            }
+            // WEB fallback (naršyklėje)
+            if (!('speechSynthesis' in window)) { resolve(); return; }
+            if (!speechUnlocked) { console.warn('Balso sintezė neatrakinta.'); resolve(); return; }
+            const doSpeak = () => {
+                if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = langCode; u.rate = 0.95; u.pitch = 1.0;
+                u.volume = Math.max(0, Math.min(1, pct / 100));   // naršyklėje % riboja garsumą
+                const voices = window.speechSynthesis.getVoices();
+                const v = voices.find(x => x.lang && x.lang.toLowerCase().startsWith(ttsLang));
+                if (v) u.voice = v;
+                u.onend = () => resolve();
+                u.onerror = (e) => { console.error('TTS klaida:', e.error); resolve(); };
+                window.speechSynthesis.speak(u);
+            };
+            if (!window.speechSynthesis.getVoices().length) {
+                window.speechSynthesis.addEventListener('voiceschanged', doSpeak, { once: true });
+            } else doSpeak();
+        });
+    }
+
+    // Pagrindinė balso funkcija: pakelia media garsą iki % -> (chime) -> kalba -> grąžina garsą.
+    let _volBusy = false;
+    async function speakText(text, withChime) {
+        if (!text) return;
+        const langCode = TTS_LANG_CODE[ttsLang] || 'en-US';
+        const pct = getTtsVolPct();
+
+        // Native: įsimename buvusį media garsą ir keliame iki pct%. (_volBusy: kad nepersidengtų)
+        let prevVol = null;
+        if (!_volBusy) {
+            prevVol = nativeVolGet();
+            if (prevVol !== null) { _volBusy = true; nativeVolSet(pct); }
+        }
+        try {
+            if (withChime) await playChime();
+            await speakNow(text, langCode, pct);
+        } finally {
+            if (prevVol !== null) { nativeVolSet(prevVol); _volBusy = false; }  // grąžiname buvusį lygį
+        }
+    }
+
+    // === B. Vagystės balso pakartojimai (be ESPHome YAML pakeitimų) ===
+    // 4 tekstai: pirmas/pakartotinis × važiuoja/stovi. LT ir EN.
+    // Numatytieji tekstai (juos galima keisti programėlėje: Aliarmai -> Vagystės balso tekstai).
+    const THEFT_TEXTS_DEFAULT = {
+        en: {
+            first_drive:  'Attention! The camper is moving! Possible theft!',
+            repeat_drive: 'Warning! The camper is still moving! Theft in progress!',
+            first_idle:   'Attention! Movement detected inside the camper!',
+            repeat_idle:  'Warning! Security alarm is still active. The camper is stationary.'
+        },
+        lt: {
+            first_drive:  'Dėmesio! Kemperis pajudėjo! Galima vagystė!',
+            repeat_drive: 'Dėmesio! Kemperis vis dar važiuoja! Vyksta vagystė!',
+            first_idle:   'Dėmesio! Kemperyje aptiktas judėjimas!',
+            repeat_idle:  'Dėmesio! Apsaugos aliarmas vis dar aktyvus. Kemperis stovi vietoje.'
+        }
+    };
+    // Įkrauname vartotojo įrašytus tekstus (jei yra), kitur — numatytuosius.
+    let THEFT_TEXTS = { en: { ...THEFT_TEXTS_DEFAULT.en }, lt: { ...THEFT_TEXTS_DEFAULT.lt } };
+    try {
+        const _tt = JSON.parse(localStorage.getItem('theft_texts') || 'null');
+        if (_tt) {
+            if (_tt.en) THEFT_TEXTS.en = { ...THEFT_TEXTS.en, ..._tt.en };
+            if (_tt.lt) THEFT_TEXTS.lt = { ...THEFT_TEXTS.lt, ..._tt.lt };
+        }
+    } catch (e) {}
+
+    // Įrašyti vieną tekstą (pagal dabartinę kalbą) ir išsaugoti į localStorage.
+    function saveTheftText(key, val) {
+        if (!THEFT_TEXTS[ttsLang]) return;
+        THEFT_TEXTS[ttsLang][key] = val;
+        localStorage.setItem('theft_texts', JSON.stringify({ en: THEFT_TEXTS.en, lt: THEFT_TEXTS.lt }));
+        if (typeof sysLog === 'function') sysLog('Vagystės tekstas išsaugotas (' + ttsLang.toUpperCase() + ').', 'success');
+    }
+    // Užpildyti laukelius pagal dabartinę kalbą.
+    function renderTheftTexts() {
+        const map = THEFT_TEXTS[ttsLang] || {};
+        ['first_idle','repeat_idle','first_drive','repeat_drive'].forEach(k => {
+            const el = document.getElementById('theft_' + k);
+            if (el) el.value = map[k] || '';
+        });
+        const lbl = document.getElementById('theft-lang-label');
+        if (lbl) lbl.textContent = ttsLang.toUpperCase();
+    }
+    const THEFT_FIRST_GAP_MS    = 30000;   // 1-as tekstas kartojamas po 30 s
+    const THEFT_REPEAT_DRIVE_MS = 120000;  // važiuojant: 2-as tekstas kas 2 min
+    const THEFT_REPEAT_IDLE_MS  = 30000;   // stovint:    2-as tekstas kas 30 s
+    const THEFT_DRIVE_SPEED_KMH = 5;       // virš šio greičio laikoma "važiuoja"
+
+    let theftState = { active: false, firstCount: 0, lastSpeakMs: 0 };
+
+    function checkTheftVoice(cache) {
+        const c = cache || sensorCache;
+        const flag = c['alert_movement_sent'];
+        const active = (flag === 'true' || flag === true);
+        const now = Date.now();
+
+        if (!active) { theftState.active = false; theftState.firstCount = 0; return; }
+
+        const driving = getCache('gps_speed_sensor', 0) > THEFT_DRIVE_SPEED_KMH;
+        const t = THEFT_TEXTS[ttsLang] || THEFT_TEXTS.en;
+
+        // Pirmas suveikimas — 1-as tekstas IŠKART
+        if (!theftState.active) {
+            theftState.active = true;
+            theftState.firstCount = 1;
+            theftState.lastSpeakMs = now;
+            speakText(driving ? t.first_drive : t.first_idle, true);
+            return;
+        }
+        // 1-as tekstas dar kartą po 30 s (iš viso 2 kartus)
+        if (theftState.firstCount < 2) {
+            if (now - theftState.lastSpeakMs >= THEFT_FIRST_GAP_MS) {
+                theftState.firstCount = 2;
+                theftState.lastSpeakMs = now;
+                speakText(driving ? t.first_drive : t.first_idle, true);
+            }
+            return;
+        }
+        // Toliau — 2-as (pakartotinis) tekstas intervalais
+        const interval = driving ? THEFT_REPEAT_DRIVE_MS : THEFT_REPEAT_IDLE_MS;
+        if (now - theftState.lastSpeakMs >= interval) {
+            theftState.lastSpeakMs = now;
+            speakText(driving ? t.repeat_drive : t.repeat_idle, true);
+        }
+    }
+
+    // Aliarmo tikrinimas — kviečiamas updateUI() pabaigoje
+    const alarmLastTriggered = {};
+    // Kalbai pritaikytas tekstas: jei yra messageI18n -> pagal ttsLang; kitaip message.
+    function alarmMsg(alarm) {
+        return (alarm.messageI18n && alarm.messageI18n[ttsLang]) || alarm.message;
+    }
+    function checkAlarms(cache) {
+        const now = Date.now();
+        ALARM_CONFIG.forEach(alarm => {
+            if (alarm.id === 'theft_alarm') return; // vagystė — atskirai (checkTheftVoice)
+            const thr = alarm.threshold;
+            if (alarm.condition(cache, thr)) {
+                if (!alarmFlags[alarm.id]) {
+                    alarmFlags[alarm.id] = true;
+                    alarmLastTriggered[alarm.id] = now;
+                    speakText(alarmMsg(alarm), true);
+                } else if (alarm.repeatInterval && (now - (alarmLastTriggered[alarm.id] || 0) >= alarm.repeatInterval)) {
+                    alarmLastTriggered[alarm.id] = now;
+                    speakText(alarmMsg(alarm), true);
+                }
+            } else if (alarmFlags[alarm.id] && alarm.reset(cache, thr)) {
+                alarmFlags[alarm.id] = false;
+            }
+        });
+        checkTheftVoice(cache);
+    }
+
+    // ─── Aliarmų UI ───
+    function escapeHtml(t) {
+        return String(t).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]||m));
+    }
+    function updateAlarmMessage(id, msg) {
+        const a = ALARM_CONFIG.find(x => x.id === id);
+        if (a) { a.message = msg; saveAlarmConfig(); }
+    }
+    function updateAlarmThreshold(id, val) {
+        const a = ALARM_CONFIG.find(x => x.id === id);
+        if (a && !isNaN(val)) { a.threshold = parseFloat(val); saveAlarmConfig(); }
+    }
+    function renderAlarmSettings() {
+        const grid = document.getElementById('alarm-config-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        ALARM_CONFIG.forEach(alarm => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.marginBottom = '16px';
+            let html = `<h3>${alarm.title || alarm.id}</h3>
+            <div class="alarm-row">
+                <label>Frazė:</label>
+                <input type="text" id="msg-${alarm.id}" value="${escapeHtml(alarm.message)}"
+                       onchange="updateAlarmMessage('${alarm.id}', this.value)">
+                <button class="btn btn-primary" style="width:auto;padding:6px 12px;"
+                        onclick="speakText(document.getElementById('msg-${alarm.id}').value)">🔊 Testuoti</button>
+            </div>`;
+            if (alarm.sensorKey && alarm.threshold !== null) {
+                html += `<div class="alarm-row">
+                <label>Aktyvavimo riba:</label>
+                <input type="number" id="thr-${alarm.id}" value="${alarm.threshold}"
+                       onchange="updateAlarmThreshold('${alarm.id}', this.value)">
+                <span style="font-size:12px;color:#8b949e">${alarm.sensorKey}</span>
+            </div>`;
+            } else {
+                html += `<div style="font-size:12px;color:#8b949e;margin-top:6px;">Sudėtinė sąlyga – keisti kode.</div>`;
+            }
+            card.innerHTML = html;
+            grid.appendChild(card);
+        });
+    }
+    // ═══════════════════════════════════════════════════════════════════
+    // === Background mode (Capacitor/Cordova) — balsas veikia ir kai ekranas išjungtas ===
+    // Naršyklėje (testuojant) cordova nėra — blokas saugiai praleidžiamas.
+    document.addEventListener('deviceready', function () {
+        try {
+            if (window.cordova && cordova.plugins && cordova.plugins.backgroundMode) {
+                cordova.plugins.backgroundMode.setDefaults({
+                    title: 'Kemperio apsauga',
+                    text: 'Stebėjimas aktyvus',
+                    silent: false
+                });
+                cordova.plugins.backgroundMode.enable();
+                cordova.plugins.backgroundMode.on('activate', function () {
+                    // KRITINIS kvietimas: neleidžia WebView'ui sustabdyti JS/SSE fone
+                    cordova.plugins.backgroundMode.disableWebViewOptimizations();
+                });
+                console.log('Background mode įjungtas.');
+            }
+        } catch (e) { console.warn('background-mode nepavyko:', e); }
+    }, false);
+
+    renderAlarmSettings();
+    init();
+</script>
+</body>
+</html>

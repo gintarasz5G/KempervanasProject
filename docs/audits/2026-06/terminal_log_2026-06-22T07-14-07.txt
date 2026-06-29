@@ -1,0 +1,109 @@
+[10:13:31] 📅 Nauja diena (2026-06-22) — išsaugoma vakarykštė istorija (2 eilutės)...
+[10:13:31] 📅 Auto-išsaugota: Downloads/kemperis_diena_2026-06-22.csv (2 eilutės).
+[10:13:31] 📵 Offline režimas — nėra ryšio su ESP32
+[10:13:34] ⚡ Priverstinis prisijungimas gyvai...
+[10:13:34] Inicijuojamas ryšys su ESP32 (http://192.168.4.1)...
+[10:13:34] ✅ Prisijungta prie ESP32!
+[10:13:34] ✅ Online — ryšys atkurtas
+[10:13:34] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 01 76 50 D2 96 EE
+[10:13:34] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[10:13:35] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 03 53 19 D4 11 EE
+[10:13:35] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[10:13:37] [ESP32] ⚪ [I][junc_hex:1262]: buf[11]: 01 76 51 D2 01 03 53 20 D4 28 EE
+[10:13:37] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=11 b)
+[10:13:38] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 30 C1 16 70 D8 79 EE
+[10:13:38] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:39] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 40 C1 17 99 D8 37 EE
+[10:13:39] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:40] [ESP32] ⚪ [I][junc_hex:1262]: buf[11]: 01 76 52 D2 01 03 53 21 D4 30 EE
+[10:13:40] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=11 b)
+[10:13:40] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 30 C1 16 70 D8 79 EE
+[10:13:40] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:40] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 40 C1 17 99 D8 37 EE
+[10:13:40] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:41] [ESP32] ⚪ [I][junc_hex:1262]: buf[11]: 01 30 C1 43 62 D6 16 70 D8 58 EE
+[10:13:41] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=11 b)
+[10:13:41] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 03 53 22 D4 20 EE
+[10:13:41] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[10:13:42] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 01 76 53 D2 99 EE
+[10:13:42] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[10:13:43] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 40 C1 17 99 D8 37 EE
+[10:13:43] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:43] 📵 Sheets klaida: Failed to fetch
+[10:13:43] Inicijuojamas ryšys su ESP32 (http://192.168.4.1)...
+[10:13:43] ✅ Prisijungta prie ESP32!
+[10:13:43] ✅ Gauta num_timezone_offset = 3
+[10:13:43] ✅ Gauta num_water_empty_cm = 30.7
+[10:13:43] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 03 53 23 D4 21 EE
+[10:13:43] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[10:13:43] ✅ Gauta num_water_full_cm = 7.0
+[10:13:43] ✅ Gauta num_gas_empty_kg = 2.8
+[10:13:44] ✅ Gauta num_gas_full_kg = 7.8
+[10:13:44] ✅ Gauta num_hx711_scale = 100000
+[10:13:44] ✅ Gauta num_gas_weight_offset = 0.00
+[10:13:44] ✅ Gauta num_roll_cal = -176.6
+[10:13:44] ✅ Gauta num_pitch_cal = -179.0
+[10:13:44] ✅ Gauta num_wheelbase_cm = 350
+[10:13:44] ✅ Gauta num_track_cm = 180
+[10:13:44] ✅ Gauta num_bat_capacity = 110
+[10:13:44] ✅ Gauta num_temp_offset = 0.8
+[10:13:44] ✅ Gauta num_humid_offset = 0.0
+[10:13:44] ✅ Gauta num_water_offset = 5.0
+[10:13:44] ✅ Gauta num_vib_threshold = 35
+[10:13:45] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 50 C1 19 27 D8 41 EE
+[10:13:45] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:46] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 40 C1 17 99 D8 37 EE
+[10:13:46] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:46] [ESP32] ⚪ [I][junc_hex:1262]: buf[11]: 01 76 54 D2 01 03 53 24 D4 35 EE
+[10:13:46] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=11 b)
+[10:13:48] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 30 C1 16 70 D8 79 EE
+[10:13:48] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:48] [ESP32] ⚪ [I][junc_hex:1262]: buf[11]: 01 76 55 D2 01 03 53 25 D4 37 EE
+[10:13:48] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=11 b)
+[10:13:48] ✅ Programėlė yra naujausios versijos.
+[10:13:49] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 10 C1 14 13 D8 52 EE
+[10:13:49] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:50] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 03 53 26 D4 24 EE
+[10:13:50] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[10:13:51] [ESP32] ⚪ [I][junc_hex:1262]: buf[11]: 01 20 C1 42 56 D6 15 42 D8 82 EE
+[10:13:51] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=11 b)
+[10:13:51] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 01 76 56 D2 02 EE
+[10:13:51] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[10:13:52] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 03 53 27 D4 25 EE
+[10:13:52] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[10:13:52] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 30 C1 16 70 D8 79 EE
+[10:13:52] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:53] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 20 C1 15 42 D8 16 EE
+[10:13:53] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:54] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 01 76 57 D2 03 EE
+[10:13:54] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[10:13:56] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 03 53 28 D4 26 EE
+[10:13:56] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[10:13:57] [ESP32] ⚪ [I][junc_hex:1262]: buf[11]: 01 76 58 D2 01 03 53 29 D4 44 EE
+[10:13:57] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=11 b)
+[10:13:58] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 12 86 C0 15 43 D8 35 EE
+[10:13:58] [ESP32] ⚪ [I][junc_ble:1279]: C0 val=1286 -> 12.86V OK
+[10:13:58] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:59] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 12 85 C0 15 42 D8 33 EE
+[10:13:59] [ESP32] ⚪ [I][junc_ble:1279]: C0 val=1285 -> 12.85V OK
+[10:13:59] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:59] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 10 C1 14 13 D8 52 EE
+[10:13:59] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:13:59] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 03 53 30 D4 34 EE
+[10:13:59] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[10:14:00] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 01 76 59 D2 05 EE
+[10:14:00] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[10:14:02] [ESP32] ⚪ [I][junc_hex:1262]: buf[5]: 46 39 D6 28 EE
+[10:14:02] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=5 b)
+[10:14:02] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 03 53 31 D4 35 EE
+[10:14:02] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[10:14:03] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 20 C1 15 42 D8 16 EE
+[10:14:03] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:14:03] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 01 76 60 D2 12 EE
+[10:14:04] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[10:14:04] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 03 53 32 D4 36 EE
+[10:14:04] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[10:14:05] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 10 C1 14 13 D8 52 EE
+[10:14:05] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[10:14:06] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 01 76 61 D2 13 EE
+[10:14:06] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
