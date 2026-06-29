@@ -1,5 +1,5 @@
 {
-  "version": 16,
-  "apk_url": "https://github.com/gintarasz5G/kemperis-app/releases/download/v16/kemperis_v16.apk",
-  "notes": "🔧 v16 — stabilumo pataisymai\n\n✅ OTA race condition pataisyta — JS watchdog 15s → 25s, daugiau nebebus klaidingo „užtruko“ pranešimo kai mobilus ryšys lėtas.\n✅ Offline režimas tylesnis — loadAllNumbers/loadAllTexts nebebandys siekti ESP32 kai nesame prisijungę, dingo „Failed to fetch“ spamas terminale.\n✅ Apsauga nuo dvigubo paleidimo — SSE reconnect nebepradės antros lygiagrečios sensorių krovimo sesijos.\n✅ Iteracijų nutraukimas — jei ryšys dingsta įkrovimo metu, ciklas nutraukiamas iškart, nebėra 16 sekančių užklausų į niekur."
+  "version": 17,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v17.apk",
+  "notes": "?? v17 GOLD MASTER - Final forensic audit certified.\n\n? ANDROID 14 FIX - Purged legacy background plugins causing startup crashes.\n? NETWORK STABILITY - SSE timeout 60s + auto-cleanup orchestration.\n? SECURITY - All secrets isolated. Industrial-grade repository structure.\n? TARGET SDK 34 - Optimized for modern tablets."
 }

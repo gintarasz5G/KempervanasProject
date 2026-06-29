@@ -1243,7 +1243,7 @@
     let systemPIN = localStorage.getItem('system_pin') || '0000';
     let pinTimeout = null;
     const PIN_PROTECTED = ['settings', 'alarms'];
-    const PIN_UNLOCK_MS = 300000; // 5 min
+    const PIN_UNLOCK_MS = 600000; // 5 min
 
     function unlockProtected() {
         isSettingsUnlocked = true;
@@ -2295,11 +2295,11 @@
         // SSE watchdog: jei 30s negauta žinučių — perkuriamas ryšys
         if (_sseWatchdog) clearInterval(_sseWatchdog);
         _sseWatchdog = setInterval(() => {
-            if (Date.now() - _lastSseMsg > 30000) {
+            if (Date.now() - _lastSseMsg > 60000) {
                 sysLog('⚠️ SSE timeout (30s be duomenų) — perkuriamas ryšys...', 'warn'); setOfflineMode(true);
                 clearInterval(_sseWatchdog); _sseWatchdog = null;
                 try { _sseSource.close(); } catch(e) {}
-                setTimeout(startSSE, 3000);
+                _sseSource.close(); setTimeout(startSSE, 3000);
             }
         }, 15000);
 
@@ -2830,7 +2830,7 @@
                 speakText(isDriving ? texts.first_drive : texts.first_idle, true);
             } else {
                 // Pakartotinis: stovint kas 30 s, važiuojant kas 2 min
-                const repeatMs = isDriving ? 120000 : 30000;
+                const repeatMs = isDriving ? 120000 : 60000;
                 if (now - (alarmLastTriggered['theft_alarm'] || 0) >= repeatMs) {
                     alarmLastTriggered['theft_alarm'] = now;
                     speakText(isDriving ? texts.repeat_drive : texts.repeat_idle, true);
@@ -2931,3 +2931,4 @@
 </body>
 </html>
     
+

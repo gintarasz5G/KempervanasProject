@@ -73,17 +73,9 @@
         </service>
 
         <!-- Cordova background plugin servisas -->
-        <service
-            android:name="de.appplant.cordova.plugin.background.ForegroundService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="specialUse"
-            tools:ignore="Instantiatable">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Safety monitoring for camper sensors (Gas, CO2). Provides emergency voice alerts via TTS." />
-        </service>
+        
 
     </application>
 
 </manifest>
+
