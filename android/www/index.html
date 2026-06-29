@@ -1003,7 +1003,7 @@
         if (!card) return;
         var rate     = parseFloat(sensorCache['pressure_trend_hpa']); // hPa/3h
         var pressure = parseFloat(sensorCache['bme_pressure']);
-        var temp     = parseFloat(sensorCache['bme_temp']);
+        var rawTemp = parseFloat(sensorCache['bme_temp']); var temp = Math.min(35, rawTemp);
         var hour     = new Date().getHours();
         if (isNaN(rate) && isNaN(pressure)) {
             var re=document.getElementById('fish-rating'); if(re) re.textContent='Laukiama duomenų...';
@@ -1347,7 +1347,7 @@
             // Footeris
             const dram = document.getElementById('diag-ram');
             if (dram && !isNaN(er)) dram.textContent = Math.round(er) + ' KB';
-            const det = document.getElementById('diag-esp-temp');
+            const det = document.getElementById('diag-esp-temp'); if(det) det.style.color = "var(--text-light)";
             if (det && !isNaN(et)) det.textContent = Math.round(et) + '°C';
             const dut = document.getElementById('diag-uptime');
             if (dut && !isNaN(eu)) {
@@ -2206,7 +2206,7 @@
                 else if (rawId.includes('junc_time_remaining') || rawId.includes('veikimo_laikas')) sensorCache['junc_time_remaining'] = value;
                 else if (rawId.includes('miegamasis___temperatura') || rawId.includes('bedroom_temp')) sensorCache['bedroom_temp'] = value;
                 // #6 FIX: Griežtesnis BME temperatūros filtras (neleidžiame ESP32 lusto temperatūrai 42°C pakliūti čia)
-                if ((rawId.includes('bme_temp') || rawId.includes('temperat')) && !rawId.includes('miegamasis') && !rawId.includes('esp_') && !rawId.includes('sistema_')) { if (value > 45.0) return; sensorCache['bme_temp'] = value; }
+                else if ((rawId.includes('bme_temp') || rawId.includes('temperat')) && !rawId.includes('miegamasis') && !rawId.includes('esp_') && !rawId.includes('sistema_')) { if (value > 45.0) return; sensorCache['bme_temp'] = value; }
                 else if (rawId.includes('pressure_altitude') || rawId.includes('aukstis__slegis') || (rawId.includes('aplinka') && rawId.includes('aukstis')) || (rawId.includes('aplinka') && rawId.includes('auks_tis'))) sensorCache['pressure_altitude'] = value;
                 else if (rawId.includes('bme_pressure') || (rawId.includes('sle_gis') && !rawId.includes('auks')) || (rawId.includes('slegis') && !rawId.includes('aukstis'))) sensorCache['bme_pressure'] = value;
                 else if (rawId.includes('vib_level') || rawId.includes('vibracija__ema') || rawId.includes('vibracija_ema')) sensorCache['vib_level'] = value;
@@ -2263,7 +2263,7 @@
                 else if (rawId.includes('sms_4')) sensorCache['sms_4'] = value;
                 else if (rawId.includes('sms_5')) sensorCache['sms_5'] = value;
                 else if (rawId.includes('sys_free_ram') || rawId.includes('sistema___laisva_ram') || rawId.includes('laisva_ram')) sensorCache['sys_free_ram'] = value;
-                else if (rawId.includes('sys_esp_temp') || rawId.includes('sistema___esp_temperat') || rawId.includes('esp_temperat') || rawId.includes('esp_temp')) sensorCache['sys_esp_temp'] = value;
+                else if (rawId.includes('sys_esp_temp') || rawId.includes('sistema___esp_temperat') || rawId.includes('esp_temperat') || rawId.includes('esp_temp') || rawId.includes('esp_t')) sensorCache['sys_esp_temp'] = value;
                 else if (rawId.includes('sys_uptime') || rawId.includes('sistema___uptime') || rawId.includes('_uptime')) sensorCache['sys_uptime'] = value;
                 else { console.warn('[SSE UNMATCHED]', rawId, '=', value); }
             }
@@ -2931,5 +2931,7 @@
 </body>
 </html>
     
+
+
 
 
