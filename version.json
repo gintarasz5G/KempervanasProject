@@ -1,5 +1,5 @@
 {
-  "version": 17,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v17.apk",
-  "notes": "?? v17 GOLD MASTER - Final forensic audit certified.\n\n? ANDROID 14 FIX - Purged legacy background plugins causing startup crashes.\n? NETWORK STABILITY - SSE timeout 60s + auto-cleanup orchestration.\n? SECURITY - All secrets isolated. Industrial-grade repository structure.\n? TARGET SDK 34 - Optimized for modern tablets."
+  "version": 18,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v18.apk",
+  "notes": "🚀 v18 - Critical Bugfix & Sync Update\n\n✅ FIXED: Battery temperature no longer pollutes ambient temperature reading.\n✅ FIXED: Sync orchestration ensuring APK contains latest web source code.\n✅ SECURITY: Reinforced 45°C limit for BME680 sensor readings.\n✅ VERSION 18: Integrated for automatic OTA update detection."
 }
