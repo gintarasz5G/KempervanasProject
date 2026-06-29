@@ -62,7 +62,7 @@ public class MainActivity extends BridgeActivity {
     private static final int PERMISSION_REQUEST_CODE = 123;
 
     static final String VERSION_JSON_URL =
-        "https://raw.githubusercontent.com/gintarasz5G/kemperis-app/main/version.json";
+        "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
     static final int CURRENT_VERSION = 18;
 
     private Network boundNetwork = null;
