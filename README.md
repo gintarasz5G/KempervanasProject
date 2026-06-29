@@ -1,10 +1,10 @@
-# Kempervanas Project - Gold Master v16
+# Kempervanas Project - Gold Master v17
 Unified ecosystem for camper monitoring.
 
-## Struktura:
-- firmware/: ESP32 konfiguracija
-- android/: Programeles i�eities kodas
-- google-sheets/: Debesu logika
-- hardware/: Schemos ir bre�iniai
-- research/: Tyrimu archyvas
-- docs/: Dokumentacija
+## Struktūra:
+- **firmware/**: ESP32 konfigūracija (ESPHome)
+- **android/**: Programėlės išeities kodas (Capacitor/Java)
+- **google-sheets/**: Debesų logika (Apps Script)
+- **hardware/**: Schemos ir brėžiniai
+- **research/**: Tyrimų ir eksperimentų archyvas
+- **docs/**: Dokumentacija ir auditai
