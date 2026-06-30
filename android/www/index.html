@@ -2231,14 +2231,42 @@
     let _lastSseMsg = 0;
     let _sseWatchdog = null;
     let _sseSource = null;
+    let _sseRetryCount = 0;
+    const MAX_SSE_RETRIES = 3;
+
     function startSSE() {
         if (_netOrchestrationLock) return; // saugiklis
-        // #8 FIX: uždaryti seną SSE ryšį prieš kuriant naują (neleidžiame dvigubam srautui)
         if (_sseSource) { try { _sseSource.close(); } catch(e) {} _sseSource = null; }
-        sysLog(`Inicijuojamas ryšys su ESP32 (${ESPHOME_URL})...`, 'warn');
+
+        // Tik jei tai pirmas bandymas arba po nesėkmių, rašom "Inicijuojamas"
+        if (_sseRetryCount === 0) debugLog('[SSE] Inicijuojamas ryšys su ESP32...');
+
         _lastSseMsg = Date.now();
-        netRebindEsp(); // surišame srautą su Kemperis WiFi prieš SSE (Android su mobiliais duomenimis)
+        netRebindEsp();
         _sseSource = new EventSource(ESPHOME_URL + '/events');
+        _sseSource.onopen = () => {
+            _lastSseMsg = Date.now();
+            _sseRetryCount = 0;
+            document.getElementById('status-dot').classList.remove('offline');
+            document.getElementById('status-text').textContent = 'Prisijungta';
+            if (_isOffline) sysLog('✅ Ryšys su ESP32 atkurtas!', 'success');
+            setOfflineMode(false);
+        };
+        _sseSource.onerror = () => {
+            _sseSource.close();
+            _sseSource = null;
+            if (_sseRetryCount < MAX_SSE_RETRIES) {
+                _sseRetryCount++;
+                debugLog('[SSE] Ryšio klaida, bandymas #' + _sseRetryCount + '...', 'warn');
+                setTimeout(startSSE, 3000);
+            } else {
+                document.getElementById('status-dot').classList.add('offline');
+                if (!_isOffline && (Date.now() - _lastSseMsg) > 5000) {
+                    sysLog('❌ SSE ryšys nutrūko po ' + MAX_SSE_RETRIES + ' bandymų.', 'error');
+                    setOfflineMode(true);
+                }
+            }
+        };
         _sseSource.addEventListener('state', function(e) {
             let data;
             try {
@@ -2246,8 +2274,8 @@
             } catch(err) {
                 return; // praleidžiame nevaliduotas SSE žinutes (pvz. junctek raw binary)
             }
-            let rawId = (data.name_id || data.id).toLowerCase(); // domain matching
-            let keyId = (data.id || data.name_id).toLowerCase(); // key extraction: id first (has clean object_id format)
+            let rawId = (data.name_id || data.id).toLowerCase().replace(/[^a-z0-9]+/g, '_'); // domain matching normalization
+            let keyId = (data.id || data.name_id).toLowerCase().replace(/[^a-z0-9]+/g, '_'); // key extraction normalization
             let value = (data.value !== undefined ? data.value : data.state);
             debugLog('[SSE] ' + rawId + '=' + value);
             console.log('[SSE]', rawId, '=', value);
@@ -2295,11 +2323,11 @@
                 else if (rawId.includes('roll_sensor') || rawId.includes('soninis_k-d') || rawId.includes('soninis_k_d')) sensorCache['roll_sensor'] = value;
                 else if (rawId.includes('pitch_sensor') || rawId.includes('is_ilginis') || rawId.includes('isilginis_p-g') || rawId.includes('isilginis_p_g')) sensorCache['pitch_sensor'] = value;
                 else if (rawId.includes('gps_coords_sensor') || rawId.includes('koordinat')) sensorCache['gps_coords_sensor'] = value;
-                else if (rawId.includes('gps_speed_sensor') || rawId.includes('gps___greitis')) sensorCache['gps_speed_sensor'] = value;
-                else if (rawId.includes('gps_alt_sensor') || rawId.includes('gps___aukstis')) sensorCache['gps_alt_sensor'] = value;
-                else if (rawId.includes('gps_heading_sensor') || rawId.includes('gps___kryptis')) sensorCache['gps_heading_sensor'] = value;
-                else if (rawId.includes('gps_sats_total_sensor') || rawId.includes('visi_palydovai')) sensorCache['gps_sats_total_sensor'] = value;
-                else if (rawId.includes('gsm_signal_pct') || rawId.includes('signalas____')) sensorCache['gsm_signal_pct'] = value;
+                else if (rawId.includes('gps_speed') || rawId.includes('gps_greitis')) sensorCache['gps_speed_sensor'] = value;
+                else if (rawId.includes('gps_alt') || rawId.includes('gps_aukstis')) sensorCache['gps_alt_sensor'] = value;
+                else if (rawId.includes('gps_heading') || rawId.includes('gps_kryptis')) sensorCache['gps_heading_sensor'] = value;
+                else if (rawId.includes('gps_sats_total') || rawId.includes('visi_palydovai')) sensorCache['gps_sats_total_sensor'] = value;
+                else if (rawId.includes('gsm_signal') || rawId.includes('signalas_')) sensorCache['gsm_signal_pct'] = value;
                 else if (rawId.includes('gsm_operator_sensor') || rawId.includes('operatorius')) sensorCache['gsm_operator_sensor'] = value;
                 else if (rawId.includes('gsm_network_sensor') || rawId.includes('gsm___tinklas') || rawId.includes('gsm_tinklas')) sensorCache['gsm_network_sensor'] = value;
                 else if (rawId.includes('gsm_roaming_sensor') || rawId.includes('roaming_statusas')) sensorCache['gsm_roaming_sensor'] = value;
@@ -2366,14 +2394,17 @@
             } catch(ex) {}
         });
 
-        // SSE watchdog: jei 30s negauta žinučių — perkuriamas ryšys
+        // SSE watchdog: jei 60s negauta žinučių — perkuriamas ryšys
         if (_sseWatchdog) clearInterval(_sseWatchdog);
         _sseWatchdog = setInterval(() => {
             if (Date.now() - _lastSseMsg > 60000) {
-                sysLog('⚠️ SSE timeout (30s be duomenų) — perkuriamas ryšys...', 'warn'); setOfflineMode(true);
-                clearInterval(_sseWatchdog); _sseWatchdog = null;
-                if (_sseSource) { try { _sseSource.close(); } catch(e) {} }
-                setTimeout(startSSE, 3000);
+                debugLog('[SSE] Watchdog: 60s tyla, bandoma atkurti...');
+                if (_sseSource) { try { _sseSource.close(); } catch(e) {} _sseSource = null; }
+                if (_sseRetryCount >= MAX_SSE_RETRIES) {
+                    sysLog('⚠️ SSE watchdog: Ryšys neatsistato, pereinama į Offline.', 'warn');
+                    setOfflineMode(true);
+                }
+                startSSE();
             }
         }, 15000);
 

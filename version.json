@@ -1,5 +1,5 @@
 {
-  "version": 26,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v26.apk",
-  "notes": "🚀 v26 - Volume Auto-Boost Fix\n\n✅ FIXED: Resolved 'ReferenceError: _volBusy is not defined'.\n✅ FIXED: Restored automatic volume boosting before speech.\n✅ NEW: Fully synchronized assets and versioning to v26."
+  "version": 27,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v27.apk",
+  "notes": "🚀 v27 - SSE Recognition & Stability Overhaul\n\n✅ NEW: Normalized sensor key recognition (solves [SSE UNMATCHED] issues).\n✅ NEW: Broadened matching for Lithuanian sensor labels (GPS, GSM, etc.).\n✅ NEW: 3-stage quiet SSE reconnection strategy to reduce 'Offline' flapping.\n✅ FIXED: Robust watchdog logic for long-term connection health."
 }
