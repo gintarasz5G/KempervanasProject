@@ -1,5 +1,5 @@
 {
-  "version": 22,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v22.apk",
-  "notes": "🚀 v22 - Comprehensive Debug Mode & Tools\n\n✅ NEW: Full Debug Logging mode (toggle in Settings).\n✅ NEW: Native Android logs are now piped to the app terminal.\n✅ NEW: Dynamic app version detection in the UI.\n✅ FIXED: Robust update check and manual water refresh."
+  "version": 23,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v23.apk",
+  "notes": "🚀 v23 - Robust UI & Diagnostics Fix\n\n✅ FIXED: Intermittent UI crashes (null pointer protection).\n✅ FIXED: Added missing 'What's new' display in update dialog.\n✅ FIXED: Optimized SSE watchdog for better reconnection.\n✅ NEW: Full Debug mode remains active for voice troubleshooting."
 }

@@ -498,6 +498,7 @@
     <div style="background:#161b22; border:1px solid #30363d; border-radius:12px; padding:28px; max-width:420px; width:92%; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
         <h2 id="update-title" style="color:#c9d1d9; margin:0 0 10px;">Atnaujinimas</h2>
         <p id="update-desc" style="color:#8b949e; margin:0 0 14px; font-size:14px; line-height:1.5;"></p>
+        <div id="update-notes" style="display:none; background:#0d1117; border:1px solid #30363d; border-radius:8px; padding:12px; margin-bottom:16px; font-size:12px; color:#c9d1d9; text-align:left; max-height:150px; overflow-y:auto; white-space:pre-wrap;"></div>
         <div style="margin-bottom:16px;">
             <button id="btn-dl-update" class="btn btn-primary" style="display:none;background:#238636;color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:600;" onclick="startDownload()">⬇️ ATSISIŲSTI</button>
         </div>
@@ -1014,7 +1015,10 @@
         const _arrowIcon = L.divIcon({className:'',html:_arrowSvg,iconSize:[40,40],iconAnchor:[20,20]});
         _mapMarker = L.marker(last, {icon:_arrowIcon}).addTo(_map).bindPopup('Paskutin\u0117 vieta \u00b7 ' + _heading.toFixed(0) + '\u00b0').openPopup();
     }
-    function closeMap() { document.getElementById('map-container').style.display = 'none'; }
+    function closeMap() {
+        const mc = document.getElementById('map-container');
+        if (mc) mc.style.display = 'none';
+    }
 
     // ─── 🎣 Žvejybos paruoštukas ─────────────────────────────────────────────
 
@@ -1665,24 +1669,30 @@
         let ov220El = document.getElementById('overview-220v');
         let ov220Sub = document.getElementById('overview-220v-sub');
         if (src220 === 'Isorine 220V') {
-            srcEl.textContent = '🔌 Išorinė 220V';
-            srcEl.style.color = '#3fb950';
-            if (srcSub) srcSub.textContent = 'Campingo/namų tinklas prijungtas';
+            if (srcEl) {
+                srcEl.textContent = '🔌 Išorinė 220V';
+                srcEl.style.color = '#3fb950';
+                if (srcSub) srcSub.textContent = 'Campingo/namų tinklas prijungtas';
+            }
             if (shoreEl) { shoreEl.textContent = '✅ Prijungta'; shoreEl.style.color = '#3fb950'; }
             if (invEl)   { invEl.textContent = '⏹ Išjungtas'; invEl.style.color = '#8b949e'; }
             if (ov220El) { ov220El.textContent = '🔌 Išorinė'; ov220El.style.color = '#3fb950'; }
             if (ov220Sub) ov220Sub.textContent = 'Campingo tinklas';
         } else if (src220 === 'Keitiklis') {
-            srcEl.textContent = '🔄 Keitiklis';
-            srcEl.style.color = '#58a6ff';
+            if (srcEl) {
+                srcEl.textContent = '🔄 Keitiklis';
+                srcEl.style.color = '#58a6ff';
+            }
             if (srcSub) srcSub.textContent = 'Veikia iš akumuliatoriaus';
             if (shoreEl) { shoreEl.textContent = '❌ Neprijungta'; shoreEl.style.color = '#f85149'; }
             if (invEl)   { invEl.textContent = '✅ Veikia'; invEl.style.color = '#3fb950'; }
             if (ov220El) { ov220El.textContent = '🔄 Keitiklis'; ov220El.style.color = '#58a6ff'; }
             if (ov220Sub) ov220Sub.textContent = 'Iš akumuliatoriaus';
         } else if (src220 === 'Nera 220V') {
-            srcEl.textContent = '⭕ Nėra 220V';
-            srcEl.style.color = '#8b949e';
+            if (srcEl) {
+                srcEl.textContent = '⭕ Nėra 220V';
+                srcEl.style.color = '#8b949e';
+            }
             if (srcSub) srcSub.textContent = 'Keitiklis išjungtas';
             if (shoreEl) { shoreEl.textContent = '❌ Neprijungta'; shoreEl.style.color = '#f85149'; }
             if (invEl)   { invEl.textContent = '⏹ Išjungtas'; invEl.style.color = '#8b949e'; }
@@ -1695,16 +1705,16 @@
         setSensorValue('junc_soc', 'soc_value', v=>Math.round(v));
         setSensorValue('junc_soc', 'soc_d', v=>Math.round(v));
         let _soc = getCache('junc_soc', 0);
-        document.getElementById('soc-fill').style.width = Math.max(0,Math.min(100,_soc))+'%';
-        document.getElementById('soc-fill-d').style.width = Math.max(0,Math.min(100,_soc))+'%';
+        const sf = document.getElementById('soc-fill'); if (sf) sf.style.width = Math.max(0,Math.min(100,_soc))+'%';
+        const sfd = document.getElementById('soc-fill-d'); if (sfd) sfd.style.width = Math.max(0,Math.min(100,_soc))+'%';
         let _water = getCache('water_pct', 0);
-        document.getElementById('water-fill').style.width = Math.max(0,Math.min(100,_water))+'%';
-        document.getElementById('water-fill-d').style.width = Math.max(0,Math.min(100,_water))+'%';
+        const wf = document.getElementById('water-fill'); if (wf) wf.style.width = Math.max(0,Math.min(100,_water))+'%';
+        const wfd = document.getElementById('water-fill-d'); if (wfd) wfd.style.width = Math.max(0,Math.min(100,_water))+'%';
         let _gas = getCache('gas_pct', 0);
-        document.getElementById('gas-fill').style.width = Math.max(0,Math.min(100,_gas))+'%';
-        document.getElementById('gas-fill-d').style.width = Math.max(0,Math.min(100,_gas))+'%';
+        const gf = document.getElementById('gas-fill'); if (gf) gf.style.width = Math.max(0,Math.min(100,_gas))+'%';
+        const gfd = document.getElementById('gas-fill-d'); if (gfd) gfd.style.width = Math.max(0,Math.min(100,_gas))+'%';
         let _gsm = getCache('gsm_signal_pct', 0);
-        document.getElementById('gsm-fill').style.width = Math.max(0,Math.min(100,_gsm))+'%';
+        const gsmf = document.getElementById('gsm-fill'); if (gsmf) gsmf.style.width = Math.max(0,Math.min(100,_gsm))+'%';
 
         setSensorValue('junc_a', 'bat-status', v=>{ let a=parseFloat(v); if(a>0.1) return '⚡ KRAUNASI'; else if(a<-0.1) return '🔻 IŠSIKRAUNA'; else return '⏸ STOVI'; });
         setSensorValue('junc_a', 'bat-status-d', v=>{ let a=parseFloat(v); if(a>0.1) return '⚡ KRAUNASI'; else if(a<-0.1) return '🔻 IŠSIKRAUNA'; else return '⏸ STOVI'; });
@@ -1727,13 +1737,13 @@
 
         let ptrS = document.getElementById('ptr-s-container');
         if (ptrS) ptrS.style.transform = `translateX(-50%) rotate(${roll}deg)`;
-        document.getElementById('txt-s-top').innerHTML = Math.abs(roll).toFixed(1) + '°';
-        document.getElementById('dir-s').innerHTML = roll > 0.5 ? 'Kairė žemiau' : (roll < -0.5 ? 'Dešinė žemiau' : 'Lygu');
+        const tst = document.getElementById('txt-s-top'); if (tst) tst.innerHTML = Math.abs(roll).toFixed(1) + '°';
+        const ds = document.getElementById('dir-s'); if (ds) ds.innerHTML = roll > 0.5 ? 'Kairė žemiau' : (roll < -0.5 ? 'Dešinė žemiau' : 'Lygu');
 
         let ptrF = document.getElementById('ptr-f-container');
         if (ptrF) ptrF.style.transform = `translateX(-50%) rotate(${pitch}deg)`;
-        document.getElementById('txt-f-top').innerHTML = Math.abs(pitch).toFixed(1) + '°';
-        document.getElementById('dir-f').innerHTML = pitch > 0.5 ? 'Priekis žemiau' : (pitch < -0.5 ? 'Galas žemiau' : 'Lygu');
+        const tft = document.getElementById('txt-f-top'); if (tft) tft.innerHTML = Math.abs(pitch).toFixed(1) + '°';
+        const df = document.getElementById('dir-f'); if (df) df.innerHTML = pitch > 0.5 ? 'Priekis žemiau' : (pitch < -0.5 ? 'Galas žemiau' : 'Lygu');
 
         let rollRad = roll * Math.PI / 180;
         let pitchRad = pitch * Math.PI / 180;
@@ -2362,8 +2372,8 @@
             if (Date.now() - _lastSseMsg > 60000) {
                 sysLog('⚠️ SSE timeout (30s be duomenų) — perkuriamas ryšys...', 'warn'); setOfflineMode(true);
                 clearInterval(_sseWatchdog); _sseWatchdog = null;
-                try { _sseSource.close(); } catch(e) {}
-                _sseSource.close(); setTimeout(startSSE, 3000);
+                if (_sseSource) { try { _sseSource.close(); } catch(e) {} }
+                setTimeout(startSSE, 3000);
             }
         }, 15000);
 
@@ -2413,37 +2423,52 @@
         const notesBox = document.getElementById('update-notes');
         const btnDl = document.getElementById('btn-dl-update');
         const st = document.getElementById('update-status-text');
-        const cv = window.KemperisUpdate ? ('v' + window.KemperisUpdate.getCurrentVersion()) : 'v13';
+        const cv = window.KemperisUpdate ? ('v' + window.KemperisUpdate.getCurrentVersion()) : 'v22';
+
         if (type === 'update') {
             lastApkUrl = apkUrl;
-            title.textContent = "🚀 Nauja versija: v" + version;
-            desc.textContent = "Ar norite atsisiųsti ir įdiegti atnaujinimą?";
-            notesBox.style.display = notes ? "block" : "none";
-            notesBox.textContent = notes || "";
-            btnDl.style.display = "block";
-            btnDl.textContent = "ATSISIŲSTI (v" + version + ")";
-            modal.style.display = "flex";
+            if (title) title.textContent = "🚀 Nauja versija: v" + version;
+            if (desc) desc.textContent = "Ar norite atsisiųsti ir įdiegti atnaujinimą?";
+            if (notesBox) {
+                notesBox.style.display = notes ? "block" : "none";
+                notesBox.textContent = notes || "";
+            }
+            if (btnDl) {
+                btnDl.style.display = "block";
+                btnDl.textContent = "ATSISIŲSTI (v" + version + ")";
+            }
+            if (modal) modal.style.display = "flex";
             sysLog("🚀 Rasta nauja versija: v" + version, "success");
             _updateBtnReset();
         } else if (type === 'latest') {
             sysLog("✅ Programėlė yra naujausios versijos.", "info");
-            if (st) { st.textContent = "✅ " + cv + " — naujausias"; st.style.color = "#3fb950"; setTimeout(() => { st.textContent = "Versija: " + cv; st.style.color = ""; }, 5000); }
+            if (st) {
+                st.textContent = "✅ " + cv + " — naujausias";
+                st.style.color = "#3fb950";
+                setTimeout(() => { st.textContent = "Versija: " + cv; st.style.color = ""; }, 5000);
+            }
             _updateBtnReset();
         } else if (type === 'downloading') {
-            title.textContent = "⏳ Siunčiama...";
-            desc.textContent = "Atnaujinimas siunčiamas. Stebėkite pranešimų juostą.";
-            btnDl.style.display = "none";
+            if (title) title.textContent = "⏳ Siunčiama...";
+            if (desc) desc.textContent = "Atnaujinimas siunčiamas. Stebėkite pranešimų juostą.";
+            if (btnDl) btnDl.style.display = "none";
         } else if (type === 'install_ready') {
-            title.textContent = "✅ Paruošta diegimui";
-            desc.textContent = "Atsisiuntimas baigtas. Paspauskite pranešimą juostoje arba čia.";
-            btnDl.style.display = "block";
-            btnDl.textContent = "DIEGTI DABAR";
-            btnDl.onclick = () => { if(window.KemperisUpdate) KemperisUpdate.downloadAndInstall(lastApkUrl); };
+            if (title) title.textContent = "✅ Paruošta diegimui";
+            if (desc) desc.textContent = "Atsisiuntimas baigtas. Paspauskite pranešimą juostoje arba čia.";
+            if (btnDl) {
+                btnDl.style.display = "block";
+                btnDl.textContent = "DIEGTI DABAR";
+                btnDl.onclick = () => { if(window.KemperisUpdate) KemperisUpdate.downloadAndInstall(lastApkUrl); };
+            }
         } else if (type === 'error' || type === 'install_error') {
             var errMsg = apkUrl || notes || "nežinoma klaida";
             sysLog("⚠️ Atnaujinimo klaida: " + errMsg, "error");
-            if (st) { st.textContent = "❌ Tikrinimo klaida (nėra interneto?)"; st.style.color = "#f85149"; setTimeout(() => { st.textContent = "Versija: " + cv; st.style.color = ""; }, 6000); }
-            modal.style.display = "none";
+            if (st) {
+                st.textContent = "❌ Tikrinimo klaida (nėra interneto?)";
+                st.style.color = "#f85149";
+                setTimeout(() => { st.textContent = "Versija: " + cv; st.style.color = ""; }, 6000);
+            }
+            if (modal) modal.style.display = "none";
             _updateBtnReset();
         }
     };
