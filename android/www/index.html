@@ -1109,7 +1109,7 @@
         if (_isOffline) { sysLog('❌ Offline — negalima atnaujinti vandens lygio', 'error'); return; }
         sysLog('💧 Atnaujinamas vandens lygis...', 'info');
         try {
-            const r = await fetch(`${ESPHOME_URL}/sensor/water_level_pct`);
+            const r = await fetch(`${ESPHOME_URL}/sensor/resursai___vanduo_lygis__`);
             const j = await r.json();
             if (j && j.value !== undefined) {
                 sensorCache['water_pct'] = j.value;
@@ -2321,16 +2321,16 @@
         if (st) { st.textContent = 'Tikrinama...'; st.style.color = '#8b949e'; }
         sysLog('🔄 Tikrinami atnaujinimai (Github)...', 'info');
 
-        // Saugiklis: jei per 25s modemas neatsako, atlaisviname mygtuką.
-        // 25s > Java pusėje setConnectTimeout(10s)+setReadTimeout(10s) = 20s,
+        // Saugiklis: jei per 35s modemas neatsako, atlaisviname mygtuką.
+        // 35s > Java pusėje setConnectTimeout(15s)+setReadTimeout(15s) = 30s,
         // todėl JS nepasiduoda anksčiau už Java ir nerodo klaidingo „užtruko"
-        // kai Java fetch faktiškai baigtųsi sėkmingai per 18–20s.
+        // kai Java fetch faktiškai baigtųsi sėkmingai per 25–30s.
         setTimeout(() => {
             if (btn && btn.disabled && btn.textContent.includes('Tikrinama')) {
                 sysLog('⚠️ Atnaujinimo patikra užtruko — bandykite dar kartą.', 'warn');
                 _updateBtnReset();
             }
-        }, 25000);
+        }, 35000);
 
         KemperisUpdate.checkUpdate();
     }

@@ -1,5 +1,5 @@
 {
-  "version": 19,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v19.apk",
-  "notes": "🚀 v19 - Voice Fix & Stability Update\n\n✅ FIXED: Text-to-Speech (TTS) now works on Android 11+ by adding package visibility queries.\n✅ VERSION 19: All components synced to latest release standards."
+  "version": 20,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v20.apk",
+  "notes": "🚀 v20 - Stability & Fixes Update\n\n✅ FIXED: Update check timeout issue caused by JS syntax error.\n✅ FIXED: Manual water level refresh button path (404 fix).\n✅ IMPROVED: Faster voice initialization and better network timeouts."
 }

@@ -63,7 +63,7 @@ public class MainActivity extends BridgeActivity {
 
     static final String VERSION_JSON_URL =
         "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
-    static final int CURRENT_VERSION = 19;
+    static final int CURRENT_VERSION = 20;
 
     private Network boundNetwork = null;
     private volatile boolean autoBindPaused = false;
@@ -346,8 +346,9 @@ public class MainActivity extends BridgeActivity {
                 try {
                     URL url = new URL(VERSION_JSON_URL);
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setConnectTimeout(10_000);
-                    conn.setReadTimeout(10_000);
+                    conn.setConnectTimeout(15_000);
+                    conn.setReadTimeout(15_000);
+                    conn.setRequestProperty("User-Agent", "KempervanasApp-v20");
                     conn.setInstanceFollowRedirects(true);
                     conn.connect();
                     int status = conn.getResponseCode();
@@ -373,16 +374,18 @@ public class MainActivity extends BridgeActivity {
                     final String jsResult;
                     if (remoteVer > CURRENT_VERSION) {
                         jsResult = String.format(
-                            "window.onUpdateResult && window.onUpdateResult('update','%d','%s','%s')",
-                            remoteVer, apkUrl.replace("'", "\\'"), notes.replace("'", "\\'"));
+                            "window.onUpdateResult && window.onUpdateResult('update',%s,%s,%s)",
+                            JSONObject.quote(String.valueOf(remoteVer)),
+                            JSONObject.quote(apkUrl),
+                            JSONObject.quote(notes));
                     } else {
                         jsResult = "window.onUpdateResult && window.onUpdateResult('latest',null,null)";
                     }
                     runOnUiThread(() -> webView.evaluateJavascript(jsResult, null));
                 } catch (Exception e) {
-                    final String err = e.getMessage() != null ? e.getMessage().replace("'", "") : "klaida";
+                    final String err = e.getMessage() != null ? e.getMessage() : "klaida";
                     runOnUiThread(() -> webView.evaluateJavascript(
-                        "window.onUpdateResult && window.onUpdateResult('error',null,'" + err + "')", null));
+                        "window.onUpdateResult && window.onUpdateResult('error',null," + JSONObject.quote(err) + ")", null));
                 } finally {
                     autoBindPaused = false;
                     ConnectivityManager cm2 = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
