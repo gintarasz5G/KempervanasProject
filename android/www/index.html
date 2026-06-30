@@ -1262,10 +1262,16 @@
 
     async function sendButton(entityName) {
         debugLog('[UI] sendButton: ' + entityName);
-        if (_isOffline) { sysLog('❌ Offline — ESP32 nepasiekiamas, komanda atmesta: ' + entityName, 'error'); alert('Nepavyko — programėlė neprisijungusi prie ESP32. Patikrinkite WiFi ryšį su "Kemperis-Valdymas".'); return; }
+        if (_isOffline) { sysLog('📵 Offline — ESP32 nepasiekiamas, komanda atmesta: ' + entityName, 'error'); alert('Nepavyko — programėlė neprisijungusi prie ESP32. Patikrinkite WiFi ryšį su "Kemperis-Valdymas".'); return; }
         sysLog(`Siunčiama komanda: ${entityName}`, 'info');
-        try { await fetch(`${ESPHOME_URL}/button/${entityName}/press`, {method:'POST'}); sysLog('✅ Mygtukas nuspaustas.', 'success'); }
-        catch(e){ sysLog(`❌ Klaida: ${e.message}`, 'error'); }
+        try {
+            await fetch(`${ESPHOME_URL}/button/${entityName}/press`, {method:'POST'});
+            sysLog('✅ Mygtukas nuspaustas.', 'success');
+            if (entityName === 'btn_adxl_zero') {
+                sysLog('🎯 Pokrypis kalibruotas — nulis nustatytas', 'success');
+            }
+        }
+        catch(e){ sysLog(`📵 Klaida: ${e.message}`, 'error'); }
     }
     async function setNumber(entityName, value) {
         if (_isOffline) { sysLog('❌ Offline — ESP32 nepasiekiamas: ' + entityName, 'error'); return; } // #8
@@ -1394,7 +1400,7 @@
         (function() {
             const et = parseFloat(sensorCache['sys_esp_temp']);
             const er = parseFloat(sensorCache['sys_free_ram']);
-            const eu = parseFloat(sensorCache['sys_uptime']);
+            const rawUptime = sensorCache['sys_uptime'];
 
             // Footeris
             const dram = document.getElementById('diag-ram');
@@ -1402,9 +1408,13 @@
             const det = document.getElementById('diag-esp-temp'); if(det) det.style.color = "var(--text-light)";
             if (det && !isNaN(et)) det.textContent = Math.round(et) + '°C';
             const dut = document.getElementById('diag-uptime');
-            if (dut && !isNaN(eu)) {
-                const s=Math.round(eu), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60);
-                dut.textContent = d > 0 ? d+'d '+h+'h' : h > 0 ? h+'h '+m+'min' : m+' min';
+            if (dut) {
+                if (typeof rawUptime === 'string' && /[a-z]/i.test(rawUptime)) {
+                    dut.textContent = rawUptime;
+                } else {
+                    const s=Math.round(parseFloat(rawUptime)||0), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60);
+                    dut.textContent = d > 0 ? d+'d '+h+'h' : h > 0 ? h+'h '+m+'min' : m+' min';
+                }
             }
 
             // Logs kortelė
@@ -1413,9 +1423,13 @@
             const euEl = document.getElementById('logs-esp-uptime');
             if (etEl && !isNaN(et)) etEl.textContent = et.toFixed(1);
             if (erEl && !isNaN(er)) erEl.textContent = Math.round(er);
-            if (euEl && !isNaN(eu)) {
-                const s=Math.round(eu), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60);
-                euEl.textContent = d > 0 ? d+'d '+h+'h' : h > 0 ? h+'h '+m+'min' : m+'min';
+            if (euEl) {
+                if (typeof rawUptime === 'string' && /[a-z]/i.test(rawUptime)) {
+                    euEl.textContent = rawUptime;
+                } else {
+                    const s=Math.round(parseFloat(rawUptime)||0), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60);
+                    euEl.textContent = d > 0 ? d+'d '+h+'h' : h > 0 ? h+'h '+m+'min' : m+'min';
+                }
             }
         })();
 
@@ -1620,7 +1634,11 @@
         // Sistemos diagnostika
         setSensorValue('sys_free_ram', 'diag-ram', v => `${Math.round(v)} KB`);
         setSensorValue('sys_esp_temp', 'diag-esp-temp', v => `${Math.round(v)}°C`);
-        setSensorValue('sys_uptime', 'diag-uptime', v=>{const s=Math.round(parseFloat(v)),d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60); return d>0?d+'d '+h+'h':h>0?h+'h '+m+'min':m+' min';});
+        setSensorValue('sys_uptime', 'diag-uptime', v => {
+            if (typeof v === 'string' && /[a-z]/i.test(v)) return v;
+            const s=Math.round(parseFloat(v)||0), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60);
+            return d > 0 ? d+'d '+h+'h' : h > 0 ? h+'h '+m+'min' : m+' min';
+        });
 
         // Google siuntimo statuso indikatorius antraštėje + Nustatymai kortelėje
         let gUpload = sensorCache['sw_google_upload'];
@@ -2454,7 +2472,7 @@
         const notesBox = document.getElementById('update-notes');
         const btnDl = document.getElementById('btn-dl-update');
         const st = document.getElementById('update-status-text');
-        const cv = window.KemperisUpdate ? ('v' + window.KemperisUpdate.getCurrentVersion()) : 'v22';
+        const cv = window.KemperisUpdate ? ('v' + window.KemperisUpdate.getCurrentVersion()) : 'v29';
 
         if (type === 'update') {
             lastApkUrl = apkUrl;
@@ -2528,10 +2546,12 @@
         { id: 'water_critical', snoozeGroup: 'water', title: '💧 Vanduo – kritinis',   sensorKey: 'water_pct', threshold: 5,
           condition: (c,t) => getFromCache(c,'water_pct',100) < t,
           reset:     (c,t) => getFromCache(c,'water_pct',100) >= t+3,
+          repeatInterval: 1800000,
           message: 'Warning! Water tank is almost empty.' },
         { id: 'water_low', snoozeGroup: 'water',      title: '💧 Vanduo – žemas',      sensorKey: 'water_pct', threshold: 15,
           condition: (c,t) => getFromCache(c,'water_pct',100) < t,
           reset:     (c,t) => getFromCache(c,'water_pct',100) >= t+5,
+          repeatInterval: 1800000,
           message: 'Warning! Water level dropped below fifteen percent.' },
         { id: 'co2_danger', snoozeGroup: 'co2',     title: '🛏️ CO₂ – pavojingas',   sensorKey: 'bedroom_co2',     threshold: 2500,
           condition: (c,t) => getFromCache(c,'bedroom_co2',0) > t,
@@ -2548,25 +2568,23 @@
         { id: 'soc_critical', snoozeGroup: 'soc',   title: '🔋 SOC – kritinis',      sensorKey: 'junc_soc',        threshold: 15,
           condition: (c,t) => getFromCache(c,'junc_soc',100) < t,
           reset:     (c,t) => getFromCache(c,'junc_soc',100) >= t+3,
+          repeatInterval: 1800000,
           message: 'Warning! Battery charge critically low.' },
         { id: 'soc_low', snoozeGroup: 'soc',        title: '🔋 SOC – žemas',         sensorKey: 'junc_soc',        threshold: 25,
           condition: (c,t) => getFromCache(c,'junc_soc',100) < t && getFromCache(c,'junc_soc',100) >= 15,
           reset:     (c,t) => getFromCache(c,'junc_soc',100) >= t+3,
+          repeatInterval: 1800000,
           message: 'Battery charge below twenty-five percent.' },
         { id: 'gas_low', snoozeGroup: 'gas',        title: '🔥 Dujos – žemas',       sensorKey: 'gas_pct', threshold: 10,
           condition: (c,t) => getFromCache(c,'gas_pct',100) < t,
           reset:     (c,t) => getFromCache(c,'gas_pct',100) >= t+5,
+          repeatInterval: 1800000,
           message: 'Less than ten percent of gas remaining.' },
         { id: 'theft_alarm',    title: '🚨 Vagystė',             sensorKey: null, threshold: null,
           repeatInterval: 120000,  // pakartojimas važiuojant (ms); tiksli logika -> checkTheftVoice()
           condition: (c) => c['alert_movement_sent'] === 'true' || c['alert_movement_sent'] === true,
           reset:     (c) => !c['alert_movement_sent'] || c['alert_movement_sent'] === 'false',
           message: 'Attention! The camper is moving. Theft alert!' },
-        { id: 'high_vibration', snoozeGroup: 'vibration', title: '📳 Vibracija (apsauga)', sensorKey: 'vib_level', threshold: 0.4,
-          condition: (c,t) => { const arm=String(c['sw_security_armed']||'').toLowerCase(); return (arm==='on'||arm==='true') && parseFloat(c['vib_level']||0)>t; },
-          reset:     (c,t) => parseFloat(c['vib_level']||0) < t*0.5,
-          repeatInterval: 20000,
-          message: 'Attention! Vibration detected. Camper may be moving.' },
         { id: 'condensation', snoozeGroup: 'condensation',   title: '💧 Kondensatas',          sensorKey: null, threshold: null,
           condition: (c) => getFromCache(c,'bme_temp',20) < 8 && getFromCache(c,'bme_humidity',0) > 65,
           reset:     (c) => getFromCache(c,'bme_temp',20) >= 10 || getFromCache(c,'bme_humidity',0) <= 60,
@@ -2918,7 +2936,7 @@
         water:        { alarmIds: ['water_critical', 'water_low'], cardId: 'card-water',      tab: 'environment' },
         gas:          { alarmIds: ['gas_low'],                     cardId: 'card-gas',        tab: 'environment' },
         soc:          { alarmIds: ['soc_critical', 'soc_low'],    cardId: 'card-soc',        tab: 'energy'      },
-        vibration:    { alarmIds: ['high_vibration'],             cardId: 'pc-security',      tab: 'overview'    },
+          vibration:    { alarmIds: [],                             cardId: 'pc-security',      tab: 'overview'    },
         condensation: { alarmIds: ['condensation'],               cardId: 'card-condensation',tab: 'environment' },
     };
 
@@ -3017,6 +3035,7 @@
 
 
     // ─── Vagystės balso aliarmas (atskira logika: 4 tekstai, stovi/važiuoja) ───
+    let _theftHistoryLatched = false;
     function checkTheftVoice(cache) {
         const isTheft = (cache['alert_movement_sent'] === 'true' || cache['alert_movement_sent'] === true);
         const theftAlarm = ALARM_CONFIG.find(a => a.id === 'theft_alarm');
@@ -3032,8 +3051,15 @@
                 alarmFlags['theft_alarm'] = true;
                 alarmLastTriggered['theft_alarm'] = now;
                 _addAlarmHistory(theftAlarm, cache);
+                _theftHistoryLatched = true;
                 speakText(isDriving ? texts.first_drive : texts.first_idle, true);
             } else {
+                // Jei alarmFlags jau true (po reloads), bet istorijoje tuščia (nauja sesija) - vis tiek užfiksuojam pirmą įrašą
+                if (!_theftHistoryLatched) {
+                    _addAlarmHistory(theftAlarm, cache);
+                    _theftHistoryLatched = true;
+                }
+
                 // Pakartotinis: stovint kas 30 s, važiuojant kas 2 min
                 const repeatMs = isDriving ? 120000 : 60000;
                 if (now - (alarmLastTriggered['theft_alarm'] || 0) >= repeatMs) {
@@ -3044,6 +3070,7 @@
         } else if (alarmFlags['theft_alarm']) {
             // Aliarmas nutrauktas — reset
             alarmFlags['theft_alarm'] = false;
+            _theftHistoryLatched = false;
         }
     }
 
