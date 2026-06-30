@@ -1,5 +1,5 @@
 {
-  "version": 21,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v21.apk",
-  "notes": "🚀 v21 - Audio & Diagnostics Update\n\n✅ FIXED: Restored chime and voice audio (AudioContext resumption).\n✅ FIXED: Robust update check logic (JS safety).\n✅ NEW: Global error logging in the 'Logs' tab for better debugging."
+  "version": 22,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v22.apk",
+  "notes": "🚀 v22 - Comprehensive Debug Mode & Tools\n\n✅ NEW: Full Debug Logging mode (toggle in Settings).\n✅ NEW: Native Android logs are now piped to the app terminal.\n✅ NEW: Dynamic app version detection in the UI.\n✅ FIXED: Robust update check and manual water refresh."
 }
