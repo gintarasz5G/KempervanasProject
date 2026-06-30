@@ -398,7 +398,7 @@
     <div id="settings" class="tab-content">
         <div class="grid">
             <div class="card"><h3>🌐 ESP32 IP adresas</h3><div class="input-group"><label>ESP IP (pvz. 192.168.4.1):</label><input type="text" id="esp_ip_input" placeholder="192.168.4.1"></div><button class="btn btn-primary" onclick="saveEspIp(document.getElementById('esp_ip_input').value)">💾 Išsaugoti ir perkrauti ryšį</button><div class="card-subtext" style="margin-top:8px;">Naudokite kai ESP prisijungia prie kemperio maršrutizatoriaus (kitas IP).</div></div>
-            <div class="card"><h3>🔊 Balso pranešimų kalba</h3><div class="input-group"><label>TTS kalba:</label><select id="tts_lang_select" onchange="setTtsLang(this.value)" style="width:100%;padding:10px;border-radius:8px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;font-size:14px;"><option value="en">English (EN)</option><option value="lt">Lietuvių (LT)</option></select></div><button class="btn btn-success" onclick="speakText(I18N_TEST[ttsLang])">🔊 Testuoti balsą</button><div class="card-subtext" style="margin-top:8px;">EN dažnai aiškiau ištaria nei LT variklis.</div></div>
+            <div class="card"><h3>🔊 Balso pranešimų kalba</h3><div class="input-group"><label>TTS kalba:</label><select id="tts_lang_select" onchange="setTtsLang(this.value)" style="width:100%;padding:10px;border-radius:8px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;font-size:14px;"><option value="en">English (EN)</option><option value="lt">Lietuvių (LT)</option></select></div><button class="btn btn-success" onclick="speakText(I18N_TEST[ttsLang]); if(window.KempTts && window.KempTts.speak) setTimeout(()=>KempTts.speak('Test path'), 500);">🔊 Testuoti balsą</button><div class="card-subtext" style="margin-top:8px;">EN dažnai aiškiau ištaria nei LT variklis.</div></div>
             <div class="card"><h3>🔊 Garsumas ir pyptelėjimas</h3><div class="input-group"><label>Pranešimų garsas: <span id="tts_vol_label">80</span>%</label><input type="range" id="tts_vol_range" min="0" max="100" step="5" oninput="onVolRangeInput(this.value)" style="width:100%;"></div><div class="card-subtext" style="margin-bottom:10px;">Prieš pranešimą garsas pakeliamas iki šio lygio, po jo grąžinamas. (Reikia native snippeto — žr. README.)</div><div class="input-group"><label>Pyptelėjimas prieš pranešimą:</label><select id="chime_select" onchange="setChimeType(this.value)" style="width:100%;padding:10px;border-radius:8px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;font-size:14px;"><option value="none">Be pyptelėjimo</option><option value="single">Vienas pyptelėjimas</option><option value="double">Dvigubas (rekom.)</option><option value="siren">Kylanti sirena</option></select></div><button class="btn btn-success" onclick="playChime()">🔔 Testuoti pyptelėjimą</button><button class="btn btn-primary" style="margin-left:6px;" onclick="speakText(I18N_TEST[ttsLang], true)">🔊 Testuoti pilną</button></div>
             <div class="card"><h3>🔐 Prieigos apsauga (PIN)</h3><div class="input-group"><label>Naujas PIN kodas:</label><input type="password" id="new_pin_input" inputmode="numeric" maxlength="8" placeholder="••••"></div><button class="btn btn-warning" onclick="changeSystemPIN()">🔑 Keisti PIN</button><div class="card-subtext" style="margin-top:8px;">Saugo „Nustatymai" ir „Aliarmai" skiltis. Numatytas: 0000. Atrakinama 5 min.</div></div>
             <div class="card"><h3>🌐 Google Sheets (Cloud)</h3><div style="display:flex; align-items:center; gap: 10px; margin-bottom:16px;"><label class="switch" data-esp-switch><input type="checkbox" id="chk_google_upload" onchange="toggleGoogleUpload(this)"><span class="slider round"></span></label><span id="google_upload_text" style="font-weight:bold; font-size:14px;">Nežinoma</span></div><div class="input-group"><label>Apps Script ID:</label><input type="text" id="txt_app_script_id" onchange="saveAppScriptId()" placeholder="AKfycb..."></div><div class="card-subtext" style="margin-bottom:8px;">Buferis: <span id="google-buffer-set">--- B / 10000</span></div><button class="btn btn-success" data-esp-btn onclick="sendButton('btn_force_send_google')">📤 SIŲSTI DUOMENIS (ESPHome)</button></div>
@@ -2584,6 +2584,7 @@
     // TTS Queue - #2 FIX: Neleidžiame balsams permušti vienas kito
     let _speechQueue = [];
     let _isSpeaking = false;
+    let _speechWatchdog = null;
 
     async function _processSpeechQueue() {
         if (_isSpeaking || _speechQueue.length === 0) {
@@ -2591,23 +2592,54 @@
             return;
         }
         _isSpeaking = true;
+
+        // Watchdog: jei po 10s vis dar "isSpeaking", priverstinai išlaisvinam
+        if (_speechWatchdog) clearTimeout(_speechWatchdog);
+        _speechWatchdog = setTimeout(() => {
+            if (_isSpeaking) {
+                debugLog('[SPEECH] Watchdog trigger: Queue RESET', 'error');
+                _isSpeaking = false;
+                _processSpeechQueue();
+            }
+        }, 10000);
+
         const item = _speechQueue.shift();
         debugLog('[SPEECH] Processing item: ' + item.text);
 
         const langCode = TTS_LANG_CODE[ttsLang] || 'en-US';
         const pct = getTtsVolPct();
+
+        debugLog('[SPEECH] step: volGet');
         let prevVol = null;
-        if (!_volBusy) {
-            prevVol = nativeVolGet();
-            if (prevVol !== null) { _volBusy = true; nativeVolSet(pct); }
-        }
+        try {
+            if (!_volBusy) {
+                prevVol = nativeVolGet();
+                debugLog('[SPEECH] step: volGet=' + prevVol);
+                if (prevVol !== null) {
+                    _volBusy = true;
+                    nativeVolSet(pct);
+                    debugLog('[SPEECH] step: volSet done');
+                }
+            }
+        } catch(e) { debugLog('[SPEECH] vol EXC ' + e, 'error'); }
 
         try {
-            if (item.withChime) await playChime();
+            if (item.withChime) {
+                debugLog('[SPEECH] step: chime start');
+                await playChime();
+                debugLog('[SPEECH] step: chime done');
+            }
+            debugLog('[SPEECH] step: calling speakNow');
             await speakNow(item.text, langCode, pct);
         } finally {
-            if (prevVol !== null) { nativeVolSet(prevVol); _volBusy = false; }
+            if (prevVol !== null) {
+                nativeVolSet(prevVol);
+                _volBusy = false;
+                debugLog('[SPEECH] step: volRestore done');
+            }
+            if (_speechWatchdog) { clearTimeout(_speechWatchdog); _speechWatchdog = null; }
             _isSpeaking = false;
+            debugLog('[SPEECH] step: item FINISHED');
             setTimeout(_processSpeechQueue, 300); // Maža pauzė tarp sakinių
         }
     }
