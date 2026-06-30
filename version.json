@@ -1,5 +1,5 @@
 {
-  "version": 25,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v25.apk",
-  "notes": "🚀 v25 - Advanced Speech Debug & Watchdog\n\n✅ NEW: Step-by-step diagnostic logging for speech orchestration.\n✅ NEW: 10s speech watchdog for automatic queue recovery.\n✅ NEW: 'Test Voice' now includes an emergency direct path bypass.\n✅ FIXED: Corrected internal version reporting to v25."
+  "version": 26,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v26.apk",
+  "notes": "🚀 v26 - Volume Auto-Boost Fix\n\n✅ FIXED: Resolved 'ReferenceError: _volBusy is not defined'.\n✅ FIXED: Restored automatic volume boosting before speech.\n✅ NEW: Fully synchronized assets and versioning to v26."
 }

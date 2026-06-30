@@ -2584,6 +2584,7 @@
     // TTS Queue - #2 FIX: Neleidžiame balsams permušti vienas kito
     let _speechQueue = [];
     let _isSpeaking = false;
+    let _volBusy = false;
     let _speechWatchdog = null;
 
     async function _processSpeechQueue() {

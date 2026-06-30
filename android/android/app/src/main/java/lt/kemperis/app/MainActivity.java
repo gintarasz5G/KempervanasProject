@@ -63,7 +63,7 @@ public class MainActivity extends BridgeActivity {
 
     static final String VERSION_JSON_URL =
         "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
-    static final int CURRENT_VERSION = 25;
+    static final int CURRENT_VERSION = 26;
 
     private Network boundNetwork = null;
     private volatile boolean autoBindPaused = false;
