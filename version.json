@@ -1,5 +1,5 @@
 {
-  "version": 27,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v27.apk",
-  "notes": "🚀 v27 - SSE Recognition & Stability Overhaul\n\n✅ NEW: Normalized sensor key recognition (solves [SSE UNMATCHED] issues).\n✅ NEW: Broadened matching for Lithuanian sensor labels (GPS, GSM, etc.).\n✅ NEW: 3-stage quiet SSE reconnection strategy to reduce 'Offline' flapping.\n✅ FIXED: Robust watchdog logic for long-term connection health."
+  "version": 28,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v28.apk",
+  "notes": "🚀 v28 - Final SSE Fixes & Branded Icon\n\n✅ NEW: Branded app icon featuring the van outline on a dark background.\n✅ FIXED: Final sensor key recognition (Bedroom & Advice sensors).\n✅ FIXED: GSM signal collision (dBm vs %). \n✅ IMPROVED: Stabilized SSE connection handling."
 }
