@@ -63,7 +63,7 @@ public class MainActivity extends BridgeActivity {
 
     static final String VERSION_JSON_URL =
         "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
-    static final int CURRENT_VERSION = 20;
+    static final int CURRENT_VERSION = 21;
 
     private Network boundNetwork = null;
     private volatile boolean autoBindPaused = false;
@@ -348,7 +348,7 @@ public class MainActivity extends BridgeActivity {
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                     conn.setConnectTimeout(15_000);
                     conn.setReadTimeout(15_000);
-                    conn.setRequestProperty("User-Agent", "KempervanasApp-v20");
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) KempervanasApp/21.0");
                     conn.setInstanceFollowRedirects(true);
                     conn.connect();
                     int status = conn.getResponseCode();
@@ -379,13 +379,13 @@ public class MainActivity extends BridgeActivity {
                             JSONObject.quote(apkUrl),
                             JSONObject.quote(notes));
                     } else {
-                        jsResult = "window.onUpdateResult && window.onUpdateResult('latest',null,null)";
+                        jsResult = "window.onUpdateResult && window.onUpdateResult('latest',null,null,null)";
                     }
                     runOnUiThread(() -> webView.evaluateJavascript(jsResult, null));
                 } catch (Exception e) {
                     final String err = e.getMessage() != null ? e.getMessage() : "klaida";
                     runOnUiThread(() -> webView.evaluateJavascript(
-                        "window.onUpdateResult && window.onUpdateResult('error',null," + JSONObject.quote(err) + ")", null));
+                        "window.onUpdateResult && window.onUpdateResult('error',null,null," + JSONObject.quote(err) + ")", null));
                 } finally {
                     autoBindPaused = false;
                     ConnectivityManager cm2 = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);

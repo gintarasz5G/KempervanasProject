@@ -1,5 +1,5 @@
 {
-  "version": 20,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v20.apk",
-  "notes": "🚀 v20 - Stability & Fixes Update\n\n✅ FIXED: Update check timeout issue caused by JS syntax error.\n✅ FIXED: Manual water level refresh button path (404 fix).\n✅ IMPROVED: Faster voice initialization and better network timeouts."
+  "version": 21,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v21.apk",
+  "notes": "🚀 v21 - Audio & Diagnostics Update\n\n✅ FIXED: Restored chime and voice audio (AudioContext resumption).\n✅ FIXED: Robust update check logic (JS safety).\n✅ NEW: Global error logging in the 'Logs' tab for better debugging."
 }

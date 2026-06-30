@@ -512,6 +512,15 @@
     // ESP WiFi AP duomenys (turi atitikti YAML: wifi -> ap). Galima keisti per localStorage.
     let ESP_WIFI_SSID = localStorage.getItem('esp_ssid') || 'Kemperis-Valdymas';
     let ESP_WIFI_PASS = localStorage.getItem('esp_pass') || 'kemperis123';
+
+    // --- Globalus klaidų gaudytojas ---
+    window.onerror = function(msg, url, line, col, error) {
+        const _txt = '🚫 JS KLAIDA: ' + msg + ' (eil. ' + line + ')';
+        console.error(_txt, error);
+        if (typeof sysLog === 'function') sysLog(_txt, 'error');
+        return false;
+    };
+
     function saveEspIp(ip) {
         ip = (ip || '').trim();
         if (!ip) return;
@@ -2549,9 +2558,18 @@
     // Naršyklės atrakinimas (reikalingas TIK web fallback'ui, ne native Capacitor)
     let speechUnlocked = false;
     function unlockSpeech() {
-        if (speechUnlocked) return;
+        if (speechUnlocked) {
+            // #v21: Net jei atrakinta, bandom prikelti AudioCtx (Android WebView saugumas)
+            const ctx = getAudioCtx();
+            if (ctx && ctx.state === 'suspended') ctx.resume();
+            return;
+        }
         speechUnlocked = true;
         try {
+            // Pažadiname Web Audio API kontekstą
+            const ctx = getAudioCtx();
+            if (ctx && ctx.state === 'suspended') ctx.resume();
+
             // Realus (ne tuščias) trumpas garsas mažu garsumu — patikimiau atrakina nei tuščia frazė.
             const u = new SpeechSynthesisUtterance('.');
             u.volume = 0.01;   // rate=0 buvo NEGALIOJANTIS — pašalinta
