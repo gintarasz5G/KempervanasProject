@@ -1,5 +1,13 @@
 # Pilnas veikimo auditas — SSE reikšmių susiejimas (app ↔ ESP)
 
+> 🛠️ **PATAISA 2026-06-30:** §2.1 („akumuliatoriaus temperatūra užteršia `bme_temp`") yra
+> **FALSE POSITIVE**. `android/www/index.html:2197–2268` yra **vienas vientisas `if/else-if`**
+> grandinė (eil. 2209 yra `else if`, ne atskiras `if`). `"Energija | Akum temperatura"`
+> (`energija___akum_temperatura`) pagaunama anksčiau ties eil. 2205 (`includes('akum_temp')` →
+> `junc_temp`), ir `else-if` grandinė sustoja — niekada nepasiekia 2209. **Užteršimo nėra.**
+> Teiginys apie „dvi nepriklausomas grandines (Block A/B)" neteisingas. Detalės:
+> `docs/audits/veikimo_auditas_2026-06-30_korteliu_saltiniai.md`.
+
 **Data:** 2026-06-29
 **Apimtis:** ar kiekviena app rodoma reikšmė tikrai paimama iš teisingo ESP sensoriaus.
 **Metodas:** statinis kryžminis auditas + tikslus matching simuliatorius (Node), kuris atkartoja

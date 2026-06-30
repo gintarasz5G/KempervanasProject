@@ -1,174 +1,186 @@
-# CLAUDE.md â€” Kempervanas ESPHome projektas
+# CLAUDE.md — Kempervanas ESPHome projektas
 
-Å is failas yra pagrindinÄ— instrukcijÅ³ bazÄ— Claude Code agentui.
-Perskaityk **viskÄ…** prieÅ¡ pradedant bet kokÄ¯ veiksmÄ….
+Šis failas yra pagrindinė instrukcijų bazė Claude Code agentui.
+Perskaityk **viską** prieš pradedant bet kokį veiksmą.
 
 ---
 
-## Projekto apÅ¾valga
+## Projekto apžvalga
 
 ESP32-S3 pagrindu veikianti kempervano automatizavimo sistema (VW Crafter 2008).
 Pagrindinis kontroleris: **KC868-A16v3.1** (ESP32-S3)
-WiFi AP: `Kemperis-Valdymas` / `kemperis123` â†’ `192.168.4.1`
+WiFi AP: `Kemperis-Valdymas` / `kemperis123` → `192.168.4.1`
 
-### ðŸŽ¯ Autoritetingi failai (production deployed)
+### 🎯 Autoritetingi failai
 
-| Komponentas | Failas | Aplankas |
-|---|---|---|
-| **ESPHome firmware** | `kempervanas_v22_veikiantis.yaml` | `C:\Users\ginta\KemperosProjektas\ESPHOME\` |
-| **Google Apps Script** | `GoogleSheetsScript.js` | `C:\Users\ginta\KemperosProjektas\ESPHOME\` |
-| **Android app frontend** | `www/index.html` | `C:\Users\ginta\kempervanas\veikiantisKEMPERIS\KemperisApp\` |
-| **Android native bridges** | `MainActivity.java`, `KemperisService.java` | `...\KemperisApp\android\app\src\main\java\lt\kemperis\app\` |
-| **Dashboard HTML (sena)** | `kemperis1.html` â†’ `kemperis_dashboard.h` | `C:\Users\ginta\kempervanas\CLAUDE\` (nebenaudojamas â€” pakeistas KemperisApp) |
-| **DaliÅ³ sÄ…raÅ¡as** | `kempervanas_daliu_sarasas_v2.xlsx` | `C:\Users\ginta\kempervanas\CLAUDE\` |
+> Visi keliai RELATYVŪS repo šakniai: `C:\Users\ginta\KempervanasProject\`
 
-### âš ï¸ AplankÅ³ struktÅ«ros Ä¯spÄ—jimas
+| Komponentas | Failas (repo viduje) |
+|---|---|
+| **ESPHome firmware** | `firmware/kempervanas.yaml` (paslaptys: `firmware/secrets.yaml`) |
+| **Google Apps Script** | `google-sheets/GoogleSheetsScript.js` |
+| **Android app frontend** | `android/www/index.html` |
+| **Android native bridges** | `android/android/app/src/main/java/lt/kemperis/app/{MainActivity,KemperisService}.java` |
+| **Hardware / dalių sąrašas** | `hardware/` (`kempervanas_daliu_sarasas.xlsx`, `schemas/`, `3d/`) |
+| **Dokumentacija ir auditai** | `docs/` ir `docs/audits/` |
 
-Projektas turi **du paraleliais vystymo aplankus** â€” nepainioti:
+### ⚠️ Aplankų struktūra (vienas git monorepo)
 
-- `C:\Users\ginta\KemperosProjektas\ESPHOME\` â€” **PRODUKCIJA** (v22 deployed firmware, deployed Apps Script)
-- `C:\Users\ginta\kempervanas\CLAUDE\` â€” **DRAFT/HISTORY** (turi v2â€“v21 senas iteracijas, ANALIZE.md, Å¡i CLAUDE.md)
-- `C:\Users\ginta\kempervanas\veikiantisKEMPERIS\KemperisApp\` â€” **Android app Å¡altinis**
+Projektas dabar yra **vienas git-valdomas repo**: `C:\Users\ginta\KempervanasProject`
+(remote: github.com/gintarasz5G/KempervanasProject, „Gold Master v18").
 
-> âš ï¸ CLAUDE folder'yje YRA `kempervanas.yaml` ir `kempervanas_v21.yaml` â€” tai **nebÄ—ra production**. Visada redaguok v22 KemperosProjektas aplanke.
-> âš ï¸ `kempervanas veikiantis su gps ir sms.yaml` (CLAUDE/) yra **istorinÄ— referencinÄ—** â€” neredaguok, tik Å¾iÅ«rÄ—k kaip veikÄ—.
+| Aplankas | Turinys |
+|---|---|
+| `firmware/` | ESPHome (`kempervanas.yaml`, `secrets.yaml`) + `archive/` senos versijos |
+| `android/` | Capacitor app: `www/index.html` (frontend), `android/...` (native Java), APK |
+| `google-sheets/` | `GoogleSheetsScript.js` (Apps Script debesų logika) |
+| `hardware/` | Schemos, jungtys, dalių sąrašas, 3D |
+| `docs/` | Dokumentacija ir `audits/` |
+| `research/` | Renogy BLE ir kt. tyrimai |
+| `release/`, `secrets/`, `tools/`, `data/` | Build artefaktai, paslaptys, įrankiai |
+
+> ⚠️ **PASENĘ — NEBENAUDOTI:** `C:\Users\ginta\KemperosProjektas\ESPHOME\`,
+> `C:\Users\ginta\kempervanas\veikiantisKEMPERIS\`, `C:\Users\ginta\kempervanas\CLAUDE\`.
+> Tai senos lygiagrečios kopijos (turinys perkeltas į `firmware/archive/` ir `docs/`).
+> **Analizuok ir redaguok TIK `C:\Users\ginta\KempervanasProject` failus.**
 
 ---
 
 ## Build & Flash komandos
 
-> **Vykdyk iÅ¡** `C:\Users\ginta\KemperosProjektas\ESPHOME\` aplanko.
+> **Vykdyk iš** `firmware/` aplanko. Paslaptys — `firmware/secrets.yaml` (pvz. `app_script_id`).
 
 ```powershell
 # Validacija (be flash'inimo)
-esphome config kempervanas_v22_veikiantis.yaml
+esphome config kempervanas.yaml
 
 # Kompiliacija
-esphome compile kempervanas_v22_veikiantis.yaml
+esphome compile kempervanas.yaml
 
 # Flash per USB-C
-esphome run kempervanas_v22_veikiantis.yaml
+esphome run kempervanas.yaml
 
-# OTA (Ä¯renginys turi bÅ«ti tinkle)
-esphome run kempervanas_v22_veikiantis.yaml --device 192.168.4.1
+# OTA (įrenginys turi būti tinkle)
+esphome run kempervanas.yaml --device 192.168.4.1
 
 # Logai realiuoju laiku
-esphome logs kempervanas_v22_veikiantis.yaml
+esphome logs kempervanas.yaml
 ```
 
 ---
 
-## Hardware architektÅ«ra
+## Hardware architektūra
 
-### MagistralÄ—s
+### Magistralės
 
-| MagistralÄ— | Pinai | Ä®renginiai |
+| Magistralė | Pinai | Įrenginiai |
 |-----------|-------|-----------|
-| I2C | SDA=GPIO9, SCL=GPIO10 | ADXL345 (0x53), VL53L0X Ã—1 (0x29), BMP180 (0x77), BME688 (0x76, SDOâ†’GND), PCF8574 Ã—3 (0x22, 0x24, 0x25), SSD1306 OLED (0x3C, lizdas E) |
+| I2C | SDA=GPIO9, SCL=GPIO10 | ADXL345 (0x53), VL53L0X ×1 (0x29), BMP180 (0x77), BME688 (0x76, SDO→GND), PCF8574 ×3 (0x22, 0x24, 0x25), SSD1306 OLED (0x3C, lizdas E) |
 | UART0 | TX=GPIO40, RX=GPIO41 | A7670E GSM/GPS (115200 baud) |
-| RS485 | TX=GPIO16, RX=GPIO17 | Modbus RTU: Junctek KH-F150A (slave 1, tiesiogiai prie Å¡unto) |
-| 1-Wire | GPIO39 | AM2301 temperatÅ«ra/drÄ—gmÄ— (atsarginÄ—) |
-| GPIO | GPIO47 (DOUT), GPIO48 (CLK) | HX711 (dujÅ³ baliono svoris) |
-| ADC | GPIO7 | TDS vandens kokybÄ—s jutiklis |
-| PCF8574 0x22/0x24/0x25 | â€” | 8 Å¡viesos iÅ¡Ä—jimai (sviesa_1â€¦sviesa_8) + 8 jungikliÅ³ Ä¯Ä—jimai |
+| BLE | — | Junctek KH-F150A šuntas (akum. duomenys per Bluetooth, UUID FFF0/FFF1) |
+| 1-Wire | GPIO39 | AM2301 temperatūra/drėgmė (atsarginė) |
+| GPIO | GPIO47 (DOUT), GPIO48 (CLK) | HX711 (dujų baliono svoris) |
+| ADC | GPIO7 | TDS vandens kokybės jutiklis |
+| PCF8574 0x22/0x24/0x25 | — | 8 šviesos išėjimai (sviesa_1…sviesa_8) + 8 jungiklių įėjimai |
 
+### Žinomi apribojimai ir kritinės pastabos
 
-### Å½inomi apribojimai ir kritinÄ—s pastabos
-
-- **ADXL345**: Boot metu bÅ«tinas I2C write `{0x2D, 0x08}` (measurement mode) prieÅ¡ nuskaitant duomenis.
-- **BME688 adresas**: SDO â†’ GND â†’ adresas 0x76 (ne 0x77, kad nevyktÅ³ konfliktas su BMP180 0x77).
-- **VL53L0X**: Vienas jutiklis, adresas 0x29. NÄ—ra XSHUT logikos.
-- **Junctek KH-F150A**: Jungiamas **tiesiogiai prie Å¡unto laidÅ³** (valdiklio dÄ—Å¾utÄ— sudegÄ—). Slave adresas = 1 (gamyklinis â€” konflikto su Renogy nebÄ—ra, nes Renogy pereina Ä¯ BT).
-- **Renogy DCC50S Bluetooth**: Turi integruotÄ… BT. Reikia BLE client sprendimo â€” Å¾r. Etapas 1 krok. 6. Alternatyva: atskiras ESP32 su BT â†’ MQTT â†’ KC868.
-- **Renogy PRO 100Ah LiFePO4**:Turi integruotÄ… BT. Reikia BLE client sprendimo
-- **HX711**: DOUT=GPIO47, CLK=GPIO48 â€” patikrink konfliktus.
+- **ADXL345**: Boot metu būtinas I2C write `{0x2D, 0x08}` (measurement mode) prieš nuskaitant duomenis.
+- **BME688 adresas**: SDO → GND → adresas 0x76 (ne 0x77, kad nevyktų konfliktas su BMP180 0x77).
+- **VL53L0X**: Vienas jutiklis, adresas 0x29. Nėra XSHUT logikos.
+- **Junctek KH-F150A**: Jungiamas tiesiogiai prie šunto laidų (valdiklio dėžutė sudegė).
+  ⚠️ Realiame firmware skaitomas per **BLE** (`ble_client`, ne RS485 Modbus). Renogy atskiro BLE
+  sensoriaus firmware nėra — „Energija" duomenys ateina iš Junctek šunto.
+- **Renogy DCC50S Bluetooth**: Turi integruotą BT. Reikia BLE client sprendimo — žr. tyrimą `research/`.
+- **Renogy PRO 100Ah LiFePO4**: Turi integruotą BT. Reikia BLE client sprendimo.
+- **HX711**: DOUT=GPIO47, CLK=GPIO48 — patikrink konfliktus.
 - **A7670E**: 5V, max ~2A. UART TX=GPIO40, RX=GPIO41.
-- **RS485**: AUTO-direction per MAX13487EESA â€” YAML **neturi** turÄ—ti `direction_pin`.
-- **SMS koduotÄ—**: Tik ASCII (GSM 7-bit) â€” **jokiÅ³ lietuviÅ¡kÅ³ raidÅ¾iÅ³** SMS tekstuose.
-- **GPS odometras**: Minimalus greitis = 5 km/h â€” multipath apsauga.
+- **RS485**: AUTO-direction per MAX13487EESA — YAML **neturi** turėti `direction_pin`.
+- **SMS koduotė**: Tik ASCII (GSM 7-bit) — **jokių lietuviškų raidžių** SMS tekstuose.
+- **GPS odometras**: Minimalus greitis = 5 km/h — multipath apsauga.
 - **No internet**: Tik WiFi AP, jokio STA/cloud.
-- **BMP180 vs BMP085**: ESPHome naudoja `bmp085` komponentÄ… â€” normalu.
-- **220V aptikimas**: IÅ¡keltas Ä¯ **atskirÄ… ESP32** â€” PCF8574 0x21 Å¡iame projekte nenaudojamas.
-- **UV LED**: Valdomas atskiru krano jungikliu â€” **neintegruojamas** Ä¯ Å¡Ä¯ projektÄ….
-- **8 LED + 8 jungikliai**: OUT1â€“8 = Å¡viesos (MOSFET sink). DIN1â€“8 = fiziniai jungikliai (optoisoliuoti, aktyvuojami GND). Kiekvienas jungiklis valdo atitinkamÄ… Å¡viesÄ…. bei vienas virtualus mygtukas isjungti visas sviesas.
+- **BMP180 vs BMP085**: ESPHome naudoja `bmp085` komponentą — normalu.
+- **220V aptikimas**: PCF8574 skaitmeniniai įėjimai → `power_source_220` / `shore_power_present` / `inverter_220_active`.
+- **UV LED**: Valdomas atskiru krano jungikliu — **neintegruojamas** į šį projektą.
+- **8 LED + 8 jungikliai**: OUT1–8 = šviesos (MOSFET sink). DIN1–8 = fiziniai jungikliai (optoisoliuoti, aktyvuojami GND). Kiekvienas jungiklis valdo atitinkamą šviesą bei vienas virtualus mygtukas išjungti visas šviesas.
 
 ---
 
 ## Reikalavimai kiekvienam jutikliui
 
-> TikslinÄ— bÅ«sena. Claude Code tikrina ar YAML atitinka â€” jei ne, taiso ir pagrindÅ¾ia.
+> Tikslinė būsena. Claude Code tikrina ar YAML atitinka — jei ne, taiso ir pagrindžia.
 
-### 1. GPS (A7670E â€” `+CGNSSINFO`)
+### 1. GPS (A7670E — `+CGNSSINFO`)
 
 **Rodo:**
-- KoordinatÄ—s (lat/lon, 6 Å¾enklai), aukÅ¡tis (m), greitis (km/h), kryptis (Â°)
-- GPS / GLONASS / BeiDou palydovÅ³ skaiÄius (naudojami / matomi)
-- Fix statusas (text_sensor: "NÄ—ra" / "2D" / "3D")
+- Koordinatės (lat/lon, 6 ženklai), aukštis (m), greitis (km/h), kryptis (°)
+- GPS / GLONASS / BeiDou palydovų skaičius (naudojami / matomi)
+- Fix statusas (text_sensor: "Nėra" / "2D" / "3D")
 
 **Reikalavimai:**
 - Atskiri `sensor:` kiekvienam parametrui
-- `accuracy_decimals: 0` greiÄiui, krypÄiai, aukÅ¡Äiui; `accuracy_decimals: 6` koordinatÄ—ms
-- Jei nÄ—ra fix â€” paskutinÄ— Å¾inoma reikÅ¡mÄ— arba NaN
+- `accuracy_decimals: 0` greičiui, krypčiai, aukščiui; `accuracy_decimals: 6` koordinatėms
+- Jei nėra fix — paskutinė žinoma reikšmė arba NaN
 
 ### 2. Pokrypis (ADXL345)
 
 **Rodo:**
-- Å oninis K/D (Â°, sveikas, + = deÅ¡inÄ— aukÅ¡Äiau)
-- IÅ¡ilginis P/G (Â°, sveikas, + = priekis aukÅ¡Äiau)
-- DomkratÅ³ patarimas (text_sensor)
+- Šoninis K/D (°, sveikas, + = dešinė aukščiau)
+- Išilginis P/G (°, sveikas, + = priekis aukščiau)
+- Domkratų patarimas (text_sensor)
 
 **Reikalavimai:**
 - `accuracy_decimals: 0`
-- Zero kalibravimas: `button:` â†’ offsets Ä¯ NVS (`restore_value: true`)
-- **DomkratÅ³ logika**: `mm = tan(kampas_rad) Ã— 1800` (VW Crafter ratÅ³ tarpas 1800mm)
-  Pvz.: "Kelti K +42mm" / "Kelti D +18mm" / "Lygu" (< 0.5Â° = lygu)
-- Roll/Pitch su `atan2` iÅ¡ ADXL345 registrÅ³ 0x32
+- Zero kalibravimas: `button:` → offsets į NVS (`restore_value: true`)
+- **Domkratų logika**: `mm = tan(kampas_rad) × 1800` (VW Crafter ratų tarpas 1800mm)
+  Pvz.: "Kelti K +42mm" / "Kelti D +18mm" / "Lygu" (< 0.5° = lygu)
+- Roll/Pitch su `atan2` iš ADXL345 registrų 0x32
 
-### 3. DujÅ³ svoris (HX711)
+### 3. Dujų svoris (HX711)
 
-**Rodo:** Likutis kg (1 Å¾enklas), likutis %
+**Rodo:** Likutis kg (1 ženklas), likutis %
 
 **Reikalavimai:**
-- `number:` tuÅ¡Äio baliono svoris (kg, NVS, numatyta 13.5)
+- `number:` tuščio baliono svoris (kg, NVS, numatyta 13.5)
 - `number:` pilno baliono svoris (kg, NVS, numatyta 23.5)
 - `number:` scale factor kalibravimui (NVS)
-- `button:` tare (nustatyti nulÄ¯)
-- Likutis = `max(0, iÅ¡matuotas âˆ’ tuÅ¡Äias)`, procentai ribojami 0â€“100%
+- `button:` tare (nustatyti nulį)
+- Likutis = `max(0, išmatuotas − tuščias)`, procentai ribojami 0–100%
 
-### 4. TemperatÅ«ra ir slÄ—gis (BMP180)
+### 4. Temperatūra ir slėgis (BMP180)
 
-**Rodo:** TemperatÅ«ra (Â°C), slÄ—gis (hPa), aukÅ¡tis (m), orÅ³ prognozÄ— (text)
+**Rodo:** Temperatūra (°C), slėgis (hPa), aukštis (m), orų prognozė (text)
 
 **Reikalavimai:**
-- `number:` temp ofset'as (Â°C, âˆ’10..+10, Å¾ingsnis 0.1, NVS)
-- OrÅ³ prognozÄ— â€” 7 slÄ—gio reikÅ¡miÅ³ istorija kas 30 min â†’ 3h tendencija:
-  - > +4 hPa/3h â†’ "Labai greitai gerÄ—ja"
-  - +2..+4 â†’ "Geras"
-  - +0.5..+2 â†’ "GerÄ—ja"
-  - Â±0.5 â†’ "Stabilus"
-  - âˆ’0.5..âˆ’2 â†’ "Kinta"
-  - âˆ’2..âˆ’4 â†’ "Blogas"
-  - < âˆ’4 hPa/3h â†’ "Smarkiai blogÄ—ja"
+- `number:` temp ofset'as (°C, −10..+10, žingsnis 0.1, NVS)
+- Orų prognozė — 7 slėgio reikšmių istorija kas 30 min → 3h tendencija:
+  - > +4 hPa/3h → "Labai greitai gerėja"
+  - +2..+4 → "Geras"
+  - +0.5..+2 → "Gerėja"
+  - ±0.5 → "Stabilus"
+  - −0.5..−2 → "Kinta"
+  - −2..−4 → "Blogas"
+  - < −4 hPa/3h → "Smarkiai blogėja"
 - Atnaujinimas kas 30 min
 
-### 5. Oro kokybÄ— (BME688)
+### 5. Oro kokybė (BME688)
 
-**Rodo:** TemperatÅ«ra (Â°C), drÄ—gmÄ— (%), slÄ—gis (hPa), VOC (Î©), oro kokybÄ— (text)
+**Rodo:** Temperatūra (°C), drėgmė (%), slėgis (hPa), VOC (Ω), oro kokybė (text)
 
 **Reikalavimai:**
-- I2C adresas: 0x76 (SDO â†’ GND)
-- ESPHome komponentas: `bme680` arba `bme68x` â€” patikrink https://esphome.io/components/sensor/bme680.html
-- Jei reikia BSEC â€” naudoti `bme680_bsec`
-- `number:` temp ofset'as (NVS, numatyta âˆ’4Â°C â€” BME688 Å¡yla nuo savÄ™s)
-- Oro kokybÄ— text: "Geras" / "Vidutinis" / "Blogas" pagal VOC reikÅ¡mÄ™
+- I2C adresas: 0x76 (SDO → GND)
+- ESPHome komponentas: `bme680` arba `bme68x` — patikrink https://esphome.io/components/sensor/bme680.html
+- Jei reikia BSEC — naudoti `bme680_bsec`
+- `number:` temp ofset'as (NVS, numatyta −4°C — BME688 šyla nuo savęs)
+- Oro kokybė text: "Geras" / "Vidutinis" / "Blogas" pagal VOC reikšmę
 
-### 6. GSM ryÅ¡ys (A7670E)
+### 6. GSM ryšys (A7670E)
 
 **Rodo:** Operatorius, RSSI (dBm), signalas %, registracijos statusas
 
 **Reikalavimai:**
-- AT: `AT+COPS?`, `AT+CSQ`, `AT+CREG?` â€” atnaujinimas kas 60s
-- **SMS atsakymas** Ä¯ "Status?" (ASCII, max 160 simboliÅ³):
+- AT: `AT+COPS?`, `AT+CSQ`, `AT+CREG?` — atnaujinimas kas 60s
+- **SMS atsakymas** į "Status?" (ASCII, max 160 simbolių):
   ```
   Kemperis OK
   Bat: {V}V {%}%
@@ -183,255 +195,117 @@ esphome logs kempervanas_v22_veikiantis.yaml
 **Rodo:** Atstumas cm (raw), lygis %, litrai
 
 **Reikalavimai:**
-- `number:` tuÅ¡Äio bako cm (NVS), pilno bako cm (NVS), tÅ«ris litrais (NVS)
-- `button:` "Nustatyti kaip tuÅ¡ÄiÄ…" ir "Nustatyti kaip pilnÄ…"
-- Procentai = `(tuÅ¡Äias âˆ’ dabartinis) / (tuÅ¡Äias âˆ’ pilnas) Ã— 100`
-- `median` filtras window 5, ribojama 0â€“100%
+- `number:` tuščio bako cm (NVS), pilno bako cm (NVS), tūris litrais (NVS)
+- `button:` "Nustatyti kaip tuščią" ir "Nustatyti kaip pilną"
+- Procentai = `(tuščias − dabartinis) / (tuščias − pilnas) × 100`
+- `median` filtras window 5, ribojama 0–100%
 
-### 8. Akumuliatorius (Renogy PRO 100Ah LiFePO4 â€” Bluetooth)
+### 8. Akumuliatorius (Junctek KH-F150A šuntas — BLE; planuota Renogy PRO LiFePO4)
 
-**Rodo:** Ä®tampa (V), srovÄ— (A), galia (W), SOC %, Ah, temperatÅ«ra (Â°C), ciklÅ³ skaiÄius
+**Rodo:** Įtampa (V), srovė (A), galia (W), SOC %, Ah, temperatūra (°C), likęs veikimo laikas
 
 **Reikalavimai:**
-- Ä®renginys turi integruotÄ… BT (Renogy BT protokolas)
+- Realiai duomenys ateina iš **Junctek šunto per BLE** (`ble_client`).
+- Renogy PRO LiFePO4 BLE — tyrimo etapas (`research/`), žr. cyrils/renogy-bt protokolą.
+
+### 9. Saulės kroviklis (Renogy DCC50S — Bluetooth)
+
+**Rodo:** Saulės įtampa/srovė/galia, akum įtampa, krovimo statusas, režimas, kraunama iš saulės, kraunama iš variklio
+
 **Reikalavimai:**
-- âš ï¸ **Reikia tyrimo** (Etapas 1, krok. 6):
+- ⚠️ **Reikia tyrimo** (`research/`):
   1. Patikrink ar KC868 ESP32-S3 palaiko BLE
-  2. IeÅ¡kok: https://github.com/cyrils/renogy-bt protokolo
-  3. IeÅ¡kok: https://github.com/search?q=renogy+esphome+ble
-  4. Alternatyva: atskiras ESP32 su BT â†’ MQTT â†’ KC868 per WiFi
-  5. Jei nerealus Å¡iame etape â€” dokumentuoti ir atidÄ—ti
-  
-### 9. SaulÄ—s kroviklis (Renogy DCC50S â€” Bluetooth)
+  2. cyrils/renogy-bt protokolas — ar tinka LiFePO4 ir DCC50S?
+  3. Ieškok: https://github.com/search?q=renogy+esphome+ble
+  4. Alternatyva: atskiras ESP32 su BT → MQTT → KC868 per WiFi
+  5. Jei nerealus šiame etape — dokumentuoti ir atidėti
 
-**Rodo:** SaulÄ—s Ä¯tampa/srovÄ—/galia, akum Ä¯tampa, krovimo statusas, reÅ¾imas, kraunama is saules,kraunama is variklio  
+### 10. Šviesos ir jungikliai
 
-**Reikalavimai:**
-- âš ï¸ **Reikia tyrimo** (Etapas 1, krok. 6):
-  1. Patikrink ar KC868 ESP32-S3 palaiko BLE
-  2. IeÅ¡kok: https://github.com/cyrils/renogy-bt protokolo
-  3. IeÅ¡kok: https://github.com/search?q=renogy+esphome+ble
-  4. Alternatyva: atskiras ESP32 su BT â†’ MQTT â†’ KC868 per WiFi
-  5. Jei nerealus Å¡iame etape â€” dokumentuoti ir atidÄ—ti
-
-### 10. Å viesos ir jungikliai
-
-**Valdymas:** 8 Å¡viesos (sviesa_1â€¦sviesa_8), 8 fiziniai jungikliai (jungiklis_1â€¦jungiklis_8)
+**Valdymas:** 8 šviesos (sviesa_1…sviesa_8), 8 fiziniai jungikliai (jungiklis_1…jungiklis_8)
 
 **Reikalavimai:**
 - Kiekvienas jungiklis_N sinchronizuotas su sviesa_N
-- OUT iÅ¡Ä—jimai: MOSFET sink â€” `inverted: true` jei reikia
-- DIN Ä¯Ä—jimai: aktyvuojami GND (KCOM = teigiama pusÄ—)
+- OUT išėjimai: MOSFET sink — `inverted: true` jei reikia
+- DIN įėjimai: aktyvuojami GND (KCOM = teigiama pusė)
 
 ---
 
 ## Dashboard grupavimas (web_server UI)
 
-ESPHome `web_server` rodo sensorius abÄ—cÄ—lÄ—s tvarka pagal `name:`.
-Grupavimui naudoti **prefiksus su rodyklÄ—mis** â€” tada grupÄ—s rikiuojasi tvarkingai.
+ESPHome `web_server` rodo sensorius abėcėlės tvarka pagal `name:`.
+Grupavimui naudoti **prefiksus su skyrikliu `Grupė |`** — tada grupės rikiuojasi tvarkingai.
 
-**Privaloma naudoti Å¡iuos prefiksus:**
+> ⚠️ **SVARBU app susiejimui:** ESPHome `name` → SSE `object_id` slug paverčiamas pakeičiant
+> kiekvieną neleistiną simbolį `_` (ne pašalina). Todėl `" | "` → `___` (trigubas pabraukimas),
+> pvz. `"GPS | Greitis"` → `gps___greitis`. App (`android/www/index.html`) SSE grandinė remiasi
+> šiais slug'ais. **Pervadinus jutiklį YAML'e — reikšmė app tyliai dingsta.** Žr. naujausią
+> `docs/audits/` SSE mapping auditą.
 
-| Prefiksas | GrupÄ— |
+**Privaloma naudoti šiuos prefiksus:**
+
+| Prefiksas | Grupė |
 |-----------|-------|
-| `GPS \|` | Palydovai, koordinatÄ—s, aukÅ¡tis, greitis, kryptis |
-| `Pokrypis \|` | Å oninis, iÅ¡ilginis, domkratÅ³ patarimas, zero mygtukas |
-| `Energija \|` | Akumuliatorius ir saulÄ—s kroviklis |
+| `GPS \|` | Palydovai, koordinatės, aukštis, greitis, kryptis |
+| `Pokrypis \|` | Šoninis, išilginis, domkratų patarimas, zero mygtukas |
+| `Energija \|` | Akumuliatorius ir saulės kroviklis |
 | `Aplinka \|` | BME688 + BMP180 + AM2301 duomenys |
 | `Resursai \|` | Vanduo + dujos su kalibravimo mygtukais |
 | `GSM \|` | Operatorius, signalas, statusas |
-| `Å viesos \|` | sviesa_1â€¦8 ir jungiklis_1â€¦8 |
-
-**PavyzdÅ¾iai:**
-```yaml
-name: "GPS | Greitis"
-name: "GPS | Palydovai GPS"
-name: "Pokrypis | Å oninis K/D"
-name: "Pokrypis | DomkratÅ³ patarimas"
-name: "Energija | Akum Ä¯tampa"
-name: "Aplinka | TemperatÅ«ra"
-name: "Resursai | Vanduo lygis"
-name: "Resursai | Dujos kg"
-name: "GSM | Operatorius"
-name: "Å viesos | Sviesa 1"
-```
-
----
-
-## Claude Code uÅ¾duoÄiÅ³ sÄ…raÅ¡as
-> Vykdyk nuosekliai. KiekvienÄ… Å¾ingsnÄ¯ baigk prieÅ¡ pradedant kitÄ….
-> **PaieÅ¡kos taisyklÄ—**: PrieÅ¡ kiekvienÄ… sprendimÄ… ieÅ¡kok bent 3 Å¡altiniuose:
-> 1. ESPHome oficiali dokumentacija
-> 2. ESPHome GitHub issues/discussions
-> 3. Bent vienas bendruomenÄ—s Å¡altinis (forumas, Reddit, kitas GitHub projektas)
-> Palygink rastus sprendimus â€” pasirink patikimiausiÄ… ir naujausiÄ….
-
-### ETAPAS 1 â€” AnalizÄ— (nekeisk failÅ³)
-
-```
-Perskaityk "kempervanas veikiantis su gps ir sms.yaml" pilnai.
-Sudaryk GPIO Å¾emÄ—lapÄ¯ â€” visi naudojami pinai. Patikrink konfliktus.
-Kiekvieno komponento patikrinimas â€” kiekvienam Ä¯renginiui iÅ¡ CLAUDE.md:
-a) Ar komponentas apskritai apraÅ¡ytas YAML? Jei ne â€” Å¾ymÄ—k "TRÅªKSTA"
-b) Ar ESPHome komponento pavadinimas teisingas? (pvz. bmp085 vs bmp180,
-bme680 vs bme68x) â€” tikrink oficialioje dokumentacijoje
-c) Ar I2C adresas sutampa su hardware? Ar nÄ—ra adresÅ³ konfliktÅ³?
-d) Ar GPIO pinai teisingi ir nesikartoja su kitais komponentais?
-e) Ar visi privalomi parametrai nurodyti? (update_interval, address, pinai)
-f) Ar konfigÅ«racija kompiliuosis be klaidÅ³? â€” ieÅ¡koti panaÅ¡iÅ³ klaidÅ³
-GitHub issues jei abejoji
-g) Ar funkcionalumas atitinka CLAUDE.md reikalavimus? (kalibravimas,
-NVS, filtrai, tikslumas) â€” jei ne, Å¾ymÄ—k "NEPILNA"
-TikrintinÅ³ komponentÅ³ sÄ…raÅ¡as (pagal prioritetÄ…):
-
-BMP180 (bmp085) â€” I2C 0x77, slÄ—gis, temperatÅ«ra, prognozÄ—
-VL53L0X â€” I2C 0x29, vandens bakas, XSHUT nereikalingas
-HX711 â€” GPIO47/48, svoris, kalibracija
-ADXL345 â€” I2C 0x53, pokrypis, boot write 0x2D/0x08
-BME688 (bme680/bme68x) â€” I2C 0x76, oro kokybÄ—
-A7670E GPS â€” UART GPIO40/41, CGNSSINFO, palydovai
-A7670E GSM â€” AT+COPS, AT+CSQ, AT+CREG, SMS atsakymas
-Renogy PRO LiFePO4 â€” BLE, tyrimas
-Renogy DCC50S â€” BLE, tyrimas
-PCF8574 â€” tik 0x22/0x24/0x25, 0x21 turi bÅ«ti PAÅ ALINTAS
-AM2301 â€” GPIO39, 1-Wire
-SSD1306 OLED â€” I2C 0x3C
-8 Å¡viesos OUT1-8 â€” MOSFET sink
-8 jungikliai DIN1-8 â€” GND aktyvacija
-
-
-Patikrink RS485 â€” neturi bÅ«ti direction_pin.
-Renogy BT tyrimas (bent 4 Å¡altiniai):
-a. Ar KC868 ESP32-S3 palaiko BLE?
-b. cyrils/renogy-bt protokolas â€” ar tinka LiFePO4 ir DCC50S?
-c. IeÅ¡koti renogy esphome ble GitHub
-d. PasiÅ«lyti sprendimÄ… arba dokumentuoti atidÄ—jimÄ…
-Visus radinius iÅ¡saugok kaip ANALIZE.md su trimis sekcijomis:
-
-âœ… VEIKIA â€” komponentas teisingai apraÅ¡ytas
-âš ï¸ NEPILNA â€” apraÅ¡ytas bet trÅ«ksta funkcionalumo
-âŒ TRÅªKSTA / KLAIDA â€” nÄ—ra arba neteisinga konfigÅ«racija
-```
-
-### ETAPAS 2 â€” Kompiliacija
-
-```
-1. esphome config "kempervanas veikiantis su gps ir sms.yaml"
-2. Kiekvienai klaidai: prieÅ¾astis â†’ paieÅ¡ka â†’ pataisa â†’ validacija iÅ¡ naujo.
-3. Kartok kol 0 klaidÅ³.
-4. esphome compile â€” tas pats ciklas.
-```
-
-### ETAPAS 3 â€” SensoriÅ³ funkcionalumas (prioritetÅ³ tvarka)
-
-- [ ] BMP180 â€” prognozÄ—, kalibravimas
-- [ ] VL53L0X â€” bakas, kalibravimas
-- [ ] HX711 â€” svoris, kalibravimas
-- [ ] ADXL345 â€” pokrypis, domkratai
-- [ ] A7670E GPS â€” palydovai, koordinatÄ—s, fix
-- [ ] A7670E GSM â€” operatorius, signalas, SMS
-- [ ] Junctek â€” Modbus RS485
-- [ ] Renogy â€” BT arba atidÄ—jimas
-- [ ] BME688 â€” temperatÅ«ra, drÄ—gmÄ—, VOC
-- [ ] 8 Å¡viesos + 8 jungikliai
-- [ ] Dashboard grupavimas â€” visi prefiksai
-
-### ETAPAS 4 â€” Galutinis patikrinimas
-
-```
-1. esphome config â€” 0 klaidÅ³, 0 Ä¯spÄ—jimÅ³
-2. esphome compile â€” sÄ—kminga
-3. Atnaujinti ANALIZE.md su pakeitimÅ³ sÄ…raÅ¡u ir kito etapo planu
-```
-
----
-
-## Ateities etapai (dar nevykdyti)
-
-### Etapas B â€” HTML Dashboard
-NaujÅ³ grupiÅ³ ir sensoriÅ³ atspindÄ—jimas UI. Neredaguojama dabar.
-
-### Etapas C â€” MQ dujÅ³ jutiklis (ADC A1)
-DujÅ³ nuotÄ—kio aliarmas â€” integruoti kai BMP180/BME688 bus stabilÅ«s.
-
-### Etapas D â€” Google Sheets logavimas
-Per A7670E 4G, kas 15 min. Kritiniai Ä¯vykiai iÅ¡ karto.
-30 dienÅ³ langas (Apps Script auto-delete).
-
-### Etapas E â€” OBD2/CAN (atskiras Waveshare ESP32-S3-RS485-CAN)
-M-CAN 500kbps: RPM, temp, greitis, turbo.
+| `Miegamasis \|` | SCD4x CO2, temperatūra, drėgmė |
+| `Sistema \|` | RAM, ESP temp, uptime, patarimai, buferis |
+| `Šviesos \|` | sviesa_1…8 ir jungiklis_1…8 |
 
 ---
 
 ## Kodo konvencijos
 
-- Komentarai YAML â€” lietuviÅ³ kalba
-- `name:` â€” lietuviÅ³ kalba su grupÄ—s prefiksu (pvz. `"GPS | Greitis"`)
-- SMS â€” tik ASCII
-- `restore_value: true` â€” visi kalibraciniai parametrai
-- `accuracy_decimals: 0` â€” greitis, pokrypis, kryptis, aukÅ¡tis, %
-- `accuracy_decimals: 1` â€” temperatÅ«ra, slÄ—gis, svoris, litrai
-- `accuracy_decimals: 2` â€” Ä¯tampa, srovÄ—
-- `accuracy_decimals: 6` â€” GPS koordinatÄ—s
-- Visi `number:` ir `button:` turi unikalÅ³ `id:`
-- Nekeisti `web_server:` â€” SSE veikia
+- Komentarai YAML — lietuvių kalba
+- `name:` — lietuvių kalba su grupės prefiksu (pvz. `"GPS | Greitis"`)
+- SMS — tik ASCII
+- `restore_value: true` — visi kalibraciniai parametrai
+- `accuracy_decimals: 0` — greitis, pokrypis, kryptis, aukštis, %
+- `accuracy_decimals: 1` — temperatūra, slėgis, svoris, litrai
+- `accuracy_decimals: 2` — įtampa, srovė
+- `accuracy_decimals: 6` — GPS koordinatės
+- Visi `number:` ir `button:` turi unikalų `id:`
+- Nekeisti `web_server:` — SSE veikia
 
 ---
 
-## Å½inynas
-Å½inynas ir paieÅ¡kos Å¡altiniai
+## Ateities etapai (dar nevykdyti)
 
-Claude Code: prieÅ¡ siÅ«lant bet kokÄ¯ sprendimÄ… â€” patikrink visus aktualius Å¡altinius.
-Nesiremk tik vienu Å¡altiniu. Palygink sprendimus ir pasirink geriausiÄ….
+### Etapas C — MQ dujų jutiklis (ADC A1)
+Dujų nuotėkio aliarmas — integruoti kai BMP180/BME688 bus stabilūs.
 
-ESPHome oficiali dokumentacija
+### Etapas D — Google Sheets logavimas
+Per A7670E 4G, kas 15 min. Kritiniai įvykiai iš karto. 30 dienų langas (Apps Script auto-delete).
 
-Visi komponentai: https://esphome.io/components/
-BMP085/180: https://esphome.io/components/sensor/bmp085.html
-BME680/688: https://esphome.io/components/sensor/bme680.html
-VL53L0X: https://esphome.io/components/sensor/vl53l0x.html
-HX711: https://esphome.io/components/sensor/hx711.html
-ADXL345: https://esphome.io/components/sensor/adxl345.html
-Modbus controller: https://esphome.io/components/modbus_controller.html
-BLE Client: https://esphome.io/components/ble_client.html
-UART: https://esphome.io/components/uart.html
-Custom komponento raÅ¡ymas: https://esphome.io/custom/custom_component.html
-Lambda / C++ ESPHome: https://esphome.io/guides/automations.html
+### Etapas E — OBD2/CAN (atskiras Waveshare ESP32-S3-RS485-CAN)
+M-CAN 500kbps: RPM, temp, greitis, turbo.
 
-ESPHome GitHub â€” klaidÅ³ ir sprendimÅ³ paieÅ¡ka
+---
 
-Issues: https://github.com/esphome/esphome/issues
-Discussions: https://github.com/esphome/esphome/discussions
-PavyzdÅ¾iÅ³ katalogas: https://github.com/esphome/esphome/tree/dev/tests
+## Žinynas ir paieškos šaltiniai
 
-ESPHome bendruomenÄ—
+Claude Code: prieš siūlant bet kokį sprendimą — patikrink visus aktualius šaltinius.
+Nesiremk tik vienu šaltiniu. Palygink sprendimus ir pasirink geriausią.
 
-Forumas: https://community.home-assistant.io/c/esphome/
-Discord: https://discord.gg/KhAMKrd (paieÅ¡ka pagal komponentÄ…)
-Reddit: https://reddit.com/r/Esphome
+**ESPHome:**
+- Komponentai: https://esphome.io/components/
+- BMP085/180: https://esphome.io/components/sensor/bmp085.html
+- BME680/688: https://esphome.io/components/sensor/bme680.html
+- VL53L0X: https://esphome.io/components/sensor/vl53l0x.html
+- HX711: https://esphome.io/components/sensor/hx711.html
+- ADXL345: https://esphome.io/components/sensor/adxl345.html
+- BLE Client: https://esphome.io/components/ble_client.html
+- Issues: https://github.com/esphome/esphome/issues · Discussions: https://github.com/esphome/esphome/discussions
 
-Renogy BT protokolas
+**Renogy BT:**
+- cyrils/renogy-bt: https://github.com/cyrils/renogy-bt (PROTOCOL.md)
+- ESPHome paieška: https://github.com/search?q=renogy+esphome+ble
 
-cyrils/renogy-bt (Python): https://github.com/cyrils/renogy-bt
-Protokolo dokumentacija: https://github.com/cyrils/renogy-bt/blob/main/PROTOCOL.md
-ESPHome Renogy paieÅ¡ka: https://github.com/search?q=renogy+esphome
-ESPHome Renogy BLE: https://github.com/search?q=renogy+ble+esphome
-Home Assistant Renogy integracija: https://github.com/search?q=renogy+home+assistant+bluetooth
-Renogy BT-2 dongle protokolas: https://community.home-assistant.io/t/renogy-solar-ble
-
-Hardware dokumentacija
-
-KC868-A16v3 schema ir pinout: https://kincony.com/kc868-a16-v3.html
-KC868 forum/support: https://www.kincony.com/forum/
-A7670E / SIM7670 AT komandos: ieÅ¡koti "SIM7670 AT Command Manual PDF"
-ADXL345 datasheet: https://www.analog.com/media/en/technical-documentation/data-sheets/ADXL345.pdf
-VL53L0X ESPHome GitHub issues: https://github.com/esphome/esphome/issues?q=vl53l0x
-BME688 BSEC biblioteka: https://github.com/boschsensortec/BSEC-Arduino-library
-
-Papildomi sprendimÅ³ Å¡altiniai
-
-Stack Overflow ESPHome: https://stackoverflow.com/questions/tagged/esphome
-Instructables ESP32 projektai: https://www.instructables.com/search/?q=esp32+esphome
-Random Nerd Tutorials: https://randomnerdtutorials.com/?s=esphome
-digiblur ESPHome YouTube/blog: https://digiblur.com
-ESPHome-Devices.com pavyzdÅ¾iai: https://www.esphome-devices.com
+**Hardware:**
+- KC868-A16v3: https://kincony.com/kc868-a16-v3.html
+- A7670E / SIM7670 AT komandos: ieškoti "SIM7670 AT Command Manual PDF"
+- ADXL345 datasheet: https://www.analog.com/media/en/technical-documentation/data-sheets/ADXL345.pdf

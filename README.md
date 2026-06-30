@@ -1,4 +1,4 @@
-# Kempervanas Project - Gold Master v17
+# Kempervanas Project - Gold Master v18
 Unified ecosystem for camper monitoring.
 
 ## Struktūra:
