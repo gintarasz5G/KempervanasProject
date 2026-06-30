@@ -2731,19 +2731,26 @@
     // Pati sintezė (be garso valdymo) — grąžina Promise, išsisprendžia pabaigus kalbėti.
     function speakNow(text, langCode, pct) {
         debugLog('[SPEECH] speakNow: ' + text);
+        debugLog('[SPEECH] KempTts=' + !!(window.KempTts && window.KempTts.speak) + ' capTTS=' + hasNativeTTS());
+
         return new Promise(resolve => {
+            let resolved = false;
+            const safeResolve = () => { if (!resolved) { resolved = true; resolve(); } };
+            // Bendras saugiklis: bet koks kelias PRIVALO išspręsti per 8s
+            const globalTimeout = setTimeout(safeResolve, 8000);
+
             // 1. Native KempTts bridge (Android) — tikslus pabaigos signalas per UtteranceProgressListener
             if (window.KempTts && window.KempTts.speak) {
                 debugLog('[BRIDGE] KempTts.speak calling...');
-                const fallback = setTimeout(() => { window.onTtsDone = null; resolve(); },
-                    Math.max(2000, text.length * 100));
+                const fallback = setTimeout(safeResolve, Math.max(2000, text.length * 100));
                 window.onTtsDone = function() {
                     clearTimeout(fallback);
+                    clearTimeout(globalTimeout);
                     window.onTtsDone = null;
-                    resolve();
+                    safeResolve();
                 };
                 try { window.KempTts.speak(text); } catch(e) {
-                    clearTimeout(fallback); window.onTtsDone = null; resolve();
+                    clearTimeout(fallback); window.onTtsDone = null; safeResolve();
                 }
                 return;
             }
@@ -2752,29 +2759,39 @@
                 try {
                     window.Capacitor.Plugins.TextToSpeech.speak({
                         text: text, lang: langCode, rate: 1.0, pitch: 1.0, volume: 1.0,
-                        category: 'playback'   // iOS; Android plugin prašo audio focus -> ducking
-                    }).then(() => resolve()).catch(e => { console.error('Native TTS klaida:', e); resolve(); });
-                } catch (e) { console.error('Native TTS exception:', e); resolve(); }
+                        category: 'playback'
+                    }).then(() => { clearTimeout(globalTimeout); safeResolve(); })
+                      .catch(e => { console.error('Native TTS klaida:', e); safeResolve(); });
+                } catch (e) { console.error('Native TTS exception:', e); safeResolve(); }
                 return;
             }
             // WEB fallback (naršyklėje)
             debugLog('[SPEECH] Web Speech fallback calling...');
-            if (!('speechSynthesis' in window)) { resolve(); return; }
-            if (!speechUnlocked) { console.warn('Balso sintezė neatrakinta.'); resolve(); return; }
+            if (!('speechSynthesis' in window)) { safeResolve(); return; }
+            if (!speechUnlocked) { console.warn('Balso sintezė neatrakinta.'); safeResolve(); return; }
+
             const doSpeak = () => {
-                if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-                const u = new SpeechSynthesisUtterance(text);
-                u.lang = langCode; u.rate = 0.95; u.pitch = 1.0;
-                u.volume = Math.max(0, Math.min(1, pct / 100));   // naršyklėje % riboja garsumą
-                const voices = window.speechSynthesis.getVoices();
-                const v = voices.find(x => x.lang && x.lang.toLowerCase().startsWith(ttsLang));
-                if (v) u.voice = v;
-                u.onend = () => resolve();
-                u.onerror = (e) => { console.error('TTS klaida:', e.error); resolve(); };
-                window.speechSynthesis.speak(u);
+                try {
+                    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(text);
+                    u.lang = langCode; u.rate = 0.95; u.pitch = 1.0;
+                    u.volume = Math.max(0, Math.min(1, pct / 100));
+                    const voices = window.speechSynthesis.getVoices();
+                    const v = voices.find(x => x.lang && x.lang.toLowerCase().startsWith(ttsLang));
+                    if (v) u.voice = v;
+                    u.onend = () => { clearTimeout(globalTimeout); safeResolve(); };
+                    u.onerror = (e) => { console.error('TTS klaida:', e.error); safeResolve(); };
+                    window.speechSynthesis.speak(u);
+                } catch(e) { safeResolve(); }
             };
+
             if (!window.speechSynthesis.getVoices().length) {
-                window.speechSynthesis.addEventListener('voiceschanged', doSpeak, { once: true });
+                // WEB fallback NEGALI kabėti: iškviečiam doSpeak ne vėliau kaip po 1000ms
+                const voicesTimeout = setTimeout(doSpeak, 1000);
+                window.speechSynthesis.addEventListener('voiceschanged', () => {
+                    clearTimeout(voicesTimeout);
+                    doSpeak();
+                }, { once: true });
             } else doSpeak();
         });
     }

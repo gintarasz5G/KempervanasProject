@@ -1,5 +1,5 @@
 {
-  "version": 23,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v23.apk",
-  "notes": "🚀 v23 - Robust UI & Diagnostics Fix\n\n✅ FIXED: Intermittent UI crashes (null pointer protection).\n✅ FIXED: Added missing 'What's new' display in update dialog.\n✅ FIXED: Optimized SSE watchdog for better reconnection.\n✅ NEW: Full Debug mode remains active for voice troubleshooting."
+  "version": 24,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v24.apk",
+  "notes": "🚀 v24 - Speech Stability & Queue Fix\n\n✅ FIXED: Resolved speech queue deadlock (8s safety timeout).\n✅ FIXED: Robust Web Speech fallback for Android WebView.\n✅ NEW: Added Bridge visibility diagnostics in Debug mode.\n✅ NEW: Verified asset synchronization parity."
 }
