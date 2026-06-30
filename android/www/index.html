@@ -2303,17 +2303,17 @@
                 else if (rawId.includes('junc_ah_remaining') || rawId.includes('ah_likutis')) sensorCache['junc_ah_remaining'] = value;
                 else if (rawId.includes('junc_temp') || rawId.includes('akum_temp')) sensorCache['junc_temp'] = value;
                 else if (rawId.includes('junc_time_remaining') || rawId.includes('veikimo_laikas')) sensorCache['junc_time_remaining'] = value;
-                else if (rawId.includes('miegamasis___temperatura') || rawId.includes('bedroom_temp')) sensorCache['bedroom_temp'] = value;
+                else if (rawId.includes('miegamasis_temperatura') || rawId.includes('miegamasis___temperatura') || rawId.includes('bedroom_temp')) sensorCache['bedroom_temp'] = value;
                 // #6 FIX: Griežtesnis BME temperatūros filtras (neleidžiame ESP32 lusto temperatūrai 42°C pakliūti čia)
                 else if ((rawId.includes('bme_temp') || rawId.includes('temperat')) && !rawId.includes('miegamasis') && !rawId.includes('esp_') && !rawId.includes('sistema_')) { if (value > 45.0) return; sensorCache['bme_temp'] = value; }
                 else if (rawId.includes('pressure_altitude') || rawId.includes('aukstis__slegis') || (rawId.includes('aplinka') && rawId.includes('aukstis')) || (rawId.includes('aplinka') && rawId.includes('auks_tis'))) sensorCache['pressure_altitude'] = value;
                 else if (rawId.includes('bme_pressure') || (rawId.includes('sle_gis') && !rawId.includes('auks')) || (rawId.includes('slegis') && !rawId.includes('aukstis'))) sensorCache['bme_pressure'] = value;
                 else if (rawId.includes('vib_level') || rawId.includes('vibracija__ema') || rawId.includes('vibracija_ema')) sensorCache['vib_level'] = value;
-                else if (rawId.includes('miegamasis___dregme') || rawId.includes('bedroom_humidity')) sensorCache['bedroom_humidity'] = value;
+                else if (rawId.includes('miegamasis_dregme') || rawId.includes('miegamasis___dregme') || rawId.includes('bedroom_humidity')) sensorCache['bedroom_humidity'] = value;
                 else if ((rawId.includes('bme_humidity') || rawId.includes('dre_gme') || rawId.includes('dregme')) && !rawId.includes('miegamasis')) sensorCache['bme_humidity'] = value;
                 else if (rawId.includes('weather_forecast') || rawId.includes('prognoz')) sensorCache['weather_forecast'] = value;
                 else if (rawId.includes('pressure_trend_hpa') || rawId.includes('slegio_tendencija') || rawId.includes('sle_gio_tendencija') || rawId.includes('slegis_tendencija')) sensorCache['pressure_trend_hpa'] = value;
-                else if (rawId.includes('system_advice') || rawId.includes('sistema__patarimai') || rawId.includes('sistema___patarimai')) sensorCache['system_advice'] = value;
+                else if (rawId.includes('system_advice') || rawId.includes('sistema_patarimai') || rawId.includes('patarimai') || rawId.includes('sistema__patarimai') || rawId.includes('sistema___patarimai')) sensorCache['system_advice'] = value;
                 else if (rawId.includes('alert_movement') || rawId.includes('judejimo_aliarmas') || rawId.includes('judejim') || (rawId.includes('sauga') && rawId.includes('aliarm'))) sensorCache['alert_movement_sent'] = value;
                 else if (rawId.includes('water_distance') || rawId.includes('vandens_atstumas')) sensorCache['water_distance'] = value;
                 else if (rawId.includes('water_offset') || rawId.includes('vandens_atstumo_offset')) sensorCache['water_offset'] = value;
@@ -2327,7 +2327,7 @@
                 else if (rawId.includes('gps_alt') || rawId.includes('gps_aukstis')) sensorCache['gps_alt_sensor'] = value;
                 else if (rawId.includes('gps_heading') || rawId.includes('gps_kryptis')) sensorCache['gps_heading_sensor'] = value;
                 else if (rawId.includes('gps_sats_total') || rawId.includes('visi_palydovai')) sensorCache['gps_sats_total_sensor'] = value;
-                else if (rawId.includes('gsm_signal') || rawId.includes('signalas_')) sensorCache['gsm_signal_pct'] = value;
+                else if ((rawId.includes('gsm_signal') || rawId.includes('signalas_')) && !rawId.includes('dbm')) sensorCache['gsm_signal_pct'] = value;
                 else if (rawId.includes('gsm_operator_sensor') || rawId.includes('operatorius')) sensorCache['gsm_operator_sensor'] = value;
                 else if (rawId.includes('gsm_network_sensor') || rawId.includes('gsm___tinklas') || rawId.includes('gsm_tinklas')) sensorCache['gsm_network_sensor'] = value;
                 else if (rawId.includes('gsm_roaming_sensor') || rawId.includes('roaming_statusas')) sensorCache['gsm_roaming_sensor'] = value;
@@ -2342,8 +2342,8 @@
                 else if (rawId.includes('gas_empty_weight')) sensorCache['gas_empty_weight'] = value;
                 else if (rawId.includes('gas_full_weight')) sensorCache['gas_full_weight'] = value;
                 else if (rawId.includes('bedroom_co2_trend') || rawId.includes('co2_tendencija') || rawId.includes('miegamasis___co2_tendencija')) sensorCache['bedroom_co2_trend'] = value;
-                else if (rawId.includes('bedroom_air_quality') || rawId.includes('miegamasis___oro_kokybe')) sensorCache['bedroom_air_quality'] = value;
-                else if (rawId.includes('bedroom_co2') || rawId.includes('miegamasis___co2')) sensorCache['bedroom_co2'] = value;
+                else if (rawId.includes('bedroom_air_quality') || rawId.includes('miegamasis_oro_kokybe') || rawId.includes('miegamasis___oro_kokybe')) sensorCache['bedroom_air_quality'] = value;
+                else if (rawId.includes('bedroom_co2') || rawId.includes('miegamasis_co2') || rawId.includes('miegamasis___co2')) sensorCache['bedroom_co2'] = value;
                 /* bedroom_temp handled above */
                 /* bedroom_humidity handled above */
                 else if (rawId.includes('hx711_scale')) sensorCache['hx711_scale'] = value;
