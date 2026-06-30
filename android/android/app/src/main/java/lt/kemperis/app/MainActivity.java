@@ -63,7 +63,7 @@ public class MainActivity extends BridgeActivity {
 
     static final String VERSION_JSON_URL =
         "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
-    static final int CURRENT_VERSION = 21;
+    static final int CURRENT_VERSION = 22;
 
     private Network boundNetwork = null;
     private volatile boolean autoBindPaused = false;
@@ -75,6 +75,17 @@ public class MainActivity extends BridgeActivity {
     private UpdateBridge updateBridge = null;
     // TTS bridge — reikia onDestroy cleanup (tts.shutdown())
     private KempTtsBridge ttsBridge = null;
+
+    private void sendNativeLog(String msg) {
+        final String js = "window.onNativeLog && window.onNativeLog(" + JSONObject.quote(msg) + ")";
+        runOnUiThread(() -> {
+            try {
+                if (getBridge() != null && getBridge().getWebView() != null) {
+                    getBridge().getWebView().evaluateJavascript(js, null);
+                }
+            } catch (Exception ignored) {}
+        });
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     @Override
@@ -259,6 +270,7 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public void send(String number, String text) {
+            android.util.Log.d("KempSms", "send() request to: " + number);
             if (number == null || number.isEmpty() || text == null || text.isEmpty()) return;
             if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.SEND_SMS)
                     != PackageManager.PERMISSION_GRANTED) {
@@ -338,6 +350,7 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public void checkUpdate() {
+            android.util.Log.d("KempUpdate", "checkUpdate() request");
             new Thread(() -> {
                 autoBindPaused = true;
                 ConnectivityManager cm = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -552,16 +565,22 @@ public class MainActivity extends BridgeActivity {
 
         @Override
         public void onInit(int status) {
+            String statusStr = (status == TextToSpeech.SUCCESS) ? "SUCCESS" : "ERROR";
+            ((MainActivity)activity).sendNativeLog("TTS onInit status=" + statusStr);
             if (status == TextToSpeech.SUCCESS) {
                 ready = true;
                 tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                    @Override public void onStart(String uid) {}
+                    @Override public void onStart(String uid) {
+                        ((MainActivity)activity).sendNativeLog("TTS Start: " + uid);
+                    }
                     @Override public void onDone(String uid) {
+                        ((MainActivity)activity).sendNativeLog("TTS Done: " + uid);
                         activity.runOnUiThread(() ->
                             webView.evaluateJavascript(
                                 "window.onTtsDone && window.onTtsDone()", null));
                     }
                     @Override public void onError(String uid) {
+                        ((MainActivity)activity).sendNativeLog("TTS Error: " + uid);
                         activity.runOnUiThread(() ->
                             webView.evaluateJavascript(
                                 "window.onTtsDone && window.onTtsDone()", null));
@@ -576,18 +595,28 @@ public class MainActivity extends BridgeActivity {
             if (!ready) return;
             Locale locale = "lt".equals(lang) ? new Locale("lt", "LT") : Locale.ENGLISH;
             int res = tts.setLanguage(locale);
-            if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED)
+            ((MainActivity)activity).sendNativeLog("TTS setLanguage(" + lang + ") res=" + res);
+            if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
+                ((MainActivity)activity).sendNativeLog("TTS Lang not supported, fallback to EN");
                 tts.setLanguage(Locale.ENGLISH);
+            }
         }
 
         @JavascriptInterface
         public void speak(String text) {
-            if (!ready || text == null || text.isEmpty()) return;
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "k_" + System.currentTimeMillis());
+            ((MainActivity)activity).sendNativeLog("speak() ready=" + ready + " text=" + text);
+            if (!ready) {
+                ((MainActivity)activity).sendNativeLog("speak() ABORT ready=false");
+                return;
+            }
+            if (text == null || text.isEmpty()) return;
+            int res = tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "k_" + System.currentTimeMillis());
+            ((MainActivity)activity).sendNativeLog("tts.speak() returned=" + res);
         }
 
         @JavascriptInterface
         public void setLang(String lang) {
+            ((MainActivity)activity).sendNativeLog("setLang() -> " + lang);
             applyLang(lang);
             SharedPreferences prefs = ctx.getSharedPreferences("kemperis", Context.MODE_PRIVATE);
             prefs.edit().putString("tts_lang", lang).apply();
@@ -620,6 +649,7 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public void setVolumePct(int pct) {
+            android.util.Log.d("KempVol", "setVolumePct: " + pct + "%");
             AudioManager am = (AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
             int max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
             am.setStreamVolume(AudioManager.STREAM_MUSIC,
@@ -634,6 +664,7 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public String saveTextFile(String filename, String mimeType, String content) {
+            android.util.Log.d("KempFile", "saveTextFile() request: " + filename);
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     // Android 10+ — MediaStore.Downloads, leidimo nereikia
@@ -739,6 +770,7 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public void unbindNetwork() {
+            android.util.Log.d("KempWifi", "unbindNetwork() request");
             autoBindPaused = true;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 ConnectivityManager cm = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -748,6 +780,7 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public void rebindNetwork() {
+            android.util.Log.d("KempWifi", "rebindNetwork() request");
             autoBindPaused = false;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && boundNetwork != null) {
                 ConnectivityManager cm = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);

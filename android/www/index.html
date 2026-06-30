@@ -411,7 +411,17 @@
             <div class="card"><h3>📳 Vibracija / Judėjimas</h3><div class="vib-row"><div><div style="font-size:11px; color:#8b949e; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Dabartinis lygis (EMA)</div><div class="card-value" style="font-size:22px;"><span id="vib-current">---</span></div></div></div><div class="input-group" style="margin-top:14px;"><label>Judėjimo slenkstis (EMA vienetai):</label><input type="number" id="num_vib_threshold" min="5" max="200" step="1" onchange="setNumber('num_vib_threshold', this.value)"></div></div>
             <div class="card"><h3>📱 Apsauga / SMS</h3><div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><label class="switch" data-esp-switch><input type="checkbox" id="chk_security_armed" onchange="toggleSecurity(this)"><span class="slider round"></span></label><span id="security_armed_text" style="font-weight:bold; font-size:14px;">Nežinoma</span></div><div class="input-group"><label>Administratoriaus telefono nr.:</label><input type="text" id="txt_admin_number_input" placeholder="+37060000000" onchange="saveAdminNumber(this.value)"></div><div class="input-group" style="margin-top:10px;"><label>Kemperio SIM nr. (offline SMS):</label><input type="text" id="camper_phone_input" placeholder="+37060000000" onchange="saveCamperPhone(this.value)"></div><button class="btn btn-warning" style="margin-top:8px;" data-esp-btn onclick="sendButton('btn_wake_up')">📡 BUDINTI ESP32 (Wake-up)</button></div>
             <div class="card"><h3>🌐 Mobiliojo ryšio APN</h3><div class="input-group"><label>APN (pvz. internet, data.omnitel.net):</label><input type="text" id="txt_apn_input" placeholder="internet" onchange="setText('txt_apn', this.value)"></div><div class="card-subtext">Pakeitus APN reikia iš naujo paleisti GSM modemą.</div></div>
-            <div class="card"><h3>🚀 Programėlės atnaujinimas</h3><div id="update-status-text" class="card-subtext" style="margin-bottom:10px;">Versija: v15</div><button id="btn-check-update" class="btn btn-primary" onclick="doCheckUpdate()" style="width:auto;padding:8px 16px;">🔄 Tikrinti dabar</button></div>
+            <div class="card"><h3>🚀 Programėlės atnaujinimas</h3><div id="update-status-text" class="card-subtext" style="margin-bottom:10px;">Versija: ...</div><button id="btn-check-update" class="btn btn-primary" onclick="doCheckUpdate()" style="width:auto;padding:8px 16px;">🔄 Tikrinti dabar</button></div>
+            <div class="card"><h3>⚙️ Nustatymai</h3>
+                <div class="input-group" style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                    <label class="switch">
+                        <input type="checkbox" id="chk_debug_logging" onchange="localStorage.setItem('debug_logging', this.checked); sysLog('🐞 Debug loginimas: ' + (this.checked?'ĮJUNGTAS':'IŠJUNGTAS'), 'info');">
+                        <span class="slider round"></span>
+                    </label>
+                    <span style="font-weight:bold; font-size:14px;">🐞 Debug loginimas</span>
+                </div>
+                <div class="card-subtext" style="margin-bottom:12px;">Įjungus, terminale bus rodomas pilnas srautas (SSE, UI, Bridge). Skirta tik diagnostikai.</div>
+            </div>
         </div>
     </div>
 
@@ -519,6 +529,15 @@
         console.error(_txt, error);
         if (typeof sysLog === 'function') sysLog(_txt, 'error');
         return false;
+    };
+
+    // --- Debug Mode Helpers ---
+    function isDebugEnabled() { return localStorage.getItem('debug_logging') === 'true'; }
+    function debugLog(msg, type='info') {
+        if (isDebugEnabled()) sysLog('[DEBUG] ' + msg, type);
+    }
+    window.onNativeLog = function(msg) {
+        debugLog('[NATIVE] ' + msg, 'info');
     };
 
     function saveEspIp(ip) {
@@ -1115,6 +1134,7 @@
 
     // #1 FIX: Priverstinis vandens lygio atnaujinimas per REST API (apeinamas SSE)
     async function refreshWaterLevel() {
+        debugLog('[UI] refreshWaterLevel');
         if (_isOffline) { sysLog('❌ Offline — negalima atnaujinti vandens lygio', 'error'); return; }
         sysLog('💧 Atnaujinamas vandens lygis...', 'info');
         try {
@@ -1131,8 +1151,26 @@
     // Native tinklo atrišimas/pririšimas: kai app pririštas prie ESP WiFi (be interneto),
     // prieš kreipiantis į Google reikia laikinai atsirišti, po to vėl pririšti prie ESP.
     let _netOrchestrationLock = false; // #OTA RACE FIX: Blokuoja SSE kol vyksta interneto operacija
-    function netUnbindForInternet() { try { if (window.KemperisWifi && KemperisWifi.unbindNetwork) { _netOrchestrationLock = true; KemperisWifi.unbindNetwork(); return true; } } catch(e){} return false; }
-    function netRebindEsp() { try { if (window.KemperisWifi && KemperisWifi.rebindNetwork) { KemperisWifi.rebindNetwork(); _netOrchestrationLock = false; } } catch(e){} }
+    function netUnbindForInternet() {
+        try {
+            if (window.KemperisWifi && KemperisWifi.unbindNetwork) {
+                debugLog('[BRIDGE] KemperisWifi.unbindNetwork calling...');
+                _netOrchestrationLock = true;
+                KemperisWifi.unbindNetwork();
+                return true;
+            }
+        } catch(e){}
+        return false;
+    }
+    function netRebindEsp() {
+        try {
+            if (window.KemperisWifi && KemperisWifi.rebindNetwork) {
+                debugLog('[BRIDGE] KemperisWifi.rebindNetwork calling...');
+                KemperisWifi.rebindNetwork();
+                _netOrchestrationLock = false;
+            }
+        } catch(e){}
+    }
 
     async function checkInternetAndEnableUpload() {
         sysLog('Tikrinamas interneto ryšys...', 'info');
@@ -1219,6 +1257,7 @@
     function getCache(id, def=0) { let v = sensorCache[id]; return (v !== undefined && v !== null && !isNaN(v)) ? parseFloat(v) : def; }
 
     async function sendButton(entityName) {
+        debugLog('[UI] sendButton: ' + entityName);
         if (_isOffline) { sysLog('❌ Offline — ESP32 nepasiekiamas, komanda atmesta: ' + entityName, 'error'); alert('Nepavyko — programėlė neprisijungusi prie ESP32. Patikrinkite WiFi ryšį su "Kemperis-Valdymas".'); return; }
         sysLog(`Siunčiama komanda: ${entityName}`, 'info');
         try { await fetch(`${ESPHOME_URL}/button/${entityName}/press`, {method:'POST'}); sysLog('✅ Mygtukas nuspaustas.', 'success'); }
@@ -2086,6 +2125,18 @@
 
     function init() {
         loadLocalLogFromStorage();
+        // Nustatyti tikrąją versiją paleidžiant
+        try {
+            if (window.KemperisUpdate && KemperisUpdate.getCurrentVersion) {
+                const v = KemperisUpdate.getCurrentVersion();
+                const el = document.getElementById('update-status-text');
+                if (el) el.textContent = 'Versija: v' + v;
+            }
+        } catch(e) {}
+        // Atstatyti debug checkbox būseną
+        const dchk = document.getElementById('chk_debug_logging');
+        if (dchk) dchk.checked = isDebugEnabled();
+
         const _DEFAULT_SCRIPT_ID = 'AKfycbwavlvHOeFhw0rsnoUQEtBj98mKy4iowtL8U-1fyAetknCbtL4hpKCOfc8swcpW7E4cEQ';
         const _DEFAULT_CAMPER_PHONE = '+37065758821';
         const _DEFAULT_ADMIN_PHONE  = '+37064730025';
@@ -2188,6 +2239,7 @@
             let rawId = (data.name_id || data.id).toLowerCase(); // domain matching
             let keyId = (data.id || data.name_id).toLowerCase(); // key extraction: id first (has clean object_id format)
             let value = (data.value !== undefined ? data.value : data.state);
+            debugLog('[SSE] ' + rawId + '=' + value);
             console.log('[SSE]', rawId, '=', value);
             if (value === 'null' || value === 'undefined') value = null;
             _lastSseMsg = Date.now();
@@ -2274,7 +2326,10 @@
                 else if (rawId.includes('sys_free_ram') || rawId.includes('sistema___laisva_ram') || rawId.includes('laisva_ram')) sensorCache['sys_free_ram'] = value;
                 else if (rawId.includes('sys_esp_temp') || rawId.includes('sistema___esp_temperat') || rawId.includes('esp_temperat') || rawId.includes('esp_temp') || rawId.includes('esp_t')) sensorCache['sys_esp_temp'] = value;
                 else if (rawId.includes('sys_uptime') || rawId.includes('sistema___uptime') || rawId.includes('_uptime')) sensorCache['sys_uptime'] = value;
-                else { console.warn('[SSE UNMATCHED]', rawId, '=', value); }
+                else {
+                    console.warn('[SSE UNMATCHED]', rawId, '=', value);
+                    debugLog('[SSE UNMATCHED] ' + rawId + '=' + value, 'warn');
+                }
             }
 
             updateUI();
@@ -2323,6 +2378,7 @@
     let lastApkUrl = "";
 
     function doCheckUpdate() {
+        debugLog('[UI] doCheckUpdate');
         var btn = document.getElementById('btn-check-update');
         var st = document.getElementById('update-status-text');
         if (!window.KemperisUpdate) { alert('Nėra ryšio su Android'); return; }
@@ -2505,9 +2561,13 @@
     let _isSpeaking = false;
 
     async function _processSpeechQueue() {
-        if (_isSpeaking || _speechQueue.length === 0) return;
+        if (_isSpeaking || _speechQueue.length === 0) {
+            if (_isSpeaking) debugLog('[SPEECH] Queue busy, waiting...');
+            return;
+        }
         _isSpeaking = true;
         const item = _speechQueue.shift();
+        debugLog('[SPEECH] Processing item: ' + item.text);
 
         const langCode = TTS_LANG_CODE[ttsLang] || 'en-US';
         const pct = getTtsVolPct();
@@ -2528,6 +2588,7 @@
     }
 
     async function speakText(text, withChime) {
+        debugLog('[SPEECH] speakText: ' + text + ' (chime=' + withChime + ')');
         if (!text) return;
 
         // Vagystė turi prioritetą - nutraukiam viską ir rėkiam
@@ -2545,6 +2606,7 @@
         ttsLang = (l === 'lt') ? 'lt' : 'en';
         localStorage.setItem('tts_lang', ttsLang);
         if (window.KempTts && window.KempTts.setLang) {
+            debugLog('[BRIDGE] KempTts.setLang calling: ' + ttsLang);
             try { window.KempTts.setLang(ttsLang); } catch(e) {}
         }
         if (typeof renderTheftTexts === 'function') renderTheftTexts(); // perpiešti vagystės tekstus nauja kalba
@@ -2593,8 +2655,23 @@
     }
     // Native media garso valdymas per AudioManager (reikalingas MainActivity snippetas — žr. README).
     // window.KemperisVol pateikia Android pusė; naršyklėje jo nėra (saugiai praleidžiama).
-    function nativeVolGet() { try { return (window.KemperisVol && KemperisVol.getVolumePct) ? KemperisVol.getVolumePct() : null; } catch (e) { return null; } }
-    function nativeVolSet(p) { try { if (window.KemperisVol && KemperisVol.setVolumePct) KemperisVol.setVolumePct(Math.round(p)); } catch (e) {} }
+    function nativeVolGet() {
+        try {
+            if (window.KemperisVol && KemperisVol.getVolumePct) {
+                debugLog('[BRIDGE] KemperisVol.getVolumePct calling...');
+                return KemperisVol.getVolumePct();
+            }
+        } catch (e) { return null; }
+        return null;
+    }
+    function nativeVolSet(p) {
+        try {
+            if (window.KemperisVol && KemperisVol.setVolumePct) {
+                debugLog('[BRIDGE] KemperisVol.setVolumePct calling: ' + p + '%');
+                KemperisVol.setVolumePct(Math.round(p));
+            }
+        } catch (e) {}
+    }
 
     // --- Dėmesio „pyptelėjimas" (chime) per Web Audio API ---
     let _audioCtx = null;
@@ -2628,9 +2705,11 @@
 
     // Pati sintezė (be garso valdymo) — grąžina Promise, išsisprendžia pabaigus kalbėti.
     function speakNow(text, langCode, pct) {
+        debugLog('[SPEECH] speakNow: ' + text);
         return new Promise(resolve => {
             // 1. Native KempTts bridge (Android) — tikslus pabaigos signalas per UtteranceProgressListener
             if (window.KempTts && window.KempTts.speak) {
+                debugLog('[BRIDGE] KempTts.speak calling...');
                 const fallback = setTimeout(() => { window.onTtsDone = null; resolve(); },
                     Math.max(2000, text.length * 100));
                 window.onTtsDone = function() {
@@ -2644,6 +2723,7 @@
                 return;
             }
             if (hasNativeTTS()) {
+                debugLog('[BRIDGE] Capacitor TextToSpeech calling...');
                 try {
                     window.Capacitor.Plugins.TextToSpeech.speak({
                         text: text, lang: langCode, rate: 1.0, pitch: 1.0, volume: 1.0,
@@ -2653,6 +2733,7 @@
                 return;
             }
             // WEB fallback (naršyklėje)
+            debugLog('[SPEECH] Web Speech fallback calling...');
             if (!('speechSynthesis' in window)) { resolve(); return; }
             if (!speechUnlocked) { console.warn('Balso sintezė neatrakinta.'); resolve(); return; }
             const doSpeak = () => {
