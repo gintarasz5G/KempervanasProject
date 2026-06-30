@@ -1,5 +1,5 @@
 {
-  "version": 28,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v28.apk",
-  "notes": "🚀 v28 - Final SSE Fixes & Branded Icon\n\n✅ NEW: Branded app icon featuring the van outline on a dark background.\n✅ FIXED: Final sensor key recognition (Bedroom & Advice sensors).\n✅ FIXED: GSM signal collision (dBm vs %). \n✅ IMPROVED: Stabilized SSE connection handling."
+  "version": 29,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v29.apk",
+  "notes": "🚀 v29 - Branded App Icon Final\n\n✅ FIXED: Forced replacement of legacy app icon with custom van outline.\n✅ NEW: Unified background color (#12151b) for launcher.\n✅ NEW: All versioning synchronized to v29."
 }
