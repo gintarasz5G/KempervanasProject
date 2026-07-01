@@ -63,7 +63,7 @@ public class MainActivity extends BridgeActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 123;
     static final String VERSION_JSON_URL = "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
-    static final int CURRENT_VERSION = 31;
+    static final int CURRENT_VERSION = 32;
 
     private Network boundNetwork = null;
     private volatile boolean autoBindPaused = false;
@@ -501,6 +501,7 @@ public class MainActivity extends BridgeActivity {
         private boolean ready = false;
         private String pendingLang = null;
         private android.media.AudioFocusRequest audioFocusReq = null;
+        private String effectiveLang = "en";
 
         public KempTtsBridge(Activity a, WebView wv) {
             this.activity = a; this.webView = wv;
@@ -543,6 +544,9 @@ public class MainActivity extends BridgeActivity {
             else pendingLang = lang;
         }
 
+        @JavascriptInterface
+        public String getEffectiveLang() { return effectiveLang; }
+
         private boolean isUsable(Locale loc) {
             int r = tts.isLanguageAvailable(loc);
             return r == TextToSpeech.LANG_AVAILABLE
@@ -553,12 +557,14 @@ public class MainActivity extends BridgeActivity {
         private void applyLang(String l) {
             if (!ready) return;
             Locale target;
-            if ("lt".equals(l)) {
+            if ("lt".equals(l) && isUsable(new Locale("lt","LT"))) {
                 target = new Locale("lt", "LT");
+                effectiveLang = "lt";
             } else {
                 if (isUsable(Locale.US))       target = Locale.US;
                 else if (isUsable(Locale.UK))  target = Locale.UK;
                 else                           target = Locale.getDefault();
+                effectiveLang = "en";
             }
             int r = tts.setLanguage(target);
             if (r == TextToSpeech.LANG_MISSING_DATA) {
@@ -679,6 +685,11 @@ public class MainActivity extends BridgeActivity {
                     File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
                     if (!dir.exists()) dir.mkdirs();
                     File file = new File(dir, name);
+                    if (file.exists() && file.isDirectory()) {
+                        File[] kids = file.listFiles();
+                        if (kids != null) for (File k : kids) k.delete();
+                        file.delete();
+                    }
                     try (FileOutputStream fos = new FileOutputStream(file)) {
                         fos.write(content.getBytes(StandardCharsets.UTF_8));
                     }

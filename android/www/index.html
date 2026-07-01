@@ -452,6 +452,11 @@
             <div class="card"><h3>📳 Vibracija / Judėjimas</h3><div class="vib-row"><div><div style="font-size:11px; color:#8b949e; text-transform:uppercase; font-weight:600; margin-bottom:4px;">Dabartinis lygis (EMA)</div><div class="card-value" style="font-size:22px;"><span id="vib-current">---</span></div></div></div><div class="input-group" style="margin-top:14px;"><label>Judėjimo slenkstis (EMA vienetai):</label><input type="number" id="num_vib_threshold" min="5" max="200" step="1" onchange="setNumber('num_vib_threshold', this.value)"></div></div>
             <div class="card"><h3>📱 Apsauga / SMS</h3><div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;"><label class="switch" data-esp-switch><input type="checkbox" id="chk_security_armed" onchange="toggleSecurity(this)"><span class="slider round"></span></label><span id="security_armed_text" style="font-weight:bold; font-size:14px;">Nežinoma</span></div><div class="input-group"><label>Administratoriaus telefono nr.:</label><input type="text" id="txt_admin_number_input" placeholder="+37060000000" onchange="saveAdminNumber(this.value)"></div><div class="input-group" style="margin-top:10px;"><label>Kemperio SIM nr. (offline SMS):</label><input type="text" id="camper_phone_input" placeholder="+37060000000" onchange="saveCamperPhone(this.value)"></div><button class="btn btn-warning" style="margin-top:8px;" data-esp-btn onclick="sendButton('btn_wake_up')">📡 BUDINTI ESP32 (Wake-up)</button></div>
             <div class="card"><h3>🌐 Mobiliojo ryšio APN</h3><div class="input-group"><label>APN (pvz. internet, data.omnitel.net):</label><input type="text" id="txt_apn_input" placeholder="internet" onchange="setText('txt_apn', this.value)"></div><div class="card-subtext">Pakeitus APN reikia iš naujo paleisti GSM modemą.</div></div>
+            <div class="card"><h3>🔍 Ekrano mastelis</h3>
+              <div class="input-group"><label>UI mastelis: <span id="ui-scale-label">100</span>%</label>
+                <input type="range" id="ui-scale-range" min="60" max="100" step="5" value="100"
+                       oninput="setUiScale(this.value)"></div>
+            </div>
             <div class="card"><h3>🚀 Programėlės atnaujinimas</h3><div id="update-status-text" class="card-subtext" style="margin-bottom:10px;">Versija: ...</div><button id="btn-check-update" class="btn btn-primary" onclick="doCheckUpdate()" style="width:auto;padding:8px 16px;">🔄 Tikrinti dabar</button></div>
             <div class="card"><h3>⚙️ Nustatymai</h3>
                 <div class="input-group" style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
@@ -2273,6 +2278,14 @@
         sysLog('🚀 Autostart ' + (enabled ? 'ENABLED' : 'DISABLED'), 'success');
     }
 
+    function setUiScale(pct) {
+        pct = Math.max(60, Math.min(100, parseInt(pct) || 100));
+        document.body.style.zoom = (pct / 100).toString();
+        const lbl = document.getElementById('ui-scale-label'); if (lbl) lbl.textContent = pct;
+        const rng = document.getElementById('ui-scale-range'); if (rng) rng.value = pct;
+        localStorage.setItem('ui_scale', pct);
+    }
+
     // v30: Async Native HTTP wrapper
     function nativeHttpGet(url) {
         return new Promise((resolve, reject) => {
@@ -2315,6 +2328,12 @@
     };
 
     function init() {
+        // v31.2: Startup language synchronization
+        if (window.KempTts && window.KempTts.setLang) { try { window.KempTts.setLang(ttsLang); } catch(e){} }
+
+        // v32.1: UI Scale application
+        setUiScale(localStorage.getItem('ui_scale') || 100);
+
         // v30 settings
         networkMode = localStorage.getItem('network_mode') || 'auto';
         const nmEl = document.getElementById('network_mode_select');
@@ -3090,6 +3109,7 @@
     }
     function renderTheftTexts() {
         const t = loadTheftTexts();
+        const currentEff = effTtsLang();
         ['first_idle','repeat_idle','first_drive','repeat_drive'].forEach(k => {
             const el = document.getElementById('theft_'+k);
             if (el) el.value = t[ttsLang][k];
@@ -3214,6 +3234,12 @@
 
     // ─── Vagystės balso aliarmas (atskira logika: 4 tekstai, stovi/važiuoja) ───
     let _theftHistoryLatched = false;
+
+    function effTtsLang() {
+        try { if (window.KempTts && window.KempTts.getEffectiveLang) return window.KempTts.getEffectiveLang(); } catch(e){}
+        return ttsLang;
+    }
+
     function checkTheftVoice(cache) {
         const isTheft = (cache['alert_movement_sent'] === 'true' || cache['alert_movement_sent'] === true);
         const theftAlarm = ALARM_CONFIG.find(a => a.id === 'theft_alarm');
@@ -3222,7 +3248,7 @@
         if (isTheft) {
             const now = Date.now();
             const isDriving = parseFloat(cache['gps_speed_sensor'] || 0) > 3; // > 3 km/h = važiuoja
-            const texts = loadTheftTexts()[ttsLang];
+            const texts = THEFT_TEXTS_DEFAULT[effTtsLang()] || THEFT_TEXTS_DEFAULT['en'];
 
             if (!alarmFlags['theft_alarm']) {
                 // Pirmas aktyvavimas — iškart pirmas tekstas
@@ -3269,6 +3295,7 @@
         if (!grid) return;
         grid.innerHTML = '';
         ALARM_CONFIG.forEach(alarm => {
+            if (alarm.id === 'theft_alarm') return; // nerodyti dubliuojančios kortelės
             const card = document.createElement('div');
             card.className = 'card';
             card.style.marginBottom = '16px';
