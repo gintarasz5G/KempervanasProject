@@ -1,5 +1,5 @@
 {
-  "version": 31,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v31.apk",
-  "notes": "🚀 v31.3 - TTS Audio Stream Fix\n\n✅ FIXED: Speech inaudibility on some devices (forced Media/Speech stream).\n✅ FIXED: Startup language synchronization (numbers read in LT/EN correctly).\n✅ NEW: Audio Ducking - lowers background music volume while the app speaks.\n✅ NEW: Robust English language fallback (supports en-GB if en-US missing)."
+  "version": 32,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v32.apk",
+  "notes": "🚀 v32 - Dual-Network Stability\n\n✅ NEW: Dual-network model (concurrent ESP WiFi + LTE Internet).\n✅ FIXED: Removed SSE flickers during Google Sheets sync/update checks.\n✅ FIXED: Instant startup (no 25s delay for update orchestration).\n✅ NEW: Refactored local log upload via native HTTP bridge for improved reliability."
 }

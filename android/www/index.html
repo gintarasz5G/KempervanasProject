@@ -1224,40 +1224,38 @@
 
     async function checkInternetAndEnableUpload() {
         sysLog('Tikrinamas interneto ryšys...', 'info');
-        const unbound = netUnbindForInternet();
-        if (unbound) await new Promise(r => setTimeout(r, 800)); // leisti tinklui persijungti
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
-            await fetch('https://www.google.com', { mode: 'no-cors', signal: controller.signal });
-            clearTimeout(timeoutId);
-            sysLog('✅ Internetas veikia.', 'success');
-            document.getElementById('btn-upload-google').disabled = false;
-        } catch(e) {
-            sysLog('❌ Nėra interneto.', 'error');
-            document.getElementById('btn-upload-google').disabled = true;
-        } finally {
-            netRebindEsp();
-        }
+        const btn = document.getElementById('btn-upload-google');
+        if (window.KemperisNet && KemperisNet.httpGet) {
+            const cb = 'cb_net_' + Math.random().toString(36).slice(2);
+            window[cb] = function(res) {
+                const ok = res && !res.includes('"error"');
+                sysLog(ok ? '✅ Internetas veikia.' : '❌ Nėra interneto.', ok ? 'success' : 'error');
+                if (btn) btn.disabled = !ok; try { delete window[cb]; } catch(e){}
+            };
+            KemperisNet.httpGet('https://www.gstatic.com/generate_204', cb);
+        } else if (btn) { btn.disabled = false; }
     }
+
     async function uploadLocalDataToGoogle() {
-        if(localLogRows.length === 0) { sysLog('Nėra duomenų.', 'warn'); return; }
+        if (localLogRows.length === 0) { sysLog('Nėra duomenų.', 'warn'); return; }
         const scriptId = document.getElementById('txt_app_script_id').value;
-        if(!scriptId || scriptId.includes('...')) { sysLog('Nenurodytas Script ID.', 'error'); return; }
+        if (!scriptId || scriptId.includes('...')) { sysLog('Nenurodytas Script ID.', 'error'); return; }
         const csvContent = localLogHeader + "\n" + localLogRows.join("\n");
         const url = `https://script.google.com/macros/s/${scriptId}/exec`;
         sysLog(`Siunčiama ${localLogRows.length} eilučių...`, 'info');
-        document.getElementById('btn-upload-google').disabled = true;
-        const unbound = netUnbindForInternet();
-        if (unbound) await new Promise(r => setTimeout(r, 800)); // leisti tinklui persijungti
-        try {
-            await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: csvContent });
-            sysLog('✅ Duomenys išsiųsti.', 'success');
-        } catch(e) {
-            sysLog(`❌ Klaida: ${e.message}`, 'error');
-        } finally {
-            netRebindEsp();   // vėl prie ESP, kad atsinaujintų gyvi duomenys
-            document.getElementById('btn-upload-google').disabled = false;
+        const btn = document.getElementById('btn-upload-google'); if (btn) btn.disabled = true;
+        if (window.KemperisNet && KemperisNet.httpPost) {
+            const cb = 'cb_up_' + Math.random().toString(36).slice(2);
+            window[cb] = function(res) {
+                sysLog('✅ Duomenys išsiųsti (per LTE).', 'success');
+                if (btn) btn.disabled = false; try { delete window[cb]; } catch(e){}
+            };
+            KemperisNet.httpPost(url, csvContent, cb);
+        } else {
+            // web fallback (naršyklė / testas)
+            try { await fetch(url, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'}, body: csvContent }); sysLog('✅ Duomenys išsiųsti.', 'success'); }
+            catch(e) { sysLog('❌ Klaida: ' + e.message, 'error'); }
+            finally { if (btn) btn.disabled = false; }
         }
     }
     async function toggleSecurity(cb) {
@@ -2403,22 +2401,12 @@
         // Startuojame offline iš karto — SSE prisijungus perjungsime į online
         setOfflineMode(true);
 
-        // Automatinis versijos patikrinimas — atbindame nuo ESP WiFi prieš GitHub requestą
-        setTimeout(async () => {
+        // Automatinis versijos patikrinimas
+        setTimeout(() => {
             if (window.KemperisUpdate) {
-                try {
-                    netUnbindForInternet();
-                    await new Promise(r => setTimeout(r, 1200));
-                    window.KemperisUpdate.checkUpdate();
-                    // #OTA FIX: Palaukti kol pasibaigs užklausa (didesnis timeout lėtam ryšiui)
-                    await new Promise(r => setTimeout(r, 25000));
-                    netRebindEsp();
-                    sysLog('🔄 Tinklo orkestracija: Grįžta prie ESP32 WiFi.', 'info');
-                } catch(e) {
-                    netRebindEsp();
-                }
+                try { window.KemperisUpdate.checkUpdate(); } catch(e){}
             }
-        }, 15000); // 15s delay — po pirmojo Sheets ciklo (unbind/rebind), be konfliktų
+        }, 15000);
 
         // SSE startuoja TIK po to, kai Sheets fetch pasibaigė (arba iš karto jei ID nenustatytas)
         // Taip garantuojama, kad netUnbindForInternet() (Sheets) ir netRebindEsp() (SSE) nesutampa.
