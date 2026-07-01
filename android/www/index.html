@@ -2366,6 +2366,7 @@
         // Pradinės reikšmės naujiems Nustatymų laukeliams
         const ipIn = document.getElementById('esp_ip_input'); if (ipIn) ipIn.value = ESP_IP;
         const langSel = document.getElementById('tts_lang_select'); if (langSel) langSel.value = ttsLang;
+        if (window.KempTts && window.KempTts.setLang) { try { window.KempTts.setLang(ttsLang); } catch(e){} }
         const volR = document.getElementById('tts_vol_range'); if (volR) volR.value = getTtsVolPct();
         const volL = document.getElementById('tts_vol_label'); if (volL) volL.textContent = getTtsVolPct();
         const chS = document.getElementById('chime_select'); if (chS) chS.value = getChimeType();

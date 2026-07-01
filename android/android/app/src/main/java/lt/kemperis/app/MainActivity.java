@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
@@ -498,12 +499,20 @@ public class MainActivity extends BridgeActivity {
         private WebView webView;
         private TextToSpeech tts;
         private boolean ready = false;
+        private String pendingLang = null;
+        private android.media.AudioFocusRequest audioFocusReq = null;
+
         public KempTtsBridge(Activity a, WebView wv) {
             this.activity = a; this.webView = wv;
             tts = new TextToSpeech(a, status -> {
                 if (status == TextToSpeech.SUCCESS) {
                     ready = true;
-                    applyLang("en");
+                    AudioAttributes aa = new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build();
+                    tts.setAudioAttributes(aa);
+                    applyLang(pendingLang != null ? pendingLang : "en");
                     reportLangs();
                     tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                         @Override public void onStart(String id) {}
@@ -515,26 +524,58 @@ public class MainActivity extends BridgeActivity {
                 }
             });
         }
+
         @JavascriptInterface
         public void speak(String text) {
-            if (ready) tts.speak(text, TextToSpeech.QUEUE_ADD, null, "uid");
-            else logToWeb("TTS neparuostas - nutylima");
+            if (ready) {
+                requestDuck();
+                android.os.Bundle params = new android.os.Bundle();
+                params.putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC);
+                tts.speak(text, TextToSpeech.QUEUE_ADD, params, "uid");
+            } else {
+                logToWeb("TTS neparuostas - nutylima");
+            }
         }
+
         @JavascriptInterface
-        public void setLang(String lang) { applyLang(lang); }
+        public void setLang(String lang) {
+            if (ready) applyLang(lang);
+            else pendingLang = lang;
+        }
+
+        private boolean isUsable(Locale loc) {
+            int r = tts.isLanguageAvailable(loc);
+            return r == TextToSpeech.LANG_AVAILABLE
+                    || r == TextToSpeech.LANG_COUNTRY_AVAILABLE
+                    || r == TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE;
+        }
+
         private void applyLang(String l) {
             if (!ready) return;
-            Locale loc = "lt".equals(l) ? new Locale("lt","LT") : Locale.US;
-            int r = tts.setLanguage(loc);
-            if (r == TextToSpeech.LANG_MISSING_DATA) { logToWeb(l + " truksta balso duomenu"); promptInstall(); }
-            else if (r == TextToSpeech.LANG_NOT_SUPPORTED) { logToWeb(l + " kalba nepalaikoma"); }
+            Locale target;
+            if ("lt".equals(l)) {
+                target = new Locale("lt", "LT");
+            } else {
+                if (isUsable(Locale.US))       target = Locale.US;
+                else if (isUsable(Locale.UK))  target = Locale.UK;
+                else                           target = Locale.getDefault();
+            }
+            int r = tts.setLanguage(target);
+            if (r == TextToSpeech.LANG_MISSING_DATA) {
+                if (!"lt".equals(l) && isUsable(Locale.UK)) { tts.setLanguage(Locale.UK); return; }
+                logToWeb(l + " truksta balso duomenu"); promptInstall();
+            } else if (r == TextToSpeech.LANG_NOT_SUPPORTED) {
+                logToWeb(l + " kalba nepalaikoma");
+            }
         }
+
         private void reportLangs() {
             int en = tts.isLanguageAvailable(Locale.US);
             int lt = tts.isLanguageAvailable(new Locale("lt","LT"));
             logToWeb("TTS EN: " + langStatus(en) + " | LT: " + langStatus(lt));
             if (en == TextToSpeech.LANG_MISSING_DATA || lt == TextToSpeech.LANG_MISSING_DATA) promptInstall();
         }
+
         private String langStatus(int r) {
             switch (r) {
                 case TextToSpeech.LANG_AVAILABLE:
@@ -545,6 +586,7 @@ public class MainActivity extends BridgeActivity {
                 default: return "nezinoma(" + r + ")";
             }
         }
+
         private void promptInstall() {
             try {
                 Intent i = new Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
@@ -552,13 +594,50 @@ public class MainActivity extends BridgeActivity {
                 activity.startActivity(i);
             } catch (Exception ignored) {}
         }
+
         private void fireDone() {
+            abandonDuck();
             activity.runOnUiThread(() -> webView.evaluateJavascript("window.onTtsDone && window.onTtsDone()", null));
         }
+
         private void logToWeb(String msg) {
             final String safe = msg.replace("'", " ");
             activity.runOnUiThread(() -> webView.evaluateJavascript("sysLog && sysLog('[TTS] " + safe + "','warn')", null));
         }
+
+        private void requestDuck() {
+            try {
+                AudioManager am = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
+                if (am == null) return;
+                AudioAttributes aa = new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    audioFocusReq = new android.media.AudioFocusRequest.Builder(
+                            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                            .setAudioAttributes(aa)
+                            .build();
+                    am.requestAudioFocus(audioFocusReq);
+                } else {
+                    am.requestAudioFocus(null, AudioManager.STREAM_MUSIC,
+                            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        private void abandonDuck() {
+            try {
+                AudioManager am = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
+                if (am == null) return;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    if (audioFocusReq != null) { am.abandonAudioFocusRequest(audioFocusReq); audioFocusReq = null; }
+                } else {
+                    am.abandonAudioFocus(null);
+                }
+            } catch (Exception ignored) {}
+        }
+
         public void shutdown() { if (tts != null) tts.shutdown(); }
     }
 

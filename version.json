@@ -1,5 +1,5 @@
 {
   "version": 31,
   "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v31.apk",
-  "notes": "🚀 v31.2 - Update Bridge Fix\n\n✅ FIXED: Native↔JS contract for update checking. Immediate feedback on version status.\n✅ NEW: Support for Android 10+ MediaStore (Downloads folder).\n✅ NEW: Robust TTS diagnostics and voice data installation prompts.\n✅ NEW: Pinch-to-zoom support (50-200%).\n✅ NEW: Automatic SMS interface hiding for WiFi-only devices."
+  "notes": "🚀 v31.3 - TTS Audio Stream Fix\n\n✅ FIXED: Speech inaudibility on some devices (forced Media/Speech stream).\n✅ FIXED: Startup language synchronization (numbers read in LT/EN correctly).\n✅ NEW: Audio Ducking - lowers background music volume while the app speaks.\n✅ NEW: Robust English language fallback (supports en-GB if en-US missing)."
 }
