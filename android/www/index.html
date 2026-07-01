@@ -2068,7 +2068,12 @@
             if (window.KemperisNet && KemperisNet.httpGet) {
                 // v30: Use native bridge for reliable routing via Internet (Non-blocking)
                 const res = await nativeHttpGet(url);
-                try { json = JSON.parse(res); } catch(e) { throw new Error("JSON Parse Error"); }
+                try {
+                    json = JSON.parse(res);
+                } catch(e) {
+                    sysLog('📵 JSON Parse Error. Response snippet: ' + (res.length > 40 ? res.substring(0, 40) : res), 'error');
+                    throw new Error("JSON Parse Error");
+                }
             } else {
                 // Fallback for web testing
                 const _ctrl = new AbortController();

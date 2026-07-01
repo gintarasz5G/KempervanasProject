@@ -108,6 +108,26 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    private HttpURLConnection getSafeConnection(URL url) throws java.io.IOException {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        Network internetNetwork = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Network[] networks = cm.getAllNetworks();
+            for (Network n : networks) {
+                NetworkCapabilities caps = cm.getNetworkCapabilities(n);
+                if (caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                    internetNetwork = n;
+                    break;
+                }
+            }
+        }
+        if (internetNetwork != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            return (HttpURLConnection) internetNetwork.openConnection(url);
+        } else {
+            return (HttpURLConnection) url.openConnection();
+        }
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -332,27 +352,7 @@ public class MainActivity extends BridgeActivity {
             HttpURLConnection conn = null;
             try {
                 URL url = new URL(urlStr);
-                ConnectivityManager cm = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
-                Network internetNetwork = null;
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    Network[] networks = cm.getAllNetworks();
-                    for (Network n : networks) {
-                        NetworkCapabilities caps = cm.getNetworkCapabilities(n);
-                        if (caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
-                            internetNetwork = n;
-                            break;
-                        }
-                    }
-                }
-
-                if (internetNetwork != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    conn = (HttpURLConnection) internetNetwork.openConnection(url);
-                    // sendNativeLog("🌐 Routing via internet-capable network: " + internetNetwork.toString());
-                } else {
-                    conn = (HttpURLConnection) url.openConnection();
-                }
-
+                conn = getSafeConnection(url);
                 conn.setRequestMethod(method);
                 conn.setConnectTimeout(10000);
                 conn.setReadTimeout(10000);
@@ -370,7 +370,11 @@ public class MainActivity extends BridgeActivity {
                     String line;
                     while ((line = br.readLine()) != null) sb.append(line);
                 }
-                return sb.toString();
+                String response = sb.toString();
+                if (code >= 200 && code < 300 && !response.trim().startsWith("{") && !response.trim().startsWith("[")) {
+                    return "{\"error\":\"Not JSON: " + (response.length() > 50 ? response.substring(0, 50) : response).replace("\"", "'") + "\"}";
+                }
+                return response;
             } catch (Exception e) {
                 return "{\"error\":\"" + e.getMessage() + "\"}";
             } finally {
@@ -421,7 +425,7 @@ public class MainActivity extends BridgeActivity {
             new Thread(() -> {
                 try {
                     URL url = new URL(VERSION_JSON_URL);
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    HttpURLConnection conn = getSafeConnection(url);
                     BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                     StringBuilder sb = new StringBuilder(); String line;
                     while((line=br.readLine())!=null) sb.append(line);
