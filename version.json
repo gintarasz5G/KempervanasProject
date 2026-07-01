@@ -1,5 +1,5 @@
 {
   "version": 31,
   "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v31.apk",
-  "notes": "🚀 v31 - MediaStore, TTS Diagnostics & Pinch-to-Zoom\n\n✅ NEW: Support for Android 10+ MediaStore (Downloads folder).\n✅ NEW: Robust TTS diagnostics and voice data installation prompts.\n✅ NEW: Pinch-to-zoom support (50-200%).\n✅ NEW: Automatic SMS interface hiding for WiFi-only devices.\n✅ NEW: Reliable APK download verification."
+  "notes": "🚀 v31.2 - Update Bridge Fix\n\n✅ FIXED: Native↔JS contract for update checking. Immediate feedback on version status.\n✅ NEW: Support for Android 10+ MediaStore (Downloads folder).\n✅ NEW: Robust TTS diagnostics and voice data installation prompts.\n✅ NEW: Pinch-to-zoom support (50-200%).\n✅ NEW: Automatic SMS interface hiding for WiFi-only devices."
 }

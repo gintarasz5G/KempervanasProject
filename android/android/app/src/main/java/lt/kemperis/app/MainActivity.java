@@ -426,12 +426,30 @@ public class MainActivity extends BridgeActivity {
                 try {
                     URL url = new URL(VERSION_JSON_URL);
                     HttpURLConnection conn = getSafeConnection(url);
+                    conn.setConnectTimeout(15000);
+                    conn.setReadTimeout(15000);
                     BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                     StringBuilder sb = new StringBuilder(); String line;
-                    while((line=br.readLine())!=null) sb.append(line);
-                    final String res = sb.toString();
-                    runOnUiThread(() -> getBridge().getWebView().evaluateJavascript("window.onUpdateResult && window.onUpdateResult(" + JSONObject.quote(res) + ")", null));
-                } catch(Exception e) { sendNativeLog("Update Check Error: " + e.getMessage()); }
+                    while ((line = br.readLine()) != null) sb.append(line);
+                    conn.disconnect();
+
+                    JSONObject jo = new JSONObject(sb.toString());
+                    int remoteVer   = jo.optInt("version", -1);
+                    String apkUrl   = jo.optString("apk_url", "");
+                    String notes    = jo.optString("notes", "");
+                    String type     = (remoteVer > CURRENT_VERSION) ? "update" : "latest";
+
+                    final String js = "window.onUpdateResult && window.onUpdateResult("
+                        + JSONObject.quote(type) + "," + remoteVer + ","
+                        + JSONObject.quote(apkUrl) + "," + JSONObject.quote(notes) + ")";
+                    runOnUiThread(() -> getBridge().getWebView().evaluateJavascript(js, null));
+
+                } catch (Exception e) {
+                    final String msg = (e.getMessage() == null) ? "nezinoma klaida" : e.getMessage();
+                    final String js = "window.onUpdateResult && window.onUpdateResult("
+                        + JSONObject.quote("error") + ",0," + JSONObject.quote(msg) + "," + JSONObject.quote("") + ")";
+                    runOnUiThread(() -> getBridge().getWebView().evaluateJavascript(js, null));
+                }
             }).start();
         }
         @JavascriptInterface
