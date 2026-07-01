@@ -1,5 +1,5 @@
 {
-  "version": 34,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v34.apk",
-  "notes": "🚀 v32.2 - Critical SSE Fix\n\n✅ FIXED: Live data from ESP32 now correctly processed (Regex & Branch order fix).\n✅ FIXED: Real-time updates for Air Quality, GPS details, System stats, and Leveling.\n✅ FIXED: Version identifier synchronization across all layers."
+  "version": 35,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v35.apk",
+  "notes": "🚀 v32.3 - Cloud Alarms & SSE Polish\n\n✅ NEW: Cloud Alarms - get voice alerts from Google data when offline (optional, fresh data only).\n✅ FIXED: Consolidated SSE event handling for better connection recovery.\n✅ FIXED: Full synchronization of APK naming, URL, and version identifiers (v35)."
 }

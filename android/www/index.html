@@ -468,6 +468,12 @@
                 </div>
                 <div class="card-subtext" style="margin-bottom:12px;">Įjungus, terminale bus rodomas pilnas srautas (SSE, UI, Bridge). Skirta tik diagnostikai.</div>
             </div>
+            <div class="card"><h3>☁️ Aliarmai iš debesų</h3>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <label class="switch"><input type="checkbox" id="chk_cloud_alarms" onchange="toggleCloudAlarms(this)"><span class="slider round"></span></label>
+                <span style="font-size:13px;">Įspėti iš Google duomenų, kai nėra tiesioginio ESP ryšio (tik švieži ≤20 min).</span>
+              </div>
+            </div>
         </div>
     </div>
 
@@ -2109,6 +2115,13 @@
                 updateFreshnessBar();
                 updateUI();
 
+                try {
+                    if (localStorage.getItem('cloud_alarms_enabled') === 'true') {
+                        const ageMin = _cloudDataAgeMin(json.timestamp || json.received);
+                        if (ageMin !== null && ageMin <= CLOUD_ALARM_MAX_AGE_MIN) checkCloudAlarms(sensorCache, ageMin);
+                    }
+                } catch(e){}
+
                 const ts = json.timestamp || json.received || '';
                 const el = document.getElementById('offline-sheets-time');
                 if (el) {
@@ -2219,6 +2232,44 @@
     };
 
     // v30 Advanced Networking functions
+    const CLOUD_ALARM_IDS = ['water_critical','water_low','soc_critical','soc_low','gas_low','condensation']; // BE theft_alarm
+    const CLOUD_ALARM_MAX_AGE_MIN = 20;
+
+    function _cloudDataAgeMin(ts) {
+        if (!ts) return null;
+        try {
+            const d = new Date(String(ts).replace(' ', 'T'));   // "YYYY-MM-DD HH:MM:SS" (lapų TZ = įrenginio TZ)
+            if (isNaN(d.getTime())) return null;
+            const age = (Date.now() - d.getTime()) / 60000;
+            return (age >= 0 && age < 1440) ? age : null;        // atmesti neigiamą/absurdišką
+        } catch(e) { return null; }
+    }
+
+    function checkCloudAlarms(cache, ageMin) {
+        const now = Date.now();
+        ALARM_CONFIG.forEach(alarm => {
+            if (!CLOUD_ALARM_IDS.includes(alarm.id)) return;      // tik whitelist, be vagystės
+            const thr = alarm.threshold;
+            const isSnoozed = alarmSnooze[alarm.id] && alarmSnooze[alarm.id] > now;
+            if (alarm.condition(cache, thr)) {
+                if (!alarmFlags[alarm.id]) {
+                    alarmFlags[alarm.id] = true;
+                    alarmLastTriggered[alarm.id] = now;
+                    _addAlarmHistory(alarm, cache);
+                    if (!isSnoozed) speakText(alarmMsg(alarm) + ' (debesys, pries ' + Math.round(ageMin) + ' min)', true);
+                } else if (alarm.repeatInterval && (now - (alarmLastTriggered[alarm.id]||0) >= alarm.repeatInterval)) {
+                    alarmLastTriggered[alarm.id] = now;
+                    if (!isSnoozed) speakText(alarmMsg(alarm) + ' (debesys)', true);
+                }
+            } else if (alarmFlags[alarm.id] && alarm.reset(cache, thr)) {
+                alarmFlags[alarm.id] = false;
+                if (alarmSnooze[alarm.id]) { delete alarmSnooze[alarm.id]; try { localStorage.setItem('_alarmSnooze', JSON.stringify(alarmSnooze)); } catch(e){} }
+            }
+        });
+        try { localStorage.setItem('_alarmFlags', JSON.stringify(alarmFlags)); } catch(e){}
+        try { localStorage.setItem('_alarmLastTriggered', JSON.stringify(alarmLastTriggered)); } catch(e){}
+    }
+
     function updateFreshnessBar() {
         const now = Date.now();
         const diffS = Math.floor((now - lastSyncTime) / 1000);
@@ -2278,6 +2329,8 @@
         sysLog('🚀 Autostart ' + (enabled ? 'ENABLED' : 'DISABLED'), 'success');
     }
 
+    function toggleCloudAlarms(el){ localStorage.setItem('cloud_alarms_enabled', el.checked ? 'true' : 'false'); }
+
     function setUiScale(pct) {
         pct = Math.max(60, Math.min(100, parseInt(pct) || 100));
         document.body.style.zoom = (pct / 100).toString();
@@ -2333,6 +2386,9 @@
 
         // v32.1: UI Scale application
         setUiScale(localStorage.getItem('ui_scale') || 100);
+
+        const cc = document.getElementById('chk_cloud_alarms');
+        if (cc) cc.checked = localStorage.getItem('cloud_alarms_enabled') === 'true';
 
         // v30 settings
         networkMode = localStorage.getItem('network_mode') || 'auto';
@@ -2587,8 +2643,6 @@
 
             updateUI();
         });
-        _sseSource.onopen = () => { _lastSseMsg = Date.now(); document.getElementById('status-dot').classList.remove('offline'); document.getElementById('status-text').textContent = 'Prisijungta'; sysLog('✅ Prisijungta prie ESP32!', 'success'); setOfflineMode(false); };
-        _sseSource.onerror = () => { document.getElementById('status-dot').classList.add('offline'); sysLog('❌ SSE ryšys nutrūko.', 'error'); if (!_isOffline && (Date.now() - _lastSseMsg) > 8000) setOfflineMode(true); };
         // ESPHome siunčia ping kas 10s — atnaujinti watchdog timestamps
         _sseSource.addEventListener('ping', function() { _lastSseMsg = Date.now(); if (_isOffline) setOfflineMode(false); });
         _sseSource.addEventListener('log', function(e) {
