@@ -2497,17 +2497,15 @@
             lastSyncSource = 'live';
             updateFreshnessBar();
 
-            if (rawId.match(/^number[\/\-]/)) {
+            if (rawId.match(/^number[\/\-_]/)) {
                 sensorCache[keyId.substring(7)] = value;
-            } else if (rawId.match(/^text[\/\-]/)) {
-                sensorCache[keyId.substring(5)] = value;
-                 } else if (rawId.match(/^switch[\/\-]/)) {
+            } else if (rawId.match(/^switch[\/\-_]/)) {
                 const _swKey = keyId.substring(7);
                 sensorCache[_swKey] = value;
                 if (data.name_id) _entityRestNames['sw:' + _swKey] = data.name_id.replace(/^switch\//i, '');
-            } else if (rawId.match(/^(text_sensor|sensor)[\/\-]/)) {
-                // 1. Greitas Map paieška sensoriai su aiškiu id: (deterministiniai)
-                const stripped = keyId.replace(/^(text_sensor|sensor)[\/\-]/, '');
+            } else if (rawId.match(/^(text_sensor|sensor)[\/\-_]/)) {
+                debugLog('[SSE BRANCH] ' + rawId, 'success');
+                const stripped = keyId.replace(/^(text_sensor|sensor)[\/\-_]/, '');
                 if (SENSOR_ID_MAP[stripped] !== undefined) {
                     sensorCache[SENSOR_ID_MAP[stripped]] = value;
                 // 2. NFKD atsarginė grandinė (lietuviški pavadinimai be id:)
@@ -2583,6 +2581,8 @@
                     console.warn('[SSE UNMATCHED]', rawId, '=', value);
                     debugLog('[SSE UNMATCHED] ' + rawId + '=' + value, 'warn');
                 }
+            } else if (rawId.match(/^text[\/\-_]/)) {
+                sensorCache[keyId.substring(5)] = value;
             }
 
             updateUI();

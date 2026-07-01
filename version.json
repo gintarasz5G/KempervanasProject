@@ -1,5 +1,5 @@
 {
-  "version": 33,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v33.apk",
-  "notes": "🚀 v32.1 - Maintenance & UI Refinements\n\n✅ FIXED: Corrected CURRENT_VERSION to 32 to match repo state.\n✅ FIXED: Removed duplicate Theft card from Alarms tab.\n✅ FIXED: Legacy saveTextFile bug (Android <=9) that failed when a directory existed.\n✅ NEW: TTS Fallback - automatically reads EN text if LT voice data is missing.\n✅ NEW: UI Scale control - adjust interface density (60-100%) in Settings."
+  "version": 34,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v34.apk",
+  "notes": "🚀 v32.2 - Critical SSE Fix\n\n✅ FIXED: Live data from ESP32 now correctly processed (Regex & Branch order fix).\n✅ FIXED: Real-time updates for Air Quality, GPS details, System stats, and Leveling.\n✅ FIXED: Version identifier synchronization across all layers."
 }
