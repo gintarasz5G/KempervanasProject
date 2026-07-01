@@ -417,9 +417,9 @@
                 <div class="input-group">
                     <label>Pasirinkite veikimo būdą:</label>
                     <select id="network_mode_select" onchange="setNetworkMode(this.value)" style="width:100%;padding:10px;border-radius:8px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;font-size:14px;">
-                        <option value="auto">🔄 Automatinis (ESP > Cloud)</option>
-                        <option value="esp_only">🔌 Tik ESP32 WiFi</option>
-                        <option value="cloud_only">☁️ Tik Cloud (Google Sheets)</option>
+                        <option value="auto">🔄 Automatinis</option>
+                        <option value="esp_only">🔌 Tik Kemperis</option>
+                        <option value="cloud_only">☁️ Tik Debesys</option>
                     </select>
                 </div>
                 <div class="card-subtext">„Cloud Only" režime programėlė tikrina Google Sheets kas 60s ir nebando jungtis prie ESP32.</div>
@@ -2219,9 +2219,12 @@
 
         let timeText = 'Initializing...';
         if (lastSyncTime > 0) {
-            if (diffS < 10) timeText = 'Just now';
-            else if (diffS < 60) timeText = diffS + 's ago';
-            else timeText = Math.floor(diffS / 60) + ' min ago';
+            const dt = new Date(lastSyncTime);
+            const abs = dt.toLocaleString('lt-LT');
+            let rel = 'ką tik';
+            if (diffS >= 60) rel = 'prieš ' + Math.floor(diffS / 60) + ' min';
+            else if (diffS >= 10) rel = 'prieš ' + diffS + 's';
+            timeText = `${abs} (${rel})`;
         }
         timeEl.textContent = timeText;
 
@@ -2561,7 +2564,7 @@
             updateUI();
         });
         _sseSource.onopen = () => { _lastSseMsg = Date.now(); document.getElementById('status-dot').classList.remove('offline'); document.getElementById('status-text').textContent = 'Prisijungta'; sysLog('✅ Prisijungta prie ESP32!', 'success'); setOfflineMode(false); };
-        _sseSource.onerror = () => { document.getElementById('status-dot').classList.add('offline'); sysLog('❌ SSE ryšys nutrūko.', 'error'); if (!_isOffline && (Date.now() - _lastSseMsg) > 5000) setOfflineMode(true); };
+        _sseSource.onerror = () => { document.getElementById('status-dot').classList.add('offline'); sysLog('❌ SSE ryšys nutrūko.', 'error'); if (!_isOffline && (Date.now() - _lastSseMsg) > 8000) setOfflineMode(true); };
         // ESPHome siunčia ping kas 10s — atnaujinti watchdog timestamps
         _sseSource.addEventListener('ping', function() { _lastSseMsg = Date.now(); if (_isOffline) setOfflineMode(false); });
         _sseSource.addEventListener('log', function(e) {

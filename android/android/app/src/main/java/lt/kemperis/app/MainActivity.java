@@ -133,7 +133,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         acquireWifiLock();
     }
@@ -432,7 +432,6 @@ public class MainActivity extends BridgeActivity {
                     @Override
                     public void onReceive(Context context, Intent intent) {
                         if (downloadId == intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)) {
-                            File file = new File(Environment.getExternalContext().getExternalFilesDir(null), "kemperis_update.apk");
                             // Simplification: In real app we query DM for actual path.
                             installApk(new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "kemperis_update.apk"));
                         }
