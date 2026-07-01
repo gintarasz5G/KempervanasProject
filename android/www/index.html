@@ -125,9 +125,23 @@
     .snooze-countdown{ font-size:13px; font-weight:600; color:#8b949e; font-family:'Courier New',monospace; }
     .snooze-bar button          { padding:3px 10px; border-radius:4px; border:1px solid rgba(248,81,73,0.4); background:rgba(248,81,73,0.15); color:#f85149; cursor:pointer; font-size:12px; }
     .snooze-bar.snoozed button  { border-color:rgba(139,148,158,0.3); background:rgba(139,148,158,0.1); color:#8b949e; }
+
+    /* v30 Freshness Bar */
+    #freshness-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: #0d1117; border-bottom: 1px solid var(--border-dark); font-size: 11px; color: #8b949e; }
+    .freshness-source { font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-right: 6px; }
+    .source-live { background: rgba(35, 134, 54, 0.2); color: #3fb950; }
+    .source-stale { background: rgba(210, 153, 34, 0.2); color: #d29922; }
+    .source-cloud { background: rgba(31, 111, 235, 0.2); color: #58a6ff; }
     </style>
 </head>
 <body>
+<div id="freshness-bar">
+    <div>
+        <span id="freshness-source-tag" class="freshness-source source-stale">Initializing</span>
+        <span id="freshness-time">---</span>
+    </div>
+    <div id="freshness-mode" style="font-style: italic;">Auto</div>
+</div>
 <div class="container">
     <div class="header">
         <h1>🚐 Kemperis</h1>
@@ -397,6 +411,30 @@
     <!-- ==================== NUSTATYMAI ==================== -->
     <div id="settings" class="tab-content">
         <div class="grid">
+            <!-- v30 Advanced Networking -->
+            <div class="card">
+                <h3>🌐 Tinklo režimas (v30)</h3>
+                <div class="input-group">
+                    <label>Pasirinkite veikimo būdą:</label>
+                    <select id="network_mode_select" onchange="setNetworkMode(this.value)" style="width:100%;padding:10px;border-radius:8px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;font-size:14px;">
+                        <option value="auto">🔄 Automatinis (ESP > Cloud)</option>
+                        <option value="esp_only">🔌 Tik ESP32 WiFi</option>
+                        <option value="cloud_only">☁️ Tik Cloud (Google Sheets)</option>
+                    </select>
+                </div>
+                <div class="card-subtext">„Cloud Only" režime programėlė tikrina Google Sheets kas 60s ir nebando jungtis prie ESP32.</div>
+            </div>
+
+            <!-- v30 Autostart -->
+            <div class="card">
+                <h3>🚀 Automatinis paleidimas</h3>
+                <div style="display:flex; align-items:center; gap: 10px; margin-bottom:16px;">
+                    <label class="switch"><input type="checkbox" id="chk_autostart" onchange="toggleAutostart(this.checked)"><span class="slider round"></span></label>
+                    <span style="font-weight:bold; font-size:14px;">Paleisti įjungus tel.</span>
+                </div>
+                <button class="btn btn-primary" onclick="window.KemperisNet && KemperisNet.openAutostartSettings()">⚙️ Gamintojo nustatymai</button>
+                <div class="card-subtext">Huawei/Xiaomi/Oppo telefonams būtina leisti „Auto-start" rankiniu būdu.</div>
+            </div>
             <div class="card"><h3>🌐 ESP32 IP adresas</h3><div class="input-group"><label>ESP IP (pvz. 192.168.4.1):</label><input type="text" id="esp_ip_input" placeholder="192.168.4.1"></div><button class="btn btn-primary" onclick="saveEspIp(document.getElementById('esp_ip_input').value)">💾 Išsaugoti ir perkrauti ryšį</button><div class="card-subtext" style="margin-top:8px;">Naudokite kai ESP prisijungia prie kemperio maršrutizatoriaus (kitas IP).</div></div>
             <div class="card"><h3>🔊 Balso pranešimų kalba</h3><div class="input-group"><label>TTS kalba:</label><select id="tts_lang_select" onchange="setTtsLang(this.value)" style="width:100%;padding:10px;border-radius:8px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;font-size:14px;"><option value="en">English (EN)</option><option value="lt">Lietuvių (LT)</option></select></div><button class="btn btn-success" onclick="speakText(I18N_TEST[ttsLang]); if(window.KempTts && window.KempTts.speak) setTimeout(()=>KempTts.speak('Test path'), 500);">🔊 Testuoti balsą</button><div class="card-subtext" style="margin-top:8px;">EN dažnai aiškiau ištaria nei LT variklis.</div></div>
             <div class="card"><h3>🔊 Garsumas ir pyptelėjimas</h3><div class="input-group"><label>Pranešimų garsas: <span id="tts_vol_label">80</span>%</label><input type="range" id="tts_vol_range" min="0" max="100" step="5" oninput="onVolRangeInput(this.value)" style="width:100%;"></div><div class="card-subtext" style="margin-bottom:10px;">Prieš pranešimą garsas pakeliamas iki šio lygio, po jo grąžinamas. (Reikia native snippeto — žr. README.)</div><div class="input-group"><label>Pyptelėjimas prieš pranešimą:</label><select id="chime_select" onchange="setChimeType(this.value)" style="width:100%;padding:10px;border-radius:8px;background:#0d1117;color:#c9d1d9;border:1px solid #30363d;font-size:14px;"><option value="none">Be pyptelėjimo</option><option value="single">Vienas pyptelėjimas</option><option value="double">Dvigubas (rekom.)</option><option value="siren">Kylanti sirena</option></select></div><button class="btn btn-success" onclick="playChime()">🔔 Testuoti pyptelėjimą</button><button class="btn btn-primary" style="margin-left:6px;" onclick="speakText(I18N_TEST[ttsLang], true)">🔊 Testuoti pilną</button></div>
@@ -523,6 +561,11 @@
     // ESP WiFi AP duomenys (turi atitikti YAML: wifi -> ap). Galima keisti per localStorage.
     let ESP_WIFI_SSID = localStorage.getItem('esp_ssid') || 'Kemperis-Valdymas';
     let ESP_WIFI_PASS = localStorage.getItem('esp_pass') || 'kemperis123';
+
+    // v30 Advanced Networking
+    let networkMode = 'auto'; // auto, esp_only, cloud_only
+    let lastSyncTime = 0;
+    let lastSyncSource = 'none'; // live, stale, cloud
 
     // --- Globalus klaidų gaudytojas ---
     window.onerror = function(msg, url, line, col, error) {
@@ -1969,7 +2012,10 @@
         if (_sd) { _sd.classList.remove('offline','offline-mode'); if (offline) _sd.classList.add('offline-mode'); }
         if (_st && offline) _st.textContent = '📵 Offline';
         const banner = document.getElementById('offline-banner');
-        if (banner) { if (offline) banner.classList.add('active'); else banner.classList.remove('active'); }
+        if (banner) {
+            if (offline && networkMode !== 'cloud_only') banner.classList.add('active');
+            else banner.classList.remove('active');
+        }
         OFFLINE_DIM_IDS.forEach(function(id) {
             const el = document.getElementById(id);
             if (el) { if (offline) el.classList.add('offline-dim'); else el.classList.remove('offline-dim'); }
@@ -2004,23 +2050,31 @@
     }
 
     async function _fetchSheetsNow() {
+        if (networkMode === 'esp_only') return; // v30: Skip Cloud in ESP Only mode
+
         const scriptId = localStorage.getItem('app_script_id') || '';
         if (scriptId.length < 10) {
             const el = document.getElementById('offline-sheets-time');
             if (el) el.textContent = '⚠️ Nustatymuose nėra Google Script ID';
             return;
         }
+
         const url = 'https://script.google.com/macros/s/' + scriptId + '/exec?action=latest';
         try {
-            await new Promise(r => setTimeout(r, 600)); // palaukti kol startSSE() atlieka rebindNetwork()
-            if (!_isOffline) return; // jau prisijungta per SSE — Sheets nebūtina, nebindame
-            if (typeof netUnbindForInternet === 'function') netUnbindForInternet(); // atbindame PO 600ms
-            await new Promise(r => setTimeout(r, 300)); // leidžiame Android apsirūpinti
-            const _ctrl = new AbortController();
-            const _tid = setTimeout(() => _ctrl.abort(), 12000);
-            let resp;
-            try { resp = await fetch(url, { signal: _ctrl.signal }); } finally { clearTimeout(_tid); }
-            const json = await resp.json();
+            let json = null;
+            if (window.KemperisNet && KemperisNet.httpGet) {
+                // v30: Use native bridge for reliable routing via Internet (Non-blocking)
+                const res = await nativeHttpGet(url);
+                try { json = JSON.parse(res); } catch(e) { throw new Error("JSON Parse Error"); }
+            } else {
+                // Fallback for web testing
+                const _ctrl = new AbortController();
+                const _tid = setTimeout(() => _ctrl.abort(), 12000);
+                let resp;
+                try { resp = await fetch(url, { signal: _ctrl.signal }); } finally { clearTimeout(_tid); }
+                json = await resp.json();
+            }
+
             if (json && !json.error) {
                 if (json.soc !== undefined)              sensorCache['junc_soc']          = json.soc;
                 if (json.voltage !== undefined)          sensorCache['junc_v']            = json.voltage;
@@ -2038,13 +2092,17 @@
                 if (json.bedroom_temp !== undefined)     sensorCache['bedroom_temp']      = json.bedroom_temp;
                 if (json.bedroom_humidity !== undefined) sensorCache['bedroom_humidity']  = json.bedroom_humidity;
                 if (json.lat && json.lon && json.lat !== 0) sensorCache['gps_coords_sensor'] = json.lat + ',' + json.lon;
+
+                lastSyncTime = Date.now();
+                lastSyncSource = 'cloud';
+                updateFreshnessBar();
                 updateUI();
+
                 const ts = json.timestamp || json.received || '';
                 const el = document.getElementById('offline-sheets-time');
                 if (el) {
                     let tsLabel;
                     if (ts) {
-                        // new Date() veikia su ISO ir su "Fri Jun 12 2026 ..." formatais
                         const d = new Date(ts);
                         if (!isNaN(d.getTime())) {
                             tsLabel = d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
@@ -2065,8 +2123,6 @@
             sysLog('📵 Sheets klaida: ' + e.message, 'warn');
             const el = document.getElementById('offline-sheets-time');
             if (el) el.textContent = '⚠️ Sheets nepasiekiamas';
-        } finally {
-            if (typeof netRebindEsp === 'function') netRebindEsp();
         }
     }
 
@@ -2151,7 +2207,117 @@
         // Kitais atvejais — tik logas, statusas nekeičiamas
     };
 
+    // v30 Advanced Networking functions
+    function updateFreshnessBar() {
+        const now = Date.now();
+        const diffS = Math.floor((now - lastSyncTime) / 1000);
+        const timeEl = document.getElementById('freshness-time');
+        const tagEl = document.getElementById('freshness-source-tag');
+        const modeEl = document.getElementById('freshness-mode');
+
+        if (!timeEl || !tagEl) return;
+
+        let timeText = 'Initializing...';
+        if (lastSyncTime > 0) {
+            if (diffS < 10) timeText = 'Just now';
+            else if (diffS < 60) timeText = diffS + 's ago';
+            else timeText = Math.floor(diffS / 60) + ' min ago';
+        }
+        timeEl.textContent = timeText;
+
+        tagEl.className = 'freshness-source';
+        if (lastSyncSource === 'live') {
+            tagEl.classList.add('source-live');
+            tagEl.textContent = 'Live ESP';
+        } else if (lastSyncSource === 'cloud') {
+            tagEl.classList.add('source-cloud');
+            tagEl.textContent = 'Cloud';
+        } else {
+            tagEl.classList.add('source-stale');
+            tagEl.textContent = 'Stale';
+        }
+
+        if (modeEl) {
+            const modes = { 'auto': 'Auto', 'esp_only': 'ESP Only', 'cloud_only': 'Cloud Only' };
+            modeEl.textContent = modes[networkMode] || 'Auto';
+        }
+    }
+
+    function setNetworkMode(mode) {
+        networkMode = mode;
+        localStorage.setItem('network_mode', mode);
+        if (window.KemperisNet) KemperisNet.setMode(mode);
+        sysLog('🌐 Network Mode changed to: ' + mode.toUpperCase(), 'success');
+
+        if (mode === 'cloud_only') {
+            if (_sseSource) _sseSource.close();
+            setOfflineMode(true);
+        } else {
+            startSSE();
+        }
+        updateFreshnessBar();
+    }
+
+    function toggleAutostart(enabled) {
+        localStorage.setItem('autostart_enabled', enabled);
+        if (window.KemperisNet) KemperisNet.setAutostart(enabled);
+        sysLog('🚀 Autostart ' + (enabled ? 'ENABLED' : 'DISABLED'), 'success');
+    }
+
+    // v30: Async Native HTTP wrapper
+    function nativeHttpGet(url) {
+        return new Promise((resolve, reject) => {
+            if (!window.KemperisNet || !window.KemperisNet.httpGet) {
+                reject(new Error("Native bridge unavailable"));
+                return;
+            }
+            const cbId = 'cb_' + Math.random().toString(36).substring(7);
+            window[cbId] = function(res) {
+                delete window[cbId];
+                resolve(res);
+            };
+            KemperisNet.httpGet(url, cbId);
+        });
+    }
+
+    function saveAppScriptId() {
+        const val = document.getElementById('txt_app_script_id').value.trim();
+        if (val) {
+            localStorage.setItem('app_script_id', val);
+            sysLog('✅ Google Script ID išsaugotas.', 'success');
+            // If in cloud_only or offline, retry sync immediately
+            if (_isOffline || networkMode === 'cloud_only') _fetchSheetsNow();
+        }
+    }
+
+    window.onEspNetworkUp = function() {
+        sysLog('🔌 Kemperis WiFi connected', 'success');
+        if (networkMode !== 'cloud_only') startSSE();
+    };
+
+    window.onEspNetworkDown = function() {
+        sysLog('🔌 Kemperis WiFi disconnected', 'warn');
+        if (networkMode === 'auto') setOfflineMode(true);
+    };
+
+    window.onTtsDone = function() {
+        debugLog('[NATIVE] TTS Finished');
+        // Speech queue logic handles this via window.onTtsDone = null checks if needed
+    };
+
     function init() {
+        // v30 settings
+        networkMode = localStorage.getItem('network_mode') || 'auto';
+        const nmEl = document.getElementById('network_mode_select');
+        if (nmEl) nmEl.value = networkMode;
+
+        const autostartEnabled = localStorage.getItem('autostart_enabled') === 'true';
+        const asEl = document.getElementById('chk_autostart');
+        if (asEl) asEl.checked = autostartEnabled;
+
+        setInterval(updateFreshnessBar, 5000);
+        updateFreshnessBar();
+
         loadLocalLogFromStorage();
         // Nustatyti tikrąją versiją paleidžiant
         try {
@@ -2253,6 +2419,7 @@
     const MAX_SSE_RETRIES = 3;
 
     function startSSE() {
+        if (networkMode === 'cloud_only') return; // v30: Skip ESP in Cloud Only mode
         if (_netOrchestrationLock) return; // saugiklis
         if (_sseSource) { try { _sseSource.close(); } catch(e) {} _sseSource = null; }
 
@@ -2299,6 +2466,9 @@
             console.log('[SSE]', rawId, '=', value);
             if (value === 'null' || value === 'undefined') value = null;
             _lastSseMsg = Date.now();
+            lastSyncTime = Date.now();
+            lastSyncSource = 'live';
+            updateFreshnessBar();
 
             if (rawId.match(/^number[\/\-]/)) {
                 sensorCache[keyId.substring(7)] = value;

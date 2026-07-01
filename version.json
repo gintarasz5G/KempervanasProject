@@ -1,5 +1,5 @@
 {
-  "version": 29,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v29.apk",
-  "notes": "🚀 v29 - Branded App Icon Final\n\n✅ FIXED: Forced replacement of legacy app icon with custom van outline.\n✅ NEW: Unified background color (#12151b) for launcher.\n✅ NEW: All versioning synchronized to v29."
+  "version": 30,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v30.apk",
+  "notes": "🚀 v30 - Advanced Networking & Autostart\n\n✅ NEW: Triple-network modes (Auto, ESP Only, Cloud Only).\n✅ NEW: Native HTTP routing for Google Sheets while bound to ESP32 WiFi.\n✅ NEW: Permanent SSE stability & proactive network reporting.\n✅ NEW: Data Freshness Bar with relative timestamps.\n✅ NEW: Reliable Autostart on boot (native implementation)."
 }
