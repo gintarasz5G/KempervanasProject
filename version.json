@@ -1,5 +1,5 @@
 {
-  "version": 30,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v30.apk",
-  "notes": "🚀 v30 - Advanced Networking & Autostart\n\n✅ NEW: Triple-network modes (Auto, ESP Only, Cloud Only).\n✅ NEW: Native HTTP routing for Google Sheets while bound to ESP32 WiFi.\n✅ NEW: Permanent SSE stability & proactive network reporting.\n✅ NEW: Data Freshness Bar with relative timestamps.\n✅ NEW: Reliable Autostart on boot (native implementation)."
+  "version": 31,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v31.apk",
+  "notes": "🚀 v31 - MediaStore, TTS Diagnostics & Pinch-to-Zoom\n\n✅ NEW: Support for Android 10+ MediaStore (Downloads folder).\n✅ NEW: Robust TTS diagnostics and voice data installation prompts.\n✅ NEW: Pinch-to-zoom support (50-200%).\n✅ NEW: Automatic SMS interface hiding for WiFi-only devices.\n✅ NEW: Reliable APK download verification."
 }

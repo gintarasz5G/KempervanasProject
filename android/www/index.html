@@ -2,14 +2,15 @@
 <html lang="lt">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, minimum-scale=0.5, user-scalable=yes">
     <title>Kemperis V4 - Pilna diagnostika</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
         :root { --bg-dark: #12151b; --bg-light: #f0f2f5; --card-dark: #1e232b; --card-light: #ffffff; --text-dark: #c9d1d9; --text-light: #1f2328; --accent: #4caf50; --accent-light: #66bb6a; --accent-cyan: #00adb5; --border-dark: #30363d; --border-light: #d0d7de; --danger: #e53935; --green: #238636; --red: #da3633; --grey: #30363d; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg-dark); color: var(--text-dark); -webkit-user-select: none; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg-dark); color: var(--text-dark); -webkit-user-select: none; touch-action: manipulation; }
+        input, textarea, select { font-size: 16px; }
         .container { max-width: 1400px; margin: 0 auto; padding: 16px; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
         .header h1 { font-size: 28px; font-weight: 700; color: #58a6ff; display: flex; align-items: center; gap: 8px; }
@@ -179,14 +180,16 @@
                 </div>
                 <button class="btn btn-success" style="margin:0 0 0 auto; width:auto; padding:8px 12px;" onclick="forceReconnect()">⚡ Gyvai</button>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-                <button class="btn btn-primary" style="margin:0;" onclick="sendOfflineSms('+status')">📡 Statusas</button>
-                <button class="btn btn-primary" style="margin:0;" onclick="sendOfflineSms('+lokacija')">📍 Lokacija</button>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-                <button class="btn btn-success" style="margin:0;" onclick="sendOfflineSms('+arm')">🔒 Arm</button>
-                <button class="btn btn-danger" style="margin:0;" onclick="sendOfflineSms('+disarm')">🔓 Disarm</button>
-                <button class="btn btn-warning" style="margin:0;" onclick="sendOfflineSms('+ikelk')">📤 Upload</button>
+            <div id="offline-sms-controls">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                    <button class="btn btn-primary" style="margin:0;" onclick="sendOfflineSms('+status')">📡 Statusas</button>
+                    <button class="btn btn-primary" style="margin:0;" onclick="sendOfflineSms('+lokacija')">📍 Lokacija</button>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                    <button class="btn btn-success" style="margin:0;" onclick="sendOfflineSms('+arm')">🔒 Arm</button>
+                    <button class="btn btn-danger" style="margin:0;" onclick="sendOfflineSms('+disarm')">🔓 Disarm</button>
+                    <button class="btn btn-warning" style="margin:0;" onclick="sendOfflineSms('+ikelk')">📤 Upload</button>
+                </div>
             </div>
             <div id="offline-sms-warn" style="display:none;font-size:12px;color:#d29922;margin-top:10px;">⚠️ Nėra SMS leidimo — perkraukite programėlę ir leiskite SMS</div>
         </div>
@@ -2322,6 +2325,14 @@
         updateFreshnessBar();
 
         loadLocalLogFromStorage();
+        // v31: SMS support check
+        const smsOk = !!(window.KemperisSms && window.KemperisSms.canSendSms && window.KemperisSms.canSendSms());
+        if (!smsOk) {
+            const c = document.getElementById('offline-sms-controls'); if (c) c.style.display = 'none';
+            const smsTab = document.getElementById('sms'); if (smsTab) smsTab.remove();
+            const opt = document.querySelector('#tab-select option[value="sms"]'); if (opt) opt.remove();
+            const i = SWIPE_TABS.indexOf('sms'); if (i !== -1) SWIPE_TABS.splice(i, 1);
+        }
         // Nustatyti tikrąją versiją paleidžiant
         try {
             if (window.KemperisUpdate && KemperisUpdate.getCurrentVersion) {

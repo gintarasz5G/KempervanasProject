@@ -62,7 +62,7 @@ public class MainActivity extends BridgeActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 123;
     static final String VERSION_JSON_URL = "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
-    static final int CURRENT_VERSION = 30;
+    static final int CURRENT_VERSION = 31;
 
     private Network boundNetwork = null;
     private volatile boolean autoBindPaused = false;
@@ -115,6 +115,11 @@ public class MainActivity extends BridgeActivity {
 
         WebSettings settings = this.getBridge().getWebView().getSettings();
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setSupportZoom(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setDisplayZoomControls(false);
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
 
         this.getBridge().getWebView().addJavascriptInterface(new VolBridge(this), "KemperisVol");
         this.getBridge().getWebView().addJavascriptInterface(new WifiBridge(this), "KemperisWifi");
@@ -394,6 +399,13 @@ public class MainActivity extends BridgeActivity {
             } catch (Exception ignored) {}
             return "";
         }
+        @JavascriptInterface
+        public boolean canSendSms() {
+            PackageManager pm = ctx.getPackageManager();
+            if (!pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)) return false;
+            TelephonyManager tm = (TelephonyManager) ctx.getSystemService(Context.TELEPHONY_SERVICE);
+            return tm != null && tm.getSimState() == TelephonyManager.SIM_STATE_READY;
+        }
     }
 
     public class UpdateBridge {
@@ -431,9 +443,19 @@ public class MainActivity extends BridgeActivity {
                 downloadReceiver = new BroadcastReceiver() {
                     @Override
                     public void onReceive(Context context, Intent intent) {
-                        if (downloadId == intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)) {
-                            // Simplification: In real app we query DM for actual path.
-                            installApk(new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "kemperis_update.apk"));
+                        long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                        if (id != downloadId) return;
+                        DownloadManager dm = (DownloadManager) ctx.getSystemService(Context.DOWNLOAD_SERVICE);
+                        DownloadManager.Query q = new DownloadManager.Query().setFilterById(id);
+                        try (android.database.Cursor c = dm.query(q)) {
+                            if (c != null && c.moveToFirst()) {
+                                int st = c.getInt(c.getColumnIndex(DownloadManager.COLUMN_STATUS));
+                                if (st == DownloadManager.STATUS_SUCCESSFUL) {
+                                    installApk(new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "kemperis_update.apk"));
+                                } else {
+                                    sendNativeLog("❌ Atsisiuntimas nepavyko (status=" + st + ")");
+                                }
+                            }
                         }
                     }
                 };
@@ -454,13 +476,68 @@ public class MainActivity extends BridgeActivity {
         private WebView webView;
         private TextToSpeech tts;
         private boolean ready = false;
-        public KempTtsBridge(Activity a, WebView wv) { this.activity = a; this.webView = wv; tts = new TextToSpeech(a, status -> { if(status==TextToSpeech.SUCCESS) { ready=true; applyLang("en"); } }); }
+        public KempTtsBridge(Activity a, WebView wv) {
+            this.activity = a; this.webView = wv;
+            tts = new TextToSpeech(a, status -> {
+                if (status == TextToSpeech.SUCCESS) {
+                    ready = true;
+                    applyLang("en");
+                    reportLangs();
+                    tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                        @Override public void onStart(String id) {}
+                        @Override public void onDone(String id) { fireDone(); }
+                        @Override public void onError(String id) { fireDone(); }
+                    });
+                } else {
+                    logToWeb("variklis nerastas (status=" + status + ")");
+                }
+            });
+        }
         @JavascriptInterface
-        public void speak(String text) { if(ready) tts.speak(text, TextToSpeech.QUEUE_ADD, null, "uid"); }
+        public void speak(String text) {
+            if (ready) tts.speak(text, TextToSpeech.QUEUE_ADD, null, "uid");
+            else logToWeb("TTS neparuostas - nutylima");
+        }
         @JavascriptInterface
         public void setLang(String lang) { applyLang(lang); }
-        private void applyLang(String l) { if(ready) tts.setLanguage("lt".equals(l) ? new Locale("lt","LT") : Locale.US); }
-        public void shutdown() { if(tts != null) tts.shutdown(); }
+        private void applyLang(String l) {
+            if (!ready) return;
+            Locale loc = "lt".equals(l) ? new Locale("lt","LT") : Locale.US;
+            int r = tts.setLanguage(loc);
+            if (r == TextToSpeech.LANG_MISSING_DATA) { logToWeb(l + " truksta balso duomenu"); promptInstall(); }
+            else if (r == TextToSpeech.LANG_NOT_SUPPORTED) { logToWeb(l + " kalba nepalaikoma"); }
+        }
+        private void reportLangs() {
+            int en = tts.isLanguageAvailable(Locale.US);
+            int lt = tts.isLanguageAvailable(new Locale("lt","LT"));
+            logToWeb("TTS EN: " + langStatus(en) + " | LT: " + langStatus(lt));
+            if (en == TextToSpeech.LANG_MISSING_DATA || lt == TextToSpeech.LANG_MISSING_DATA) promptInstall();
+        }
+        private String langStatus(int r) {
+            switch (r) {
+                case TextToSpeech.LANG_AVAILABLE:
+                case TextToSpeech.LANG_COUNTRY_AVAILABLE:
+                case TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE: return "OK";
+                case TextToSpeech.LANG_MISSING_DATA:  return "truksta duomenu";
+                case TextToSpeech.LANG_NOT_SUPPORTED: return "nepalaikoma";
+                default: return "nezinoma(" + r + ")";
+            }
+        }
+        private void promptInstall() {
+            try {
+                Intent i = new Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                activity.startActivity(i);
+            } catch (Exception ignored) {}
+        }
+        private void fireDone() {
+            activity.runOnUiThread(() -> webView.evaluateJavascript("window.onTtsDone && window.onTtsDone()", null));
+        }
+        private void logToWeb(String msg) {
+            final String safe = msg.replace("'", " ");
+            activity.runOnUiThread(() -> webView.evaluateJavascript("sysLog && sysLog('[TTS] " + safe + "','warn')", null));
+        }
+        public void shutdown() { if (tts != null) tts.shutdown(); }
     }
 
     public class VolBridge {
@@ -484,14 +561,29 @@ public class MainActivity extends BridgeActivity {
         private Context ctx;
         public KemperisFileBridge(Context c) { this.ctx = c; }
         @JavascriptInterface
-        public String saveTextFile(String folder, String name, String content) {
+        public String saveTextFile(String name, String mime, String content) {
             try {
-                File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), folder);
-                if (!dir.exists()) dir.mkdirs();
-                File file = new File(dir, name);
-                try (FileOutputStream fos = new FileOutputStream(file)) { fos.write(content.getBytes(StandardCharsets.UTF_8)); }
-                return file.getAbsolutePath();
-            } catch(Exception e) { return "Error: " + e.getMessage(); }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContentValues cv = new ContentValues();
+                    cv.put(MediaStore.Downloads.DISPLAY_NAME, name);
+                    cv.put(MediaStore.Downloads.MIME_TYPE, (mime == null || mime.isEmpty()) ? "text/plain" : mime);
+                    cv.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+                    android.net.Uri uri = ctx.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+                    if (uri == null) return "Error: MediaStore insert null";
+                    try (OutputStream os = ctx.getContentResolver().openOutputStream(uri)) {
+                        os.write(content.getBytes(StandardCharsets.UTF_8));
+                    }
+                    return "ok";
+                } else {
+                    File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                    if (!dir.exists()) dir.mkdirs();
+                    File file = new File(dir, name);
+                    try (FileOutputStream fos = new FileOutputStream(file)) {
+                        fos.write(content.getBytes(StandardCharsets.UTF_8));
+                    }
+                    return "ok";
+                }
+            } catch (Exception e) { return "Error: " + e.getMessage(); }
         }
     }
 
