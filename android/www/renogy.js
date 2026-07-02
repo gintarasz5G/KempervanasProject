@@ -251,22 +251,21 @@ const RenogyBLE = (function() {
 
     function parseFrame(type, frame) {
         const data = frame.slice(3, -2); // Remove ID, Func, Len and CRC
-        const startReg = frame[0] === 0xFF ? (type === 'battery' ? (STATE.devices.battery.queryIndex === 0 ? 0x13B2 : 0x1388) : 0x0100) : 0;
+        const len = frame[2];
 
         if (type === 'battery') {
-            if (STATE.devices.battery.queryIndex === 0) { // Was 1 during write, now result of 0x1388
-                // 0x1388 (5000) - Cells/Temp
+            if (len === 0x44) { // 0x1388 (5000) - Cells/Temp
                 // data[0..1] = cell count
                 // data[2..13] = cell voltages (v1..v6) -> we only need 1..4
-                window.sensorCache['ren_cell_0'] = u16(data[2], data[3]) / 1000.0;
-                window.sensorCache['ren_cell_1'] = u16(data[4], data[5]) / 1000.0;
-                window.sensorCache['ren_cell_2'] = u16(data[6], data[7]) / 1000.0;
-                window.sensorCache['ren_cell_3'] = u16(data[8], data[9]) / 1000.0;
+                // R6: Scale 0.1
+                window.sensorCache['ren_cell_0'] = u16(data[2], data[3]) / 10.0;
+                window.sensorCache['ren_cell_1'] = u16(data[4], data[5]) / 10.0;
+                window.sensorCache['ren_cell_2'] = u16(data[6], data[7]) / 10.0;
+                window.sensorCache['ren_cell_3'] = u16(data[8], data[9]) / 10.0;
 
-                // Temperatures (starting 0x1394 / data[24])
-                window.sensorCache['ren_temp'] = s16(data[24], data[25]) / 10.0;
-            } else {
-                // 0x13B2 (5042) - V/A/Ah/SOC
+                // R2: Temperatures (reg 5018 / data[36..37])
+                window.sensorCache['ren_temp'] = s16(data[36], data[37]) / 10.0;
+            } else if (len === 0x0C) { // 0x13B2 (5042) - V/A/Ah/SOC
                 const currentRaw = s16(data[0], data[1]); // 5042
                 window.sensorCache['ren_a'] = currentRaw / 100.0;
                 window.sensorCache['ren_v'] = u16(data[2], data[3]) / 10.0; // 5043
@@ -275,26 +274,34 @@ const RenogyBLE = (function() {
                 const capAh = u32(data[8], data[9], data[10], data[11]) / 1000.0; // 5046-47
 
                 if (capAh > 0) window.sensorCache['ren_soc'] = (remAh / capAh) * 100.0;
+            } else {
+                debug(`Nezinomas baterijos blokas: len=${len}`, 'warn');
             }
         } else if (type === 'dcc') {
-            // Register 0x0100 base
-            window.sensorCache['dcc_batt_v'] = u16(data[2], data[3]) / 10.0; // 0x101
-            window.sensorCache['dcc_charge_a'] = u16(data[4], data[5]) / 100.0; // 0x102 (Scale /100 based on renogy-bt)
+            if (len === 0x42) { // Register 0x0100 base
+                window.sensorCache['dcc_batt_v'] = u16(data[2], data[3]) / 10.0; // 0x101
+                window.sensorCache['dcc_charge_a'] = u16(data[4], data[5]) / 100.0; // 0x102 (Scale /100 based on renogy-bt)
 
-            // Alternator (0x104..0x106)
-            window.sensorCache['dcc_alt_v'] = u16(data[8], data[9]) / 10.0;
-            window.sensorCache['dcc_alt_a'] = u16(data[10], data[11]) / 100.0;
-            window.sensorCache['dcc_alt_w'] = u16(data[12], data[13]);
+                // R2: Alternator (0x104..0x106) -> data[8..13]
+                window.sensorCache['dcc_alt_v'] = u16(data[8], data[9]) / 10.0;
+                window.sensorCache['dcc_alt_a'] = u16(data[10], data[11]) / 100.0;
+                window.sensorCache['dcc_alt_w'] = u16(data[12], data[13]);
 
-            // PV (0x107..0x109)
-            window.sensorCache['dcc_pv_v'] = u16(data[14], data[15]) / 10.0;
-            window.sensorCache['dcc_pv_a'] = u16(data[16], data[17]) / 100.0;
-            window.sensorCache['dcc_solar_w'] = u16(data[18], data[19]);
+                // PV (0x107..0x109) -> data[14..19]
+                window.sensorCache['dcc_pv_v'] = u16(data[14], data[15]) / 10.0;
+                window.sensorCache['dcc_pv_a'] = u16(data[16], data[17]) / 100.0;
+                window.sensorCache['dcc_solar_w'] = u16(data[18], data[19]);
 
-            // Status (0x0120 / data[64..65])
-            const stageCode = data[65];
-            const stages = ["Inactive", "Normal", "Boost", "Float", "Equalize", "Direct", "Limit"];
-            window.sensorCache['dcc_stage'] = stages[stageCode] || "Unknown";
+                // R3: Status (0x120 / data[64..65])
+                const stageCode = data[65];
+                const stages = {
+                    0: "Neaktyvus", 1: "Aktyvuotas", 2: "MPPT", 3: "Islyginimas",
+                    4: "Boost", 5: "Palaikymas", 6: "Sroves ribojimas", 8: "Tiesiai is generatoriaus"
+                };
+                window.sensorCache['dcc_stage'] = stages[stageCode] || ("Kodas " + stageCode);
+            } else {
+                debug(`Nezinomas DCC blokas: len=${len}`, 'warn');
+            }
         }
     }
 
@@ -309,8 +316,8 @@ const RenogyBLE = (function() {
         if (!BleClient) return;
 
         try {
-            const hasLocation = await BleClient.isEnabled(); // Check if BT is on
-            if (!hasLocation) {
+            const isBtOn = await BleClient.isEnabled(); // R4: Rename hasLocation
+            if (!isBtOn) {
                 await requestEnableBT();
                 return;
             }
@@ -342,7 +349,17 @@ const RenogyBLE = (function() {
         const container = document.getElementById('renogy-scan-list');
         if (!container) return;
 
+        // R4: Sort Renogy devices to top
         const unique = Array.from(new Map(results.map(r => [r.device.deviceId, r])).values());
+        unique.sort((a, b) => {
+            const nameA = (a.device.name || '').toUpperCase();
+            const nameB = (b.device.name || '').toUpperCase();
+            const isRenA = nameA.startsWith('BT-TH') || nameA.startsWith('RNGRBP');
+            const isRenB = nameB.startsWith('BT-TH') || nameB.startsWith('RNGRBP');
+            if (isRenA && !isRenB) return -1;
+            if (!isRenA && isRenB) return 1;
+            return 0;
+        });
 
         container.innerHTML = unique.map(r => `
             <div class="card" style="margin-bottom:8px; padding:12px; background:rgba(255,255,255,0.05);">

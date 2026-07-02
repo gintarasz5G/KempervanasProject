@@ -919,7 +919,15 @@
     }
     function downloadLocalCSV(isAuto = false) {
         if (localLogRows.length === 0) { if (!isAuto) alert('Nėra įrašytų duomenų.'); return; }
-        const csvContent = localLogHeader + "\n" + localLogRows.join("\n");
+
+        // R5: Pad older rows to match the current header column count
+        const nCols = (localLogHeader.match(/,/g)||[]).length;
+        const rows = localLogRows.map(r => {
+            const m = nCols - (r.match(/,/g)||[]).length;
+            return m > 0 ? r + ','.repeat(m) : r;
+        });
+
+        const csvContent = localLogHeader + "\n" + rows.join("\n");
         // Failo pavadinimas: kemperis_diena_YYYY-MM-DD.csv (datos bazė, ne laikas)
         const filename = `kemperis_diena_${_todayDateStr()}.csv`;
         if (window.KemperisFile) {
