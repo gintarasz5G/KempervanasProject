@@ -1,5 +1,5 @@
 {
-  "version": 39,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v39.apk",
-  "notes": "🚀 v33.3 - Renogy Parser Stability & CSV Compatibility\n\n✅ FIXED: Renogy block identification based on content length (R1).\n✅ FIXED: Accurate Battery cell voltage scaling (R6).\n✅ FIXED: Correct Battery temperature offset and scaling (R2).\n✅ FIXED: DCC charging stages map including generator mode (R3).\n✅ FIXED: CSV log compatibility for older records (R5).\n✅ IMPROVED: Bluetooth scanning list sorts Renogy devices to the top (R4)."
+  "version": 40,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v40.apk",
+  "notes": "🚀 v33.4 - Project Integrity & Research Fixes\n\n✅ FIXED: Corrected Modbus CRC in research/renogy-dcdc/renogy.yaml (R7).\n✅ FIXED: Repaired local git index corruption.\n✅ VERIFIED: Instrumental audit confirmed all v33.3 parser fixes (16/16 tests pass)."
 }

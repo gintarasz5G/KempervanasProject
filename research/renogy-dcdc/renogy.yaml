@@ -73,7 +73,7 @@ interval:
                 id: junctek_shunt
                 service_uuid: "FFF0"
                 characteristic_uuid: "FFF2"
-                value: [0xFF, 0x03, 0x01, 0x00, 0x00, 0x21, 0xD1, 0xCA]
+                value: [0xFF, 0x03, 0x01, 0x00, 0x00, 0x21, 0x91, 0xF0]
 
 # ==========================================
 # JUNCTEK SENSORIAI (Web ir ESP-NOW)
