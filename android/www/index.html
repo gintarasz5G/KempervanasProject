@@ -161,6 +161,7 @@
             <option value="comms">📡 Ryšys</option>
             <option value="leveling">⚖️ Lygiavimas</option>
             <option value="sms">💬 SMS</option>
+            <option value="renogy">🔋 Renogy BLE</option>
             <option value="settings">⚙️ Nustatymai</option>
             <option value="alarms">🚨 Aliarmai</option>
             <option value="logs">🛠️ Logai</option>
@@ -400,6 +401,94 @@
             </div>
         </div>
         <button class="btn btn-success" style="padding:16px; font-size:14px; margin-top: 16px;" data-esp-btn onclick="sendButton('btn_adxl_zero')">🎯 KALIBRUOTI NULINĘ PADĖTĮ (Dabartinė Pozicija)</button>
+    </div>
+
+    <!-- ==================== RENOGY BLE ==================== -->
+    <div id="renogy" class="tab-content">
+        <div class="card" style="margin-bottom:16px; border-left:4px solid #4caf50;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>🔋 Renogy Direct BLE (Planšetė)</h3>
+                <label class="switch">
+                    <input type="checkbox" id="chk_renogy_ble" onchange="RenogyBLE.toggleGlobal(this.checked)">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="card-subtext">Prisijungia tiesiogiai iš planšetės Bluetooth prie Renogy įrenginių.</div>
+        </div>
+
+        <div class="grid">
+            <!-- Charging Sources -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h3>🔌 Krovimo šaltiniai</h3>
+                <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:10px;">
+                    <div id="ren-alt-box" style="flex:1; min-width:140px; padding:12px; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid #30363d;">
+                        <div style="font-size:11px; color:#8b949e; text-transform:uppercase;">🚗 Variklis</div>
+                        <div style="font-size:24px; font-weight:bold; margin:4px 0;"><span id="ren_alt_w">0</span> W</div>
+                        <div style="font-size:12px; color:#8b949e;"><span id="ren_alt_v">0.0</span>V · <span id="ren_alt_a">0.0</span>A</div>
+                    </div>
+                    <div id="ren-pv-box" style="flex:1; min-width:140px; padding:12px; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid #30363d;">
+                        <div style="font-size:11px; color:#8b949e; text-transform:uppercase;">☀️ Saulė</div>
+                        <div style="font-size:24px; font-weight:bold; margin:4px 0;"><span id="ren_pv_w">0</span> W</div>
+                        <div style="font-size:12px; color:#8b949e;"><span id="ren_pv_v">0.0</span>V · <span id="ren_pv_a">0.0</span>A</div>
+                    </div>
+                </div>
+                <div class="card-subtext" style="margin-top:10px; font-weight:bold; color:#58a6ff;">Būsena: <span id="ren_dcc_stage">Ieškoma...</span></div>
+            </div>
+
+            <!-- DCC50S Details -->
+            <div class="card">
+                <h3>⚡ DCC50S Statusas</h3>
+                <div class="card-value"><span id="ren_dcc_v">0.0</span><span class="card-unit">V</span></div>
+                <div class="card-subtext">Krovimo srovė: <span id="ren_dcc_a">0.0</span> A</div>
+                <div id="ren-dcc-sync" class="status-line" style="margin-top:8px;">Atjungta</div>
+            </div>
+
+            <!-- Battery Pro Details -->
+            <div class="card">
+                <h3>🔋 Baterija (Pro BLE)</h3>
+                <div class="card-value"><span id="ren_bat_soc">0</span>%</div>
+                <div class="progress-bar"><div class="progress-fill" id="ren-bat-fill" style="width:0%; background:#238636;"></div></div>
+                <div class="card-subtext">
+                    <span id="ren_bat_v">0.0</span>V · <span id="ren_bat_a">0.0</span>A<br>
+                    Temp: <span id="ren_bat_temp">0</span>°C
+                </div>
+                <div id="ren-bat-sync" class="status-line" style="margin-top:8px;">Atjungta</div>
+            </div>
+
+            <!-- Cell Voltages -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h3>🧪 Celių įtampos (V)</h3>
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-top:8px; text-align:center;">
+                    <div style="padding:6px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">1</div><div id="ren_cell_0" style="font-weight:bold;">0.00</div></div>
+                    <div style="padding:6px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">2</div><div id="ren_cell_1" style="font-weight:bold;">0.00</div></div>
+                    <div style="padding:6px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">3</div><div id="ren_cell_2" style="font-weight:bold;">0.00</div></div>
+                    <div style="padding:6px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">4</div><div id="ren_cell_3" style="font-weight:bold;">0.00</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="section-title" style="margin-top:24px;">⚙️ Įrenginių konfigūracija</div>
+        <div class="grid">
+            <div class="card">
+                <h3>Skenavimas</h3>
+                <button class="btn btn-primary" onclick="RenogyBLE.startScan()">🔍 Ieškoti įrenginių</button>
+                <div id="renogy-scan-list" style="margin-top:12px;"></div>
+            </div>
+            <div class="card">
+                <h3>Priskirti įrenginiai</h3>
+                <div id="renogy-assigned-list" style="font-size:13px; line-height:1.8;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>🔋 Baterija: <b id="ren_lbl_bat">---</b></span>
+                        <button class="btn btn-danger" style="width:auto; padding:2px 8px; font-size:10px;" onclick="RenogyBLE.forget('battery')">✕</button>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:8px;">
+                        <span>⚡ DCC50S: <b id="ren_lbl_dcc">---</b></span>
+                        <button class="btn btn-danger" style="width:auto; padding:2px 8px; font-size:10px;" onclick="RenogyBLE.forget('dcc')">✕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ==================== SMS ==================== -->
@@ -793,7 +882,7 @@
             localStorage.setItem(DAILY_SAVED_KEY, todayStr);
         }
 
-        const row = `${now.toISOString()},,${getCache('gps_lat',0).toFixed(6)},${getCache('gps_lon',0).toFixed(6)},${getCache('gps_alt_sensor',0).toFixed(1)},${speed.toFixed(1)},${getCache('gps_heading_sensor',0).toFixed(1)},${getCache('junc_soc',0).toFixed(0)},${getCache('junc_v',0).toFixed(2)},${getCache('junc_a',0).toFixed(2)},${getCache('water_pct',0).toFixed(0)},${getCache('tds_ppm',0).toFixed(0)},${getCache('gas_pct',0).toFixed(0)},${getCache('bme_temp',0).toFixed(1)},${getCache('bme_humidity',0).toFixed(1)},${getCache('bme_pressure',0).toFixed(1)},${getCache('bedroom_co2',0).toFixed(0)}`;
+        const row = `${now.toISOString()},,${getCache('gps_lat',0).toFixed(6)},${getCache('gps_lon',0).toFixed(6)},${getCache('gps_alt_sensor',0).toFixed(1)},${speed.toFixed(1)},${getCache('gps_heading_sensor',0).toFixed(1)},${getCache('junc_soc',0).toFixed(0)},${getCache('junc_v',0).toFixed(2)},${getCache('junc_a',0).toFixed(2)},${getCache('water_pct',0).toFixed(0)},${getCache('tds_ppm',0).toFixed(0)},${getCache('gas_pct',0).toFixed(0)},${getCache('bme_temp',0).toFixed(1)},${getCache('bme_humidity',0).toFixed(1)},${getCache('bme_pressure',0).toFixed(1)},${getCache('bedroom_co2',0).toFixed(0)},${getCache('ren_soc',0).toFixed(1)},${getCache('ren_v',0).toFixed(2)},${getCache('ren_a',0).toFixed(2)},${getCache('ren_temp',0).toFixed(0)},${getCache('dcc_solar_w',0).toFixed(0)},${getCache('dcc_alt_w',0).toFixed(0)},${sensorCache['dcc_stage']||''}`;
         localLogRows.push(row);
         if (localLogRows.length > MAX_LOG_ROWS) localLogRows.shift(); // FIFO
         saveLocalLogToStorage();
@@ -1378,7 +1467,7 @@
 
     // === Skirtukai: dropdown + rodyklės + swipe ===
     // Swipe cikle praleidžiame PIN-saugomas skiltis (settings, alarms) — jas renkamės per sąrašą.
-    const SWIPE_TABS = ['overview','gps','energy','environment','comms','leveling','sms','logs'];
+    const SWIPE_TABS = ['overview','gps','energy','environment','comms','leveling','sms','renogy','logs'];
     let currentTab = 'overview';
 
     function syncTabSelect() { const s = document.getElementById('tab-select'); if (s) s.value = currentTab; }
@@ -1892,6 +1981,53 @@
 
         updateSmsTerminal();
         updateFishingCard();
+
+        // --- Renogy UI Sync ---
+        (function() {
+            const renState = RenogyBLE.getState();
+            const chk = document.getElementById('chk_renogy_ble');
+            if (chk && document.activeElement !== chk) chk.checked = renState.enabled;
+
+            document.getElementById('ren_lbl_bat').textContent = renState.devices.battery.name || '---';
+            document.getElementById('ren_lbl_dcc').textContent = renState.devices.dcc.name || '---';
+
+            setSensorValue('ren_soc', 'ren_bat_soc', v => Math.round(v));
+            const renSf = document.getElementById('ren-bat-fill');
+            if (renSf) renSf.style.width = Math.max(0, Math.min(100, getCache('ren_soc', 0))) + '%';
+
+            setSensorValue('ren_v', 'ren_bat_v', v => v.toFixed(1));
+            setSensorValue('ren_a', 'ren_bat_a', v => v.toFixed(1));
+            setSensorValue('ren_temp', 'ren_bat_temp');
+
+            setSensorValue('ren_cell_0', 'ren_cell_0');
+            setSensorValue('ren_cell_1', 'ren_cell_1');
+            setSensorValue('ren_cell_2', 'ren_cell_2');
+            setSensorValue('ren_cell_3', 'ren_cell_3');
+
+            setSensorValue('dcc_batt_v', 'ren_dcc_v', v => v.toFixed(1));
+            setSensorValue('dcc_charge_a', 'ren_dcc_a', v => v.toFixed(1));
+            setSensorValue('dcc_pv_v', 'ren_pv_v', v => v.toFixed(1));
+            setSensorValue('dcc_pv_a', 'ren_pv_a', v => v.toFixed(1));
+            setSensorValue('dcc_solar_w', 'ren_pv_w');
+            setSensorValue('dcc_alt_v', 'ren_alt_v', v => v.toFixed(1));
+            setSensorValue('dcc_alt_a', 'ren_alt_a', v => v.toFixed(1));
+            setSensorValue('dcc_alt_w', 'ren_alt_w');
+            setSensorValue('dcc_stage', 'ren_dcc_stage');
+
+            const syncBat = document.getElementById('ren-bat-sync');
+            if (syncBat) {
+                const b = renState.devices.battery;
+                syncBat.textContent = b.connected ? 'Prijungta' : (b.id ? 'Jungiamasi...' : 'Nepriskirta');
+                syncBat.style.color = b.connected ? '#3fb950' : '#8b949e';
+            }
+            const syncDcc = document.getElementById('ren-dcc-sync');
+            if (syncDcc) {
+                const d = renState.devices.dcc;
+                syncDcc.textContent = d.connected ? 'Prijungta' : (d.id ? 'Jungiamasi...' : 'Nepriskirta');
+                syncDcc.style.color = d.connected ? '#3fb950' : '#8b949e';
+            }
+        })();
+
         checkAlarms(sensorCache);
         // D: ESP32 sveikatos baneris — RAM < 50KB arba temp > 70°C
         (function() {
@@ -3412,6 +3548,7 @@
     });
 
     </script>
+    <script src="renogy.js"></script>
     <div id="map-container" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-dark); z-index:2000; flex-direction:column;">
         <div class="map-header">
             <span style="font-weight:bold; font-size:16px;">Maršruto žemėlapis</span>

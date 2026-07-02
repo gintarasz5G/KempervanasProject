@@ -1,5 +1,5 @@
 {
-  "version": 35,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v35.apk",
-  "notes": "🚀 v32.3 - Cloud Alarms & SSE Polish\n\n✅ NEW: Cloud Alarms - get voice alerts from Google data when offline (optional, fresh data only).\n✅ FIXED: Consolidated SSE event handling for better connection recovery.\n✅ FIXED: Full synchronization of APK naming, URL, and version identifiers (v35)."
+  "version": 36,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v36.apk",
+  "notes": "🚀 v33.0 - Naujas „Renogy\" BLE tab'as!\n\n✅ NAUJA: Tiesioginis Bluetooth prisijungimas prie Renogy Pro baterijų ir DCC50S kroviklių.\n✅ NAUJA: Atskiras krovimo šaltinių (Saulė/Variklis) stebėjimas.\n✅ NAUJA: Detali baterijos celių būklė.\n✅ FIXED: Optimizuotas SSE duomenų apdorojimas ir ryšio stabilumas."
 }
