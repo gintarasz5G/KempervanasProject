@@ -41,6 +41,17 @@ Vartotojo terminalo logas patvirtina diagnozę ir prideda radinį:
 - SSE klaidos #1–#3 + watchdog ciklas; Sheets fallback ir update check veikia
   (internetas per mobiliuosius yra).
 
+**PATIKSLINIMAS (vartotojas): planšetė BUVO prisijungusi prie Kemperis WiFi.**
+Vadinasi, `getCurrentSSID()` grąžino ne tikrą SSID, o `<unknown ssid>` — Android 8.1+
+slepia SSID, jei app neturi location leidimo ARBA planšetėje išjungtas vietos
+nustatymas (Location jungiklis). Todėl `curSsid.indexOf(ESP_WIFI_SSID) === -1` klaidingai
+nusprendžia „neprisijungta". **Reikalavimai:**
+(a) startup diagnostikoje loguoti RAW SSID reikšmę (`sysLog('SSID: [' + curSsid + ']')`);
+(b) `<unknown ssid>`/tuščią traktuoti kaip „nežinoma" (NE „neprisijungta") ir kliautis
+VALIDATED patikra bind'ui — dėl tos pačios priežasties ir bind fix'e SSID kelias veiks
+tik su location, tad `!VALIDATED` fallback yra PRIVALOMAS, ne pagalbinis;
+(c) jei SSID `<unknown ssid>` — UI patarti įjungti vietos nustatymą.
+
 **Naujas radinys — `suggestWifi` nepakankamas:** app bando jungtis per
 `WifiNetworkSuggestion` API, bet Android'e suggestion (a) pirmą kartą reikalauja
 vartotojo patvirtinimo per sisteminį pranešimą, (b) prie AP be interneto jungiasi

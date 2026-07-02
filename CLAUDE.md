@@ -257,8 +257,10 @@ Dujų nuotėkio aliarmas. Laisvo ADC kanalo parinkimas — patikrinti konfliktus
 ### Etapas D — Renogy BLE (DCC50S + Pro 100Ah LiFePO4)
 Įranga: DCC50S (`RBC50D1S-BT`) su **BT-2 moduliu** komplekte (`BT-TH-xxxx`);
 baterija Pro (`RBT12100LFP-BT`) su integruotu BT ir self-heating.
-**1 žingsnis (užduotis paruošta): app skaito tiesiogiai per planšetės BT** —
-žr. `docs/uzduotis_renogy_ble_tab.md`. 2 žingsnis (jei prireiks SMS/Sheets):
+**1 žingsnis ĮGYVENDINTAS (app v38 / v33.2, 2026-07-02): app skaito tiesiogiai per
+planšetės BT** — `android/www/renogy.js` + `capacitor.js` + `ble-plugin.js`;
+žr. `docs/uzduotis_renogy_ble_tab.md` ir `docs/audits/auditas_2026-07-02_vakaras_v38.md`
+(likę defektai R1–R5). 2 žingsnis (jei prireiks SMS/Sheets):
 per ESP `ble_client` (RAM rizika!) arba atskiras ESP32 → ESP-NOW/MQTT.
 Protokolas — cyrils/renogy-bt; vietinis tyrimas `research/renogy-dcdc/renogy.yaml`.
 
