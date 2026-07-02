@@ -1,4 +1,37 @@
-# v36 Renogy BLE verifikacija — 2026-07-02
+# v36/v37 Renogy BLE verifikacija — 2026-07-02
+
+> **PAPILDYMAS — v37 (commit 1426158) patikra, 2-a iteracija.**
+>
+> ✅ Ištaisyta: B1 (plugin'as `android/package.json`, settings.gradle, plugins.json ir
+> APK DEX'e — patikrinta išpakavus kemperis_v37.apk); B2 (`<script>` tagai yra, failai
+> APK'e); P1 (dvi baterijos užklausos 0x1388+0x13B2, SOC=rem/cap); P2 (alternator
+> data[8..13] @0x104–0x106, masteliai /100); manifest `maxSdkVersion="30"` +
+> ADVERTISE pašalintas; scan cooldown; BT enable UI (`requestEnableBT`,
+> `startEnabledNotifications`); raw HEX logas; versijų grandinė 37/37/„33.1"; šaknies
+> package.json/node_modules išvalyti.
+>
+> ❌ **LIEKA BLOKUOJANTI (B3 tęsinys): `capacitorExports` neapibrėžtas.**
+> `ble-plugin.js` baigiasi `})({}, capacitorExports);` — šį globalą apibrėžia
+> `@capacitor/core/dist/capacitor.js`, kurio **nėra nei `www/`, nei APK'e** (patikrinta;
+> native-bridge.js jo neapibrėžia). Kraunant ble-plugin.js — `ReferenceError`,
+> `window.capacitorCommunityBluetoothLe` nesusikuria, renogy.js rodys „Plugin not loaded".
+> **Taisymas (2 eilutės):**
+> 1. Nukopijuoti `android/node_modules/@capacitor/core/dist/capacitor.js` → `android/www/capacitor.js`
+>    (failas yra, patikrinta; jis saugiai PAPILDO native-bridge sukurtą `window.Capacitor`, neperrašo).
+> 2. `index.html`: `<script src="capacitor.js"></script>` įterpti PRIEŠ `ble-plugin.js` (9 eil.).
+>
+> ⚠️ **Būsima klaida:** `android/package.json` gale prirašyta ~30 NULL baitų
+> (`tail -c 30 | xxd` — vien `00`). Dabar Gradle to nemato, bet **kitas `npm install`
+> lūš** (npm JSON parseris null baitų netoleruoja). Perrašyti failą švariu JSON.
+>
+> 📌 Taip pat: working tree turi nesucommitintų pakeitimų (index.html, renogy.js,
+> ble-plugin.js, manifest ir kt.) — po taisymo viską sucommitinti ir perbuild'inti APK
+> (versija pagal grandinę; jei v37 dar neįdiegtas planšetėje — galima perrašyti v37 APK,
+> kitaip v38).
+>
+> **Verdiktas: v37 APK dar NEDIEGTI — Renogy funkcija neveiks be capacitor.js.**
+
+---
 
 **Tikrinta:** commit `a74c360` (+ `3289a1f` cleanup), `kemperis_v36.apk` (išpakuotas), prieš
 `docs/uzduotis_renogy_ble_tab.md` reikalavimus.
