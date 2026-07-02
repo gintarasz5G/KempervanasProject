@@ -777,7 +777,7 @@
     let manualLocalLogStop = false;
     let localLogInterval = null;
     let localLogRows = [];
-    const localLogHeader = "Laikas,,Platuma,Ilguma,Aukštis,Greitis,Kryptis,SOC,Įtampa,Srovė,Vanduo%,TDS,Dujos%,Temp,Drėgmė,Slėgis,CO2";
+    const localLogHeader = "Laikas,,Platuma,Ilguma,Aukštis,Greitis,Kryptis,SOC,Įtampa,Srovė,Vanduo%,TDS,Dujos%,Temp,Drėgmė,Slėgis,CO2,Ren SOC,Ren V,Ren A,Ren Temp,DCC Saulė W,DCC Gen W,DCC Stadija";
     let lastDataLogTime = 0;
     const DAILY_LOG_KEY   = 'kemper_daily_log';
     const DAILY_DATE_KEY  = 'kemper_log_date';
@@ -1562,9 +1562,9 @@
         (function() {
             let ah = parseFloat(sensorCache['junc_ah_remaining']);
             let cap = parseFloat(sensorCache['num_bat_capacity'] || 110);
-            if (!isNaN(ah) && ah > 0.5) {
-                // Jei turime Ah, tai yra tiksliausias šaltinis skaičiuoti SOC
-                sensorCache['junc_soc'] = Math.round((ah / cap) * 100);
+            let soc = parseFloat(sensorCache['junc_soc']);
+            if ((isNaN(soc) || soc <= 0) && !isNaN(ah) && ah > 0.5 && cap > 1) {
+                sensorCache['junc_soc'] = Math.min(100, Math.round((ah / cap) * 100));
             }
         })();
 
@@ -2175,11 +2175,15 @@
                         const json = await resp.json();
                         if (json && json.value !== undefined) {
                             sensorCache[id] = json.value;
-                            sysLog(`✅ Gauta ${id} = ${json.value}`, 'info');
+                            debugLog(`✅ Gauta ${id} = ${json.value}`);
                         }
                     }
                 } catch(e) {
-                    sysLog(`❌ Nepavyko gauti ${id}: ${e.message}`, 'error');
+                    if (String(e && e.message).includes('Failed to fetch')) {
+                        debugLog('loadAllNumbers: ryšio nėra, ciklas nutrauktas');
+                        break;
+                    }
+                    debugLog(`❌ Nepavyko gauti ${id}: ${e.message}`, 'error');
                 }
             }
             updateUI();
@@ -2751,7 +2755,6 @@
                 sensorCache[_swKey] = value;
                 if (data.name_id) _entityRestNames['sw:' + _swKey] = data.name_id.replace(/^switch\//i, '');
             } else if (rawId.match(/^(text_sensor|sensor)[\/\-_]/)) {
-                debugLog('[SSE BRANCH] ' + rawId, 'success');
                 const stripped = keyId.replace(/^(text_sensor|sensor)[\/\-_]/, '');
                 if (SENSOR_ID_MAP[stripped] !== undefined) {
                     sensorCache[SENSOR_ID_MAP[stripped]] = value;

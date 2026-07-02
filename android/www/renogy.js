@@ -27,7 +27,9 @@ const RenogyBLE = (function() {
     }
 
     function debug(msg, type = 'info') {
-        if (window.isDebugEnabled && window.isDebugEnabled()) {
+        if (type === 'error') {
+            window.sysLog && window.sysLog('[Renogy] ' + msg, 'error');
+        } else if (window.isDebugEnabled && window.isDebugEnabled()) {
             window.sysLog && window.sysLog('[Renogy] ' + msg, type);
         }
     }
@@ -60,11 +62,14 @@ const RenogyBLE = (function() {
     async function init() {
         const BleClient = getBle();
         if (!BleClient) {
-            debug('Bluetooth plugin NOT FOUND', 'error');
+            const err = 'Bluetooth plugin NOT FOUND';
+            debug(err, 'error');
+            const container = document.getElementById('renogy-scan-list');
+            if (container) container.innerHTML = '<div style="color:#ff7b72;padding:10px;">❌ BLE neinicijuotas: ' + err + '</div>';
             return;
         }
         try {
-            await BleClient.initialize();
+            await BleClient.initialize({ androidNeverForLocation: true });
             STATE.btEnabled = await BleClient.isEnabled();
 
             BleClient.startEnabledNotifications((enabled) => {
@@ -315,10 +320,14 @@ const RenogyBLE = (function() {
         const BleClient = getBle();
         if (!BleClient) return;
 
+        const container = document.getElementById('renogy-scan-list');
+        if (container) container.innerHTML = '<div style="color:#8b949e;padding:10px;">🔍 Skenuojama...</div>';
+
         try {
             const isBtOn = await BleClient.isEnabled(); // R4: Rename hasLocation
             if (!isBtOn) {
                 await requestEnableBT();
+                if (container) container.innerHTML = '';
                 return;
             }
 
@@ -336,11 +345,16 @@ const RenogyBLE = (function() {
             setTimeout(async () => {
                 await BleClient.stopLEScan();
                 STATE.scanning = false;
+                if (results.length === 0 && container) {
+                    container.innerHTML = '<div style="color:#8b949e;padding:10px;">Nieko nerasta. Patikrinkite BT leidimus (žr. Logs)</div>';
+                }
                 if (window.updateUI) window.updateUI();
             }, 8000);
         } catch (e) {
             STATE.scanning = false;
-            debug('Scan error: ' + e.message, 'error');
+            const msg = e.message || e;
+            debug('Scan error: ' + msg, 'error');
+            if (container) container.innerHTML = '<div style="color:#ff7b72;padding:10px;">❌ Klaida: ' + msg + '</div>';
             if (window.updateUI) window.updateUI();
         }
     }

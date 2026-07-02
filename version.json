@@ -1,5 +1,5 @@
 {
-  "version": 40,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v40.apk",
-  "notes": "🚀 v33.4 - Project Integrity & Research Fixes\n\n✅ FIXED: Corrected Modbus CRC in research/renogy-dcdc/renogy.yaml (R7).\n✅ FIXED: Repaired local git index corruption.\n✅ VERIFIED: Instrumental audit confirmed all v33.3 parser fixes (16/16 tests pass)."
+  "version": 41,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v41.apk",
+  "notes": "🚀 v33.5 - Renogy Init Fix & Performance Polishing\n\n✅ FIXED: Renogy BLE initialization on Android 12+ (added neverForLocation param).\n✅ FIXED: Battery SOC cap at 100% and logic refinement.\n✅ FIXED: CSV Log header sync (24 columns total).\n✅ IMPROVED: Faster scanning feedback and error visibility for Renogy tab.\n✅ IMPROVED: Silent recovery in loadAllNumbers during network transitions.\n✅ CLEANUP: Removed verified SSE debug logs for cleaner performance."
 }
