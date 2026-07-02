@@ -63,7 +63,7 @@ public class MainActivity extends BridgeActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 123;
     static final String VERSION_JSON_URL = "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
-    static final int CURRENT_VERSION = 37;
+    static final int CURRENT_VERSION = 38;
 
     private Network boundNetwork = null;
     private volatile boolean autoBindPaused = false;
@@ -228,12 +228,28 @@ public class MainActivity extends BridgeActivity {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return;
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         wifiCallback = new ConnectivityManager.NetworkCallback() {
-            @Override
-            public void onAvailable(@NonNull Network network) {
-                if (autoBindPaused) return;
-                NetworkCapabilities caps = cm.getNetworkCapabilities(network);
-                if (caps == null) return;
-                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+            private void checkAndBind(Network network, NetworkCapabilities caps) {
+                if (autoBindPaused || caps == null) return;
+                if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return;
+
+                boolean isEsp = false;
+                // 1) Try identifying by SSID (requires location permission, which we have)
+                try {
+                    WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                    WifiInfo info = wm.getConnectionInfo();
+                    String ssid = (info != null) ? info.getSSID() : "";
+                    if (ssid != null) {
+                        if (ssid.startsWith("\"") && ssid.endsWith("\"")) ssid = ssid.substring(1, ssid.length()-1);
+                        if ("Kemperis-Valdymas".equals(ssid)) isEsp = true;
+                    }
+                } catch (Exception ignored) {}
+
+                // 2) Fallback: identify by lack of validation (typical for no-internet APs)
+                if (!isEsp && !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+                    isEsp = true;
+                }
+
+                if (isEsp && !network.equals(boundNetwork)) {
                     boundNetwork = network;
                     cm.bindProcessToNetwork(network);
                     runOnUiThread(() -> {
@@ -242,6 +258,17 @@ public class MainActivity extends BridgeActivity {
                     });
                 }
             }
+
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                checkAndBind(network, cm.getNetworkCapabilities(network));
+            }
+
+            @Override
+            public void onCapabilitiesChanged(@NonNull Network network, @NonNull NetworkCapabilities caps) {
+                checkAndBind(network, caps);
+            }
+
             @Override
             public void onLost(@NonNull Network network) {
                 if (network.equals(boundNetwork)) {
@@ -253,7 +280,6 @@ public class MainActivity extends BridgeActivity {
         };
         NetworkRequest req = new NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-            .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build();
         cm.registerNetworkCallback(req, wifiCallback);
     }
@@ -707,8 +733,14 @@ public class MainActivity extends BridgeActivity {
             WifiManager wm = (WifiManager) ctx.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
             WifiInfo info = wm.getConnectionInfo();
             String s = info.getSSID();
+            if (s == null) return "Nėra";
             if (s.startsWith("\"") && s.endsWith("\"")) s = s.substring(1, s.length()-1);
+            if (s.equals("<unknown ssid>")) return "Nežinomas (įjunkite vietovę)";
             return s;
+        }
+        @JavascriptInterface
+        public boolean isBound() {
+            return boundNetwork != null;
         }
         @JavascriptInterface
         public void unbindNetwork() {

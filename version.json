@@ -1,5 +1,5 @@
 {
-  "version": 37,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v37.apk",
-  "notes": "🚀 v33.1 - Renogy BLE Fixes\n\n✅ FIXED: Native BLE plugin correctly included in APK.\n✅ FIXED: Protocol register offsets for Battery and DCC50S.\n✅ FIXED: Bluetooth UI controls and scan cooldown.\n✅ NEW: Raw HEX diagnostic logs for BLE debugging."
+  "version": 38,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v38.apk",
+  "notes": "🚀 v33.2 - WiFi Bind & Renogy BLE Fixes\n\n✅ FIXED: WiFi Binding now works on all Android versions (checks SSID 'Kemperis-Valdymas').\n✅ FIXED: Renogy BLE plugin initialization (added missing capacitor.js).\n✅ NEW: WiFi connection diagnostic in Comms tab (SSID & Binding status).\n✅ NEW: Version identifier synchronization (v38)."
 }

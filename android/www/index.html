@@ -6,6 +6,7 @@
     <title>Kemperis V4 - Pilna diagnostika</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="capacitor.js"></script>
     <script src="ble-plugin.js"></script>
     <script src="renogy.js"></script>
     <style>
@@ -357,6 +358,12 @@
     <!-- ==================== RYŠYS ==================== -->
     <div id="comms" class="tab-content">
         <div class="grid">
+            <div class="card">
+                <h3>🔌 WiFi Ryšys (ESP32)</h3>
+                <div class="card-value" style="font-size: 18px;" id="wifi-ssid">Tikrinama...</div>
+                <div class="card-subtext" id="wifi-bind-status">Statusas nežinomas</div>
+                <button class="btn btn-primary" style="margin-top:10px; width:auto; padding:6px 12px;" onclick="forceReconnect()">⚡ Perkrauti SSE</button>
+            </div>
             <div class="card" data-offline-dim><h3>📡 GSM Operatorius</h3><div class="card-value" style="font-size: 20px;" id="gsm-operator">---</div><div class="card-subtext">Tinklas: <span id="gsm-network">---</span></div></div>
             <div class="card" data-offline-dim><h3>🌍 Tinklo registracija</h3><div class="card-value" style="font-size: 20px;" id="gsm-roaming">---</div><div class="card-subtext" id="gsm-roaming-sub">Tikrinama...</div></div>
             <div class="card" data-offline-dim><h3>GSM Signalas</h3><div class="card-value"><span id="gsm-signal">0</span>%</div><div class="progress-bar"><div class="progress-fill" id="gsm-fill" style="width:0%; background:#58a6ff;"></div></div><div class="card-subtext" id="gsm-dbm">0 dBm</div></div>
@@ -1796,6 +1803,21 @@
             const s=Math.round(parseFloat(v)||0), d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60);
             return d > 0 ? d+'d '+h+'h' : h > 0 ? h+'h '+m+'min' : m+' min';
         });
+
+        // WiFi Bind status
+        (function() {
+            if (window.KemperisWifi) {
+                const ssid = KemperisWifi.getCurrentSSID();
+                const bound = KemperisWifi.isBound();
+                const ssidEl = document.getElementById('wifi-ssid');
+                const bindEl = document.getElementById('wifi-bind-status');
+                if (ssidEl) ssidEl.textContent = ssid;
+                if (bindEl) {
+                    bindEl.textContent = bound ? '✅ Procesas pririštas prie WiFi' : '❌ Nėra bind (reikšmės gali vėluoti)';
+                    bindEl.style.color = bound ? '#3fb950' : '#f85149';
+                }
+            }
+        })();
 
         // Google siuntimo statuso indikatorius antraštėje + Nustatymai kortelėje
         let gUpload = sensorCache['sw_google_upload'];
