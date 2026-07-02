@@ -1,24 +1,23 @@
 {
-    "name":  "kemperisapp",
-    "version":  "1.0.0",
-    "description":  "",
-    "main":  "index.js",
-    "scripts":  {
-                    "test":  "echo \"Error: no test specified\" \u0026\u0026 exit 1"
-                },
-    "keywords":  [
-
-                 ],
-    "author":  "",
-    "license":  "ISC",
-    "type":  "commonjs",
-    "dependencies":  {
-                         "@capacitor-community/text-to-speech":  "^8.0.0",
-                         "@capacitor/android":  "^8.3.4",
-                         "@capacitor/cli":  "^8.3.4",
-                         "@capacitor/core":  "^8.3.4"
-                     },
-    "devDependencies":  {
-                            "typescript":  "^6.0.3"
-                        }
+    "name": "kemperisapp",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "dependencies": {
+        "@capacitor-community/bluetooth-le": "^8.2.0",
+        "@capacitor-community/text-to-speech": "^8.0.0",
+        "@capacitor/android": "^8.3.4",
+        "@capacitor/cli": "^8.3.4",
+        "@capacitor/core": "^8.3.4"
+    },
+    "devDependencies": {
+        "typescript": "^6.0.3"
+    }
 }

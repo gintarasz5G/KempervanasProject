@@ -1,4 +1,4 @@
-// Renogy BLE Implementation for Kemperis App (v32.3+)
+// Renogy BLE Implementation for Kemperis App (v33.0+)
 // Protocol: Modbus RTU over BLE GATT
 // Based on: https://github.com/cyrils/renogy-bt
 
@@ -11,19 +11,31 @@ const RenogyBLE = (function() {
     const STATE = {
         enabled: false,
         scanning: false,
+        lastScanTime: 0,
         devices: {
-            battery: { id: null, name: null, connected: false, lastSync: 0, buffer: [], retryCount: 0 },
-            dcc:     { id: null, name: null, connected: false, lastSync: 0, buffer: [], retryCount: 0 }
+            battery: { id: null, name: null, connected: false, lastSync: 0, buffer: [], retryCount: 0, lastQuery: 0, queryIndex: 0 },
+            dcc:     { id: null, name: null, connected: false, lastSync: 0, buffer: [], retryCount: 0, lastQuery: 0 }
         },
         pollingInterval: null,
-        reconnectTimers: {}
+        btEnabled: true
     };
 
     // --- Helpers ---
 
+    function getBle() {
+        return window.capacitorCommunityBluetoothLe ? window.capacitorCommunityBluetoothLe.BleClient : null;
+    }
+
     function debug(msg, type = 'info') {
         if (window.isDebugEnabled && window.isDebugEnabled()) {
             window.sysLog && window.sysLog('[Renogy] ' + msg, type);
+        }
+    }
+
+    function hexLog(type, data) {
+        if (window.isDebugEnabled && window.isDebugEnabled()) {
+            const hex = Array.from(data).map(b => b.toString(16).padStart(2, '0')).join(' ');
+            window.sysLog && window.sysLog(`[Renogy HEX] ${type}: ${hex}`, 'data');
         }
     }
 
@@ -41,13 +53,27 @@ const RenogyBLE = (function() {
 
     function u16(b1, b2) { return (b1 << 8) | b2; }
     function s16(b1, b2) { let v = u16(b1, b2); return v > 32767 ? v - 65536 : v; }
+    function u32(b1, b2, b3, b4) { return (b1 << 24) | (b2 << 16) | (b3 << 8) | b4; }
 
     // --- BLE Core ---
 
     async function init() {
-        const { BleClient } = Capacitor.Plugins.BluetoothLe;
+        const BleClient = getBle();
+        if (!BleClient) {
+            debug('Bluetooth plugin NOT FOUND', 'error');
+            return;
+        }
         try {
             await BleClient.initialize();
+            STATE.btEnabled = await BleClient.isEnabled();
+
+            BleClient.startEnabledNotifications((enabled) => {
+                STATE.btEnabled = enabled;
+                debug('Bluetooth ' + (enabled ? 'ON' : 'OFF'), enabled ? 'success' : 'warn');
+                if (enabled && STATE.enabled) startPolling();
+                if (window.updateUI) window.updateUI();
+            });
+
             STATE.enabled = localStorage.getItem('renogy_enabled') !== 'false';
 
             // Load saved devices
@@ -70,6 +96,16 @@ const RenogyBLE = (function() {
         }
     }
 
+    async function requestEnableBT() {
+        const BleClient = getBle();
+        if (!BleClient) return;
+        try {
+            await BleClient.requestEnable();
+        } catch (e) {
+            debug('Enable BT failed: ' + e.message, 'error');
+        }
+    }
+
     async function toggleGlobal(on) {
         STATE.enabled = on;
         localStorage.setItem('renogy_enabled', on);
@@ -80,7 +116,7 @@ const RenogyBLE = (function() {
     function startPolling() {
         if (STATE.pollingInterval) return;
         pollCycle();
-        STATE.pollingInterval = setInterval(pollCycle, 10000);
+        STATE.pollingInterval = setInterval(pollCycle, 5000); // Check every 5s, query every 10s
     }
 
     function stopPolling() {
@@ -92,32 +128,52 @@ const RenogyBLE = (function() {
 
     async function pollCycle() {
         if (!STATE.enabled) return;
-        const { BleClient } = Capacitor.Plugins.BluetoothLe;
-        if (!(await BleClient.isEnabled())) {
-            debug('Bluetooth is OFF', 'warn');
-            return;
-        }
+        const BleClient = getBle();
+        if (!BleClient || !(await BleClient.isEnabled())) return;
 
-        // Poll battery
-        if (STATE.devices.battery.id) {
-            if (!STATE.devices.battery.connected) connectAndNotify('battery');
-            else queryDevice('battery', [0xFF, 0x03, 0x13, 0x88, 0x00, 0x22]); // Basic block
-        }
+        const now = Date.now();
 
-        // Poll DCC (wait 2s)
-        setTimeout(async () => {
-            if (STATE.devices.dcc.id) {
-                if (!STATE.devices.dcc.connected) connectAndNotify('dcc');
-                else queryDevice('dcc', [0xFF, 0x03, 0x01, 0x00, 0x00, 0x21]); // Basic block
+        // Poll battery (Query alternates between cells and dynamic data)
+        if (STATE.devices.battery.id && (now - STATE.devices.battery.lastQuery > 10000)) {
+            if (!STATE.devices.battery.connected) {
+                if (STATE.devices.battery.retryCount < 5 || (now - STATE.devices.battery.lastSync > 60000)) {
+                    connectAndNotify('battery');
+                }
+            } else {
+                if (STATE.devices.battery.queryIndex === 0) {
+                    // Cells & Temp: 0x1388 (5000), count 0x22
+                    queryDevice('battery', [0xFF, 0x03, 0x13, 0x88, 0x00, 0x22]);
+                    STATE.devices.battery.queryIndex = 1;
+                } else {
+                    // V/A/Ah: 0x13B2 (5042), count 0x06
+                    queryDevice('battery', [0xFF, 0x03, 0x13, 0xB2, 0x00, 0x06]);
+                    STATE.devices.battery.queryIndex = 0;
+                }
+                STATE.devices.battery.lastQuery = now;
             }
-        }, 2000);
+        }
+
+        // Poll DCC (wait 2.5s offset)
+        setTimeout(async () => {
+            if (STATE.devices.dcc.id && (Date.now() - STATE.devices.dcc.lastQuery > 10000)) {
+                if (!STATE.devices.dcc.connected) {
+                    if (STATE.devices.dcc.retryCount < 5 || (Date.now() - STATE.devices.dcc.lastSync > 60000)) {
+                        connectAndNotify('dcc');
+                    }
+                } else {
+                    // DCC Main: 0x0100, count 0x21
+                    queryDevice('dcc', [0xFF, 0x03, 0x01, 0x00, 0x00, 0x21]);
+                    STATE.devices.dcc.lastQuery = Date.now();
+                }
+            }
+        }, 2500);
     }
 
     async function connectAndNotify(type) {
         const dev = STATE.devices[type];
         if (dev.connected || !dev.id) return;
 
-        const { BleClient } = Capacitor.Plugins.BluetoothLe;
+        const BleClient = getBle();
         try {
             debug(`Connecting to ${type} (${dev.name})...`);
             await BleClient.connect(dev.id, (id) => onDisconnect(type, id));
@@ -138,7 +194,7 @@ const RenogyBLE = (function() {
     async function disconnectDevice(type) {
         const dev = STATE.devices[type];
         if (!dev.id) return;
-        const { BleClient } = Capacitor.Plugins.BluetoothLe;
+        const BleClient = getBle();
         try {
             await BleClient.stopNotifications(dev.id, SERVICE_NOTIFY, CHAR_NOTIFY);
             await BleClient.disconnect(dev.id);
@@ -149,13 +205,14 @@ const RenogyBLE = (function() {
     function onDisconnect(type, id) {
         debug(`${type} disconnected`, 'warn');
         STATE.devices[type].connected = false;
+        if (window.updateUI) window.updateUI();
     }
 
     async function queryDevice(type, cmdBase) {
         const dev = STATE.devices[type];
         if (!dev.connected) return;
 
-        const { BleClient } = Capacitor.Plugins.BluetoothLe;
+        const BleClient = getBle();
         const fullCmd = new Uint8Array([...cmdBase, ...crc16(cmdBase)]);
         try {
             dev.buffer = []; // Reset buffer for new query
@@ -182,7 +239,8 @@ const RenogyBLE = (function() {
             const crcCalc = crc16(payload);
 
             if (crcCalc[0] === crcReceived[0] && crcCalc[1] === crcReceived[1]) {
-                parseFrame(type, frame.slice(3, -2));
+                hexLog(type, frame);
+                parseFrame(type, frame);
                 dev.lastSync = Date.now();
                 if (window.updateUI) window.updateUI();
             } else {
@@ -191,37 +249,49 @@ const RenogyBLE = (function() {
         }
     }
 
-    function parseFrame(type, data) {
+    function parseFrame(type, frame) {
+        const data = frame.slice(3, -2); // Remove ID, Func, Len and CRC
+        const startReg = frame[0] === 0xFF ? (type === 'battery' ? (STATE.devices.battery.queryIndex === 0 ? 0x13B2 : 0x1388) : 0x0100) : 0;
+
         if (type === 'battery') {
-            // Register 0x1388 (5000) base
-            window.sensorCache['ren_soc']  = u16(data[0], data[1]) / 10.0;
-            window.sensorCache['ren_v']    = u16(data[2], data[3]) / 10.0;
-            window.sensorCache['ren_a']    = s16(data[4], data[5]) / 100.0;
+            if (STATE.devices.battery.queryIndex === 0) { // Was 1 during write, now result of 0x1388
+                // 0x1388 (5000) - Cells/Temp
+                // data[0..1] = cell count
+                // data[2..13] = cell voltages (v1..v6) -> we only need 1..4
+                window.sensorCache['ren_cell_0'] = u16(data[2], data[3]) / 1000.0;
+                window.sensorCache['ren_cell_1'] = u16(data[4], data[5]) / 1000.0;
+                window.sensorCache['ren_cell_2'] = u16(data[6], data[7]) / 1000.0;
+                window.sensorCache['ren_cell_3'] = u16(data[8], data[9]) / 1000.0;
 
-            // Temp (5005-5006 range)
-            window.sensorCache['ren_temp'] = s16(data[10], data[11]);
+                // Temperatures (starting 0x1394 / data[24])
+                window.sensorCache['ren_temp'] = s16(data[24], data[25]) / 10.0;
+            } else {
+                // 0x13B2 (5042) - V/A/Ah/SOC
+                const currentRaw = s16(data[0], data[1]); // 5042
+                window.sensorCache['ren_a'] = currentRaw / 100.0;
+                window.sensorCache['ren_v'] = u16(data[2], data[3]) / 10.0; // 5043
 
-            // Cell voltages (5007...)
-            window.sensorCache['ren_cell_0'] = u16(data[14], data[15]) / 1000.0;
-            window.sensorCache['ren_cell_1'] = u16(data[16], data[17]) / 1000.0;
-            window.sensorCache['ren_cell_2'] = u16(data[18], data[19]) / 1000.0;
-            window.sensorCache['ren_cell_3'] = u16(data[20], data[21]) / 1000.0;
+                const remAh = u32(data[4], data[5], data[6], data[7]) / 1000.0; // 5044-45
+                const capAh = u32(data[8], data[9], data[10], data[11]) / 1000.0; // 5046-47
+
+                if (capAh > 0) window.sensorCache['ren_soc'] = (remAh / capAh) * 100.0;
+            }
         } else if (type === 'dcc') {
             // Register 0x0100 base
-            window.sensorCache['dcc_batt_v'] = u16(data[2], data[3]) / 10.0;
-            window.sensorCache['dcc_charge_a'] = u16(data[4], data[5]) / 10.0;
+            window.sensorCache['dcc_batt_v'] = u16(data[2], data[3]) / 10.0; // 0x101
+            window.sensorCache['dcc_charge_a'] = u16(data[4], data[5]) / 100.0; // 0x102 (Scale /100 based on renogy-bt)
 
-            // PV (0x0107...)
+            // Alternator (0x104..0x106)
+            window.sensorCache['dcc_alt_v'] = u16(data[8], data[9]) / 10.0;
+            window.sensorCache['dcc_alt_a'] = u16(data[10], data[11]) / 100.0;
+            window.sensorCache['dcc_alt_w'] = u16(data[12], data[13]);
+
+            // PV (0x107..0x109)
             window.sensorCache['dcc_pv_v'] = u16(data[14], data[15]) / 10.0;
-            window.sensorCache['dcc_pv_a'] = u16(data[16], data[17]) / 10.0;
+            window.sensorCache['dcc_pv_a'] = u16(data[16], data[17]) / 100.0;
             window.sensorCache['dcc_solar_w'] = u16(data[18], data[19]);
 
-            // Alternator (0x0117...)
-            window.sensorCache['dcc_alt_v'] = u16(data[46], data[47]) / 10.0;
-            window.sensorCache['dcc_alt_a'] = u16(data[48], data[49]) / 10.0;
-            window.sensorCache['dcc_alt_w'] = u16(data[50], data[51]);
-
-            // Status (0x0120)
+            // Status (0x0120 / data[64..65])
             const stageCode = data[65];
             const stages = ["Inactive", "Normal", "Boost", "Float", "Equalize", "Direct", "Limit"];
             window.sensorCache['dcc_stage'] = stages[stageCode] || "Unknown";
@@ -231,22 +301,40 @@ const RenogyBLE = (function() {
     // --- UI Methods ---
 
     async function startScan() {
-        const { BleClient } = Capacitor.Plugins.BluetoothLe;
-        STATE.scanning = true;
-        const results = [];
+        if (Date.now() - STATE.lastScanTime < 10000) {
+            debug('Scan cooldown active', 'warn');
+            return;
+        }
+        const BleClient = getBle();
+        if (!BleClient) return;
+
         try {
+            const hasLocation = await BleClient.isEnabled(); // Check if BT is on
+            if (!hasLocation) {
+                await requestEnableBT();
+                return;
+            }
+
+            STATE.scanning = true;
+            STATE.lastScanTime = Date.now();
+            if (window.updateUI) window.updateUI();
+
+            const results = [];
             await BleClient.requestLEScan({}, (result) => {
                 if (result.device.deviceId === '38:3B:26:79:DB:64') return; // Skip Junctek
                 results.push(result);
+                renderScanResults(results); // Live update
             });
+
             setTimeout(async () => {
                 await BleClient.stopLEScan();
                 STATE.scanning = false;
-                renderScanResults(results);
-            }, 5000);
+                if (window.updateUI) window.updateUI();
+            }, 8000);
         } catch (e) {
             STATE.scanning = false;
             debug('Scan error: ' + e.message, 'error');
+            if (window.updateUI) window.updateUI();
         }
     }
 
@@ -254,19 +342,18 @@ const RenogyBLE = (function() {
         const container = document.getElementById('renogy-scan-list');
         if (!container) return;
 
-        // Dedup by ID
         const unique = Array.from(new Map(results.map(r => [r.device.deviceId, r])).values());
 
         container.innerHTML = unique.map(r => `
-            <div class="card" style="margin-bottom:8px; padding:12px;">
+            <div class="card" style="margin-bottom:8px; padding:12px; background:rgba(255,255,255,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <div style="font-weight:bold;">${r.device.name || 'Unknown'}</div>
+                        <div style="font-weight:bold;">${r.device.name || 'Unknown Device'}</div>
                         <div style="font-size:11px; color:#8b949e;">${r.device.deviceId}</div>
                     </div>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn btn-primary" style="width:auto; padding:4px 8px;" onclick="RenogyBLE.assign('${r.device.deviceId}', '${r.device.name}', 'battery')">Baterija</button>
-                        <button class="btn btn-success" style="width:auto; padding:4px 8px;" onclick="RenogyBLE.assign('${r.device.deviceId}', '${r.device.name}', 'dcc')">DCC50S</button>
+                        <button class="btn btn-primary" style="width:auto; padding:6px 10px; font-size:11px;" onclick="RenogyBLE.assign('${r.device.deviceId}', '${r.device.name}', 'battery')">Baterija</button>
+                        <button class="btn btn-success" style="width:auto; padding:6px 10px; font-size:11px;" onclick="RenogyBLE.assign('${r.device.deviceId}', '${r.device.name}', 'dcc')">DCC50S</button>
                     </div>
                 </div>
             </div>
@@ -275,8 +362,8 @@ const RenogyBLE = (function() {
 
     function assign(id, name, type) {
         STATE.devices[type].id = id;
-        STATE.devices[type].name = name;
-        localStorage.setItem(`ren_dev_${type}`, JSON.stringify({id, name}));
+        STATE.devices[type].name = name || 'Renogy Device';
+        localStorage.setItem(`ren_dev_${type}`, JSON.stringify({id, name: STATE.devices[type].name}));
         debug(`Assigned ${name} as ${type}`, 'success');
         document.getElementById('renogy-scan-list').innerHTML = '';
         if (STATE.enabled) pollCycle();
@@ -292,7 +379,7 @@ const RenogyBLE = (function() {
     }
 
     return {
-        init, toggleGlobal, startScan, assign, forget,
+        init, toggleGlobal, startScan, assign, forget, requestEnableBT,
         getState: () => STATE
     };
 })();
