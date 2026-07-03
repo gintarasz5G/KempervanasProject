@@ -268,6 +268,14 @@ Protokolas — cyrils/renogy-bt; vietinis tyrimas `research/renogy-dcdc/renogy.y
 M-CAN 500 kbps: RPM, temp, greitis, turbo.
 
 ### Kita svarstytina
+- **Junctek temp zondas → lauko temperatūra** (planas, 2026-07-02): kai Renogy `ren_temp`
+  gyvai patvirtintas (po v33.5), Junctek D9 zondas perkeliamas į lauką.
+  **TIK APP pakeitimai (firmware NELIESTI — vartotojo sprendimas):** `junc_temp` kortelę
+  pervadinti „Lauko temperatūra" ir perkelti į Aplinkos tab'ą; akum temperatūra — iš
+  Renogy `ren_temp`; žvejybos kortelė ir kondensato patarimai gali naudoti `junc_temp`
+  kaip lauko temp. SSE mapping nesikeičia (slug lieka tas pats). Kosmetinis likutis:
+  ESPHome web UI jutiklis ir toliau vadinsis „Energija | Akum temperatura".
+  Zondą montuoti šešėlyje, ne prie įkaistančio metalo.
 - Domkratų patarimo text_sensor firmware'e (į web UI ir SMS; app jau skaičiuoja pats).
 - Apps Script 30 d. auto-valymas (buvo planuota; vartotojas prašė Apps Script kol kas neliesti).
 - Papildoma įranga iš senų planų (SSD1306 OLED, AM2301, BMP180) — neprijungta; integruoti tik jei fiziškai sumontuojama.
