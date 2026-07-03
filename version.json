@@ -1,5 +1,5 @@
 {
-  "version": 41,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v41.apk",
-  "notes": "🚀 v33.5 - Renogy Init Fix & Performance Polishing\n\n✅ FIXED: Renogy BLE initialization on Android 12+ (added neverForLocation param).\n✅ FIXED: Battery SOC cap at 100% and logic refinement.\n✅ FIXED: CSV Log header sync (24 columns total).\n✅ IMPROVED: Faster scanning feedback and error visibility for Renogy tab.\n✅ IMPROVED: Silent recovery in loadAllNumbers during network transitions.\n✅ CLEANUP: Removed verified SSE debug logs for cleaner performance."
+  "version": 42,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v42.apk",
+  "notes": "🚀 v33.6 - In-App Updater & Location Fixes\n\n✅ FIXED: In-App Updater now correctly identifies and installs new versions (dynamic naming).\n✅ FIXED: Native error handling during installation (permissions & logs).\n✅ FIXED: Location permissions restored for Android 12+ (SSID visibility).\n✅ NEW: 'Open App Settings' button when WiFi SSID is hidden."
 }

@@ -361,6 +361,9 @@
             <div class="card">
                 <h3>🔌 WiFi Ryšys (ESP32)</h3>
                 <div class="card-value" style="font-size: 18px;" id="wifi-ssid">Tikrinama...</div>
+                <div id="wifi-location-fix" style="display:none; margin-top:8px;">
+                    <button class="btn btn-warning" style="width:auto; padding:4px 10px; font-size:11px;" onclick="window.KemperisWifi && KemperisWifi.openAppSettings()">⚙️ Suteikti vietos leidimą</button>
+                </div>
                 <div class="card-subtext" id="wifi-bind-status">Statusas nežinomas</div>
                 <button class="btn btn-primary" style="margin-top:10px; width:auto; padding:6px 12px;" onclick="forceReconnect()">⚡ Perkrauti SSE</button>
             </div>
@@ -1819,7 +1822,9 @@
                 const bound = KemperisWifi.isBound();
                 const ssidEl = document.getElementById('wifi-ssid');
                 const bindEl = document.getElementById('wifi-bind-status');
+                const locFix = document.getElementById('wifi-location-fix');
                 if (ssidEl) ssidEl.textContent = ssid;
+                if (locFix) locFix.style.display = (ssid.indexOf('Nežinomas') !== -1) ? 'block' : 'none';
                 if (bindEl) {
                     bindEl.textContent = bound ? '✅ Procesas pririštas prie WiFi' : '❌ Nėra bind (reikšmės gali vėluoti)';
                     bindEl.style.color = bound ? '#3fb950' : '#f85149';

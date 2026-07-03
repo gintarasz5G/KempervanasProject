@@ -63,7 +63,7 @@ public class MainActivity extends BridgeActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 123;
     static final String VERSION_JSON_URL = "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
-    static final int CURRENT_VERSION = 41;
+    static final int CURRENT_VERSION = 42;
 
     private Network boundNetwork = null;
     private volatile boolean autoBindPaused = false;
@@ -482,11 +482,17 @@ public class MainActivity extends BridgeActivity {
         @JavascriptInterface
         public void downloadAndInstall(String apkUrl) {
             try {
+                String fileName = apkUrl.substring(apkUrl.lastIndexOf('/') + 1);
+                if (fileName.isEmpty() || !fileName.endsWith(".apk")) fileName = "kemperis_update.apk";
+                final File dest = new File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName);
+                if (dest.exists()) dest.delete();
+
                 DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
                 request.setTitle("Kemperis Atnaujinimas");
-                request.setDescription("Atsiunčiama nauja versija...");
+                request.setDescription("Atsiunčiama versija " + fileName + "...");
                 request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "kemperis_update.apk");
+                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
                 DownloadManager dm = (DownloadManager) ctx.getSystemService(Context.DOWNLOAD_SERVICE);
                 downloadId = dm.enqueue(request);
                 downloadReceiver = new BroadcastReceiver() {
@@ -500,7 +506,7 @@ public class MainActivity extends BridgeActivity {
                             if (c != null && c.moveToFirst()) {
                                 int st = c.getInt(c.getColumnIndex(DownloadManager.COLUMN_STATUS));
                                 if (st == DownloadManager.STATUS_SUCCESSFUL) {
-                                    installApk(new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "kemperis_update.apk"));
+                                    installApk(dest);
                                 } else {
                                     sendNativeLog("❌ Atsisiuntimas nepavyko (status=" + st + ")");
                                 }
@@ -512,11 +518,25 @@ public class MainActivity extends BridgeActivity {
             } catch(Exception e) { sendNativeLog("Download Error: " + e.getMessage()); }
         }
         private void installApk(File file) {
-            Uri apkUri = FileProvider.getUriForFile(ctx, ctx.getPackageName() + ".fileprovider", file);
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-            ctx.startActivity(intent);
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    if (!ctx.getPackageManager().canRequestPackageInstalls()) {
+                        sendNativeLog("⚠️ Reikia leisti įdiegti programėles iš nežinomų šaltinių.");
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+                        intent.setData(Uri.parse("package:" + ctx.getPackageName()));
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        ctx.startActivity(intent);
+                        return;
+                    }
+                }
+                Uri apkUri = FileProvider.getUriForFile(ctx, ctx.getPackageName() + ".fileprovider", file);
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                ctx.startActivity(intent);
+            } catch (Exception e) {
+                sendNativeLog("Install error: " + e.getMessage());
+            }
         }
     }
 
@@ -735,12 +755,21 @@ public class MainActivity extends BridgeActivity {
             String s = info.getSSID();
             if (s == null) return "Nėra";
             if (s.startsWith("\"") && s.endsWith("\"")) s = s.substring(1, s.length()-1);
-            if (s.equals("<unknown ssid>")) return "Nežinomas (įjunkite vietovę)";
+            if (s.equals("<unknown ssid>")) return "Nežinomas (reikia vietos leidimo IR įjungtos vietovės)";
             return s;
         }
         @JavascriptInterface
         public boolean isBound() {
             return boundNetwork != null;
+        }
+        @JavascriptInterface
+        public void openAppSettings() {
+            try {
+                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                intent.setData(Uri.parse("package:" + ctx.getPackageName()));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                ctx.startActivity(intent);
+            } catch (Exception ignored) {}
         }
         @JavascriptInterface
         public void unbindNetwork() {
