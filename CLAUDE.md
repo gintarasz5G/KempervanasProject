@@ -3,6 +3,13 @@
 Šis failas yra pagrindinė instrukcijų bazė Claude Code agentui.
 Perskaityk **viską** prieš pradedant bet kokį veiksmą.
 
+> ⚠️ **VAIDMENŲ PASISKIRSTYMAS (Cowork Claude = TIK AUDITORIUS).**
+> Cowork aplinkoje veikiantis Claude yra **tik auditorius**: analizuoja logus/kodą,
+> tikrina, verifikuoja ir **rašo užduotis** (`docs/uzduotis_*.md`). Jis **NEREDAGUOJA
+> programėlės kodo** (`android/`, `firmware/`, `version.json` ir kt.). **Visus faktinius
+> pataisymus atlieka atskiras Android asistentas.** Radęs klaidą, Cowork Claude ją
+> dokumentuoja užduotyje, bet failų nekeičia (išskyrus `docs/` auditus ir užduotis).
+
 > Sinchronizuota su firmware 2026-07-02 (v32.3, commit 8d19a1d). Šis failas aprašo
 > **faktinę** sistemos būseną; neįgyvendinti planai — tik skyriuje „Ateities etapai".
 
