@@ -721,6 +721,7 @@
     }
     // Atkuriame paskutinius duomenis iš localStorage — UI nebus tuščias po app resume
     let sensorCache = (function(){ try { return JSON.parse(localStorage.getItem('_sensorCache') || '{}'); } catch(e){ return {}; } })();
+    window.sensorCache = sensorCache;
 
     function forceReconnect() {
         sysLog('⚡ Priverstinis prisijungimas gyvai...', 'warn');
@@ -1567,7 +1568,7 @@
             let cap = parseFloat(sensorCache['num_bat_capacity'] || 110);
             let soc = parseFloat(sensorCache['junc_soc']);
             if ((isNaN(soc) || soc <= 0) && !isNaN(ah) && ah > 0.5 && cap > 1) {
-                sensorCache['junc_soc'] = Math.min(100, Math.round((ah / cap) * 100));
+                sensorCache['junc_soc'] = Math.max(0, Math.min(100, Math.round((ah / cap) * 100)));
             }
         })();
 
@@ -1912,8 +1913,8 @@
 
         // Progreso juostos — tiesiogiai, be tekstinio turinio
         // #SOC FIX: rodyti procentą tekste (anksčiau atnaujinta tik juosta, tekstas likdavo 0)
-        setSensorValue('junc_soc', 'soc_value', v=>Math.round(v));
-        setSensorValue('junc_soc', 'soc_d', v=>Math.round(v));
+        setSensorValue('junc_soc', 'soc_value', v => Math.max(0, Math.min(100, Math.round(v))));
+        setSensorValue('junc_soc', 'soc_d', v => Math.max(0, Math.min(100, Math.round(v))));
         let _soc = getCache('junc_soc', 0);
         const sf = document.getElementById('soc-fill'); if (sf) sf.style.width = Math.max(0,Math.min(100,_soc))+'%';
         const sfd = document.getElementById('soc-fill-d'); if (sfd) sfd.style.width = Math.max(0,Math.min(100,_soc))+'%';

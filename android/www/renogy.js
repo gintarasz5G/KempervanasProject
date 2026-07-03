@@ -17,7 +17,8 @@ const RenogyBLE = (function() {
             dcc:     { id: null, name: null, connected: false, lastSync: 0, buffer: [], retryCount: 0, lastQuery: 0 }
         },
         pollingInterval: null,
-        btEnabled: true
+        btEnabled: true,
+        lastSkipReason: null
     };
 
     // --- Helpers ---
@@ -55,7 +56,7 @@ const RenogyBLE = (function() {
 
     function u16(b1, b2) { return (b1 << 8) | b2; }
     function s16(b1, b2) { let v = u16(b1, b2); return v > 32767 ? v - 65536 : v; }
-    function u32(b1, b2, b3, b4) { return (b1 << 24) | (b2 << 16) | (b3 << 8) | b4; }
+    function u32(b1, b2, b3, b4) { return ((b1 << 24) | (b2 << 16) | (b3 << 8) | b4) >>> 0; }
 
     // --- BLE Core ---
 
@@ -132,9 +133,20 @@ const RenogyBLE = (function() {
     }
 
     async function pollCycle() {
-        if (!STATE.enabled) return;
         const BleClient = getBle();
-        if (!BleClient || !(await BleClient.isEnabled())) return;
+        let skip = null;
+        if (!STATE.enabled) skip = 'pollCycle skip: modulis OFF';
+        else if (!BleClient || !STATE.btEnabled) skip = 'pollCycle skip: BT isjungtas';
+        else if (!STATE.devices.battery.id && !STATE.devices.dcc.id) skip = 'pollCycle skip: nepriskirtas irenginys';
+
+        if (skip) {
+            if (STATE.lastSkipReason !== skip) {
+                debug(skip, 'warn');
+                STATE.lastSkipReason = skip;
+            }
+            return;
+        }
+        STATE.lastSkipReason = null;
 
         const now = Date.now();
 
@@ -193,6 +205,7 @@ const RenogyBLE = (function() {
             dev.connected = false;
             dev.retryCount++;
             debug(`${type} connect failed: ${e.message}`, 'warn');
+            if (window.updateUI) window.updateUI();
         }
     }
 
@@ -232,9 +245,8 @@ const RenogyBLE = (function() {
         dev.buffer.push(...data);
 
         // Modbus RTU Response: [id, func, len, ...data, crcL, crcH]
-        if (dev.buffer.length < 5) return;
-        const expectedLen = dev.buffer[2] + 5;
-        if (dev.buffer.length >= expectedLen) {
+        while (dev.buffer.length >= 5 && dev.buffer.length >= dev.buffer[2] + 5) {
+            const expectedLen = dev.buffer[2] + 5;
             const frame = dev.buffer.slice(0, expectedLen);
             dev.buffer = dev.buffer.slice(expectedLen);
 

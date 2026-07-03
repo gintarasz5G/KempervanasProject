@@ -1,5 +1,5 @@
 {
-  "version": 42,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v42.apk",
-  "notes": "🚀 v33.6 - In-App Updater & Location Fixes\n\n✅ FIXED: In-App Updater now correctly identifies and installs new versions (dynamic naming).\n✅ FIXED: Native error handling during installation (permissions & logs).\n✅ FIXED: Location permissions restored for Android 12+ (SSID visibility).\n✅ NEW: 'Open App Settings' button when WiFi SSID is hidden."
+  "version": 43,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v43.apk",
+  "notes": "🚀 v33.7 - Renogy Card Fix & Final Polishing\n\n✅ FIXED: Renogy data now correctly displayed in cards (window.sensorCache binding).\n✅ FIXED: Multi-frame Modbus processing (while loop for buffered data).\n✅ FIXED: SOC calculation now strictly capped at 0-100%.\n✅ IMPROVED: Polling cycle logs now show skip reasons (Module OFF, BT OFF, etc.).\n✅ NEW: Version identifier synchronization (v43)."
 }
