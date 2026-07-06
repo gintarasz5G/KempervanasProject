@@ -2992,17 +2992,27 @@
         return isNaN(v) ? def : v;
     }
 
+    // Rasti "brolio" (kitos pakopos to paties jutiklio) aliarmo GYVĄ (galimai vartotojo
+    // pakeistą per Nustatymus) slenkstį — kad kritinė/žema pakopos niekad nepersidengtų,
+    // net jei vartotojas pakeičia vieno iš jų slenkstį.
+    function _siblingThreshold(id, fallback) {
+        const a = ALARM_CONFIG.find(x => x.id === id);
+        return (a && a.threshold !== null && a.threshold !== undefined) ? a.threshold : fallback;
+    }
+
     // Numatytieji aliarmai — šaltinis atkūrimui
     const DEFAULT_ALARMS = [
         { id: 'water_critical', snoozeGroup: 'water', title: '💧 Vanduo – kritinis',   sensorKey: 'water_pct', threshold: 5,
           condition: (c,t) => getFromCache(c,'water_pct',100) < t,
           reset:     (c,t) => getFromCache(c,'water_pct',100) >= t+3,
           repeatInterval: 1800000,
+          messageI18n: { en: 'Warning! Water tank is almost empty.', lt: 'Dėmesio! Vandens bakas beveik tuščias.' },
           message: 'Warning! Water tank is almost empty.' },
         { id: 'water_low', snoozeGroup: 'water',      title: '💧 Vanduo – žemas',      sensorKey: 'water_pct', threshold: 15,
-          condition: (c,t) => getFromCache(c,'water_pct',100) < t,
+          condition: (c,t) => { const v = getFromCache(c,'water_pct',100); return v < t && v >= _siblingThreshold('water_critical', 5); },
           reset:     (c,t) => getFromCache(c,'water_pct',100) >= t+5,
           repeatInterval: 1800000,
+          messageI18n: { en: 'Warning! Water level dropped below fifteen percent.', lt: 'Dėmesio! Vandens lygis nukrito žemiau penkiolikos procentų.' },
           message: 'Warning! Water level dropped below fifteen percent.' },
         { id: 'co2_danger', snoozeGroup: 'co2',     title: '🛏️ CO₂ – pavojingas',   sensorKey: 'bedroom_co2',     threshold: 2500,
           condition: (c,t) => getFromCache(c,'bedroom_co2',0) > t,
@@ -3011,7 +3021,7 @@
           messageI18n: { en: 'Danger! CO2 level is dangerously high. Ventilate immediately!', lt: 'Pavojus! CO2 lygis pavojingai aukštas. Nedelsiant vėdinkite!' },
           message: 'Danger! CO2 level exceeds safe limit. Ventilate immediately!' },
         { id: 'co2_elevated', snoozeGroup: 'co2',   title: '🛏️ CO₂ – padidėjęs',   sensorKey: 'bedroom_co2',     threshold: 1800,
-          condition: (c,t) => getFromCache(c,'bedroom_co2',0) > t && getFromCache(c,'bedroom_co2',0) <= 2500,
+          condition: (c,t) => { const v = getFromCache(c,'bedroom_co2',0); return v > t && v <= _siblingThreshold('co2_danger', 2500); },
           reset:     (c,t) => getFromCache(c,'bedroom_co2',0) < t-300,
           repeatInterval: 60000,   // kartoti kas 1 min kol padidėjęs
           messageI18n: { en: 'Warning. CO2 level is elevated. Ventilation recommended.', lt: 'Dėmesio. CO2 lygis padidėjęs. Rekomenduojama vėdinti.' },
@@ -3020,16 +3030,19 @@
           condition: (c,t) => getFromCache(c,'junc_soc',100) < t,
           reset:     (c,t) => getFromCache(c,'junc_soc',100) >= t+3,
           repeatInterval: 1800000,
+          messageI18n: { en: 'Warning! Battery charge critically low.', lt: 'Dėmesio! Akumuliatoriaus įkrova kritiškai žema.' },
           message: 'Warning! Battery charge critically low.' },
         { id: 'soc_low', snoozeGroup: 'soc',        title: '🔋 SOC – žemas',         sensorKey: 'junc_soc',        threshold: 25,
-          condition: (c,t) => getFromCache(c,'junc_soc',100) < t && getFromCache(c,'junc_soc',100) >= 15,
+          condition: (c,t) => { const v = getFromCache(c,'junc_soc',100); return v < t && v >= _siblingThreshold('soc_critical', 15); },
           reset:     (c,t) => getFromCache(c,'junc_soc',100) >= t+3,
           repeatInterval: 1800000,
+          messageI18n: { en: 'Battery charge below twenty-five percent.', lt: 'Akumuliatoriaus įkrova žemiau dvidešimt penkių procentų.' },
           message: 'Battery charge below twenty-five percent.' },
         { id: 'gas_low', snoozeGroup: 'gas',        title: '🔥 Dujos – žemas',       sensorKey: 'gas_pct', threshold: 10,
           condition: (c,t) => getFromCache(c,'gas_pct',100) < t,
           reset:     (c,t) => getFromCache(c,'gas_pct',100) >= t+5,
           repeatInterval: 1800000,
+          messageI18n: { en: 'Less than ten percent of gas remaining.', lt: 'Liko mažiau nei dešimt procentų dujų.' },
           message: 'Less than ten percent of gas remaining.' },
         { id: 'theft_alarm',    title: '🚨 Vagystė',             sensorKey: null, threshold: null,
           repeatInterval: 120000,  // pakartojimas važiuojant (ms); tiksli logika -> checkTheftVoice()
@@ -3039,6 +3052,7 @@
         { id: 'condensation', snoozeGroup: 'condensation',   title: '💧 Kondensatas',          sensorKey: null, threshold: null,
           condition: (c) => getFromCache(c,'bme_temp',20) < 8 && getFromCache(c,'bme_humidity',0) > 65,
           reset:     (c) => getFromCache(c,'bme_temp',20) >= 10 || getFromCache(c,'bme_humidity',0) <= 60,
+          messageI18n: { en: 'Warning. Low temperature and high humidity. Condensation risk.', lt: 'Dėmesio. Žema temperatūra ir aukšta drėgmė. Kondensato susidarymo rizika.' },
           message: 'Warning. Low temperature and high humidity. Condensation risk.' },
     ];
 
