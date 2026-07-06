@@ -2153,7 +2153,7 @@
                 const r = await fetch(`${ESPHOME_URL}/text/${id}`);
                 if (!r.ok) continue;
                 const data = await r.json();
-                const val = data.value ?? '';
+                const val = (data.value !== undefined && data.value !== null) ? data.value : '';
                 // txt_admin_number → #txt_admin_number_input, kiti → #id_input arba #id
                 const el = document.getElementById(id + '_input') || document.getElementById(id);
                 if (el) el.value = val;
@@ -3050,7 +3050,10 @@
                 const parsed = JSON.parse(saved);
                 return DEFAULT_ALARMS.map(def => {
                     const o = parsed.find(p => p.id === def.id);
-                    return o ? { ...def, threshold: o.threshold ?? def.threshold, message: o.message ?? def.message } : { ...def };
+                    if (!o) return { ...def };
+                    const th = (o.threshold !== undefined && o.threshold !== null) ? o.threshold : def.threshold;
+                    const msg = (o.message !== undefined && o.message !== null) ? o.message : def.message;
+                    return { ...def, threshold: th, message: msg };
                 });
             } catch(e) {}
         }
@@ -3060,7 +3063,7 @@
 
     function saveAlarmConfig() {
         localStorage.setItem('kemper_alarm_config', JSON.stringify(
-            ALARM_CONFIG.map(a => ({ id: a.id, threshold: a.threshold ?? null, message: a.message }))
+            ALARM_CONFIG.map(a => ({ id: a.id, threshold: (a.threshold !== undefined ? a.threshold : null), message: a.message }))
         ));
     }
     function resetAlarmsToDefault() {
@@ -3145,12 +3148,14 @@
         }
     }
 
-    async function speakText(text, withChime) {
+    async function speakText(text, withChime, priority) {
         debugLog('[SPEECH] speakText: ' + text + ' (chime=' + withChime + ')');
         if (!text) return;
 
         // Vagystė turi prioritetą - nutraukiam viską ir rėkiam
-        if (text.toLowerCase().includes('theft') || text.toLowerCase().includes('pajudėjo') || text.toLowerCase().includes('vagystė')) {
+        // (priority=true ateina tiesiai iš checkTheftVoice() — nesitikima raktažodžių tekste,
+        //  nes vartotojas gali pakeisti vagystės pranešimų tekstus Nustatymuose)
+        if (priority || text.toLowerCase().includes('theft') || text.toLowerCase().includes('pajudėjo') || text.toLowerCase().includes('vagystė')) {
             if (window.speechSynthesis && window.speechSynthesis.speaking) window.speechSynthesis.cancel();
             _speechQueue = []; // Išvalom eilę
             _isSpeaking = false;
@@ -3510,7 +3515,7 @@
                 alarmLastTriggered['theft_alarm'] = now;
                 _addAlarmHistory(theftAlarm, cache);
                 _theftHistoryLatched = true;
-                speakText(isDriving ? texts.first_drive : texts.first_idle, true);
+                speakText(isDriving ? texts.first_drive : texts.first_idle, true, true);
             } else {
                 // Jei alarmFlags jau true (po reloads), bet istorijoje tuščia (nauja sesija) - vis tiek užfiksuojam pirmą įrašą
                 if (!_theftHistoryLatched) {
@@ -3522,7 +3527,7 @@
                 const repeatMs = isDriving ? 120000 : 60000;
                 if (now - (alarmLastTriggered['theft_alarm'] || 0) >= repeatMs) {
                     alarmLastTriggered['theft_alarm'] = now;
-                    speakText(isDriving ? texts.repeat_drive : texts.repeat_idle, true);
+                    speakText(isDriving ? texts.repeat_drive : texts.repeat_idle, true, true);
                 }
             }
         } else if (alarmFlags['theft_alarm']) {

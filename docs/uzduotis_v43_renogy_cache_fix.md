@@ -14,7 +14,75 @@
 
 ---
 
-## 🔴🔴 STATUSAS — auditoriaus patikra 2026-07-03 (PO asistento pataisymų)
+## ✅ STATUSAS #3 — GALUTINIS (2026-07-03, patikra host failų sistemoje)
+
+**Viskas tvarkoje. Užduotis įgyvendinta.** Patikrinta per host įrankius (ne bash sandbox):
+
+| Punktas | Būsena | Vieta (host) |
+|---|---|---|
+| Failai pilni | ✅ | `renogy.js` baigiasi `RenogyBLE.init()` (435 eil.); `index.html` — `</html>` (3623) |
+| P1 `window.sensorCache = sensorCache` | ✅ | `index.html:724` |
+| P2.1 `while` multi-frame | ✅ | `renogy.js:248` |
+| P2.2 `u32 … >>> 0` | ✅ | `renogy.js:59` |
+| P3 `pollCycle` skip logai (`lastSkipReason`) | ✅ | `renogy.js:21,143–149` |
+| P4.1 `junc_soc` `Math.max(0,…)` | ✅ | `index.html:1571` |
+| `version.json` 43 / APK `kemperis_v43.apk` | ✅ | — |
+
+> **⚠️ Pataisa dėl STATUSAS #1/#2 (auditoriaus klaida):** ten buvę „failai nukirsti"
+> alarmai kilo iš **pasenusios bash sandbox mount kopijos**, kuri nesutapo su tikra host
+> failų sistema. Realiai host failai (ir APK) visą laiką buvo pilni. STATUSAS #1/#2 palikti
+> istorijai, bet **nebegalioja** — teisingas yra šis #3.
+>
+> Pamoka auditoriui: failų vientisumą tikrinti **host įrankiais** (Read/Grep), ne vien
+> bash `tail`/`node --check`, nes sandbox mount gali rodyti pasenusią kopiją.
+
+**Belieka** (jei dar nepadaryta, ir tik tikrai mašinoje, ne per sandbox): `git status`
+švarus, `.git/index.lock` pašalintas (jei yra), commit + push. Git būsenos per sandbox
+netikrinti — mano mount'as pasenęs.
+
+---
+
+## 🔴🔴 STATUSAS #2 — auditoriaus patikra 2026-07-03 15:4x (PO builda) — ⛔ NEBEGALIOJA (žr. #3)
+
+Asistentas užbaigė: `version.json` → 43, `apk_url` → `kemperis_v43.apk`, **APK subuildintas**.
+**Įdiegta programėlė turėtų veikti** — bet **git šaltinis liko sugadintas**.
+
+| Artefaktas | Būsena | Įrodymas |
+|---|---|---|
+| `kemperis_v43.apk` → viduje `renogy.js` | ✅ **PILNAS, teisingas** | baigiasi `RenogyBLE.init()`; `node --check` praeina; yra `>>> 0` |
+| `kemperis_v43.apk` → viduje `index.html` | ✅ **PILNAS** | baigiasi `</html>`; yra `window.sensorCache = sensorCache` |
+| `android/www/renogy.js` (git) | ❌ **NUKIRSTAS** | baigiasi `function forget(type`; `node --check` → SyntaxError |
+| `android/www/index.html` (git) | ❌ **NUKIRSTAS** | baigiasi `Uždaryti</butto`; nėra `</body></html>` |
+| `assets/public/renogy.js` (sinchr.) | ❌ **NUKIRSTAS** | `node --check` → SyntaxError |
+| `version.json` | ✅ 43 / apk_url sinchronas | — |
+
+**Reikšmė:** APK geras (šiuo metu įdiegta versija veikia), BET jei šis darbinis medis bus
+**commitintas — repo šaltinis sugadinamas ir kitas build lūžta**. Klasikinė
+„APK geras, šaltinis sudegęs" būsena. **NECOMMITINTI**, kol šaltinis neatkurtas.
+
+**Atkūrimas — lengviausias kelias:** teisingi PILNI failai jau yra `kemperis_v43.apk` viduje.
+Ištraukti ir jais perrašyti darbinį šaltinį:
+```bash
+cd android
+unzip -o kemperis_v43.apk assets/public/renogy.js assets/public/index.html -d /tmp/v43ok
+cp /tmp/v43ok/assets/public/renogy.js  www/renogy.js
+cp /tmp/v43ok/assets/public/index.html www/index.html
+# sinchr. į native assets:
+cp www/renogy.js www/index.html android/app/src/main/assets/public/
+node --check www/renogy.js          # privalo praeiti
+tail -c 20 www/index.html            # privalo baigtis </html>
+git diff --stat                      # jokio failo diff'as neturi baigtis vien ištrynimais gale
+```
+Po to — commit + push (APK jau atitinka šaltinį, perbuildinti nereikia).
+
+> **⚠️ Pasikartojanti korupcija (jau 2-as kartas).** Failų uodegos dingsta būtent po
+> asistento redagavimo/sync. Verta išsiaiškinti šaknį: redaktoriaus „write" nutrūksta,
+> ar `cap sync`/build žingsnis perrašo `www` nukirsta kopija. Kol neišspręsta — **PO KIEKVIENO
+> darbo** paleisti `node --check www/renogy.js` ir `tail -c 20 www/index.html` prieš commit.
+
+---
+
+## 🔴🔴 STATUSAS #1 — auditoriaus patikra 2026-07-03 (PO pirmų pataisymų)
 
 Asistentas jau pritaikė daugumą logikos pataisymų, **bet PALIKO ABU failus NUKIRSTUS**
 (worktree korupcija — būtent tai, apie ką įspėja skyrius žemiau). **Programėlė šiuo metu

@@ -1,5 +1,5 @@
 {
-  "version": 43,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v43.apk",
-  "notes": "🚀 v33.7 - Renogy Card Fix & Final Polishing\n\n✅ FIXED: Renogy data now correctly displayed in cards (window.sensorCache binding).\n✅ FIXED: Multi-frame Modbus processing (while loop for buffered data).\n✅ FIXED: SOC calculation now strictly capped at 0-100%.\n✅ IMPROVED: Polling cycle logs now show skip reasons (Module OFF, BT OFF, etc.).\n✅ NEW: Version identifier synchronization (v43)."
+  "version": 44,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v44.apk",
+  "notes": "🚀 v33.8 - Senos WebView suderinamumo pataisymas (kritinis)\n\n✅ FIXED: Pašalinti visi likę `??` (nullish coalescing, ES2020) operatoriai index.html (alarm config + tekstų sensorius) — senose magnetolų WebView (Chrome <80) jie sukeldavo viso <script> bloko sintaksės klaidą: programėlė atsidarydavo, bet NEREAGUODAVO į jokius paspaudimus, neveikė ekranų perjungimas, log peržiūra ir ESP32 duomenų gavimas.\n✅ FIXED: Vagystės balso pranešimų prioritetas (checkTheftVoice) — anksčiau 'stovinčio kemperio' įsilaužimo pranešimai (first_idle/repeat_idle) nepertraukdavo eilėje laukiančių kitų pranešimų, nes prioritetas buvo nustatomas pagal raktažodžius tekste ('theft'/'vagystė'), kurių šiuose tekstuose nebuvo. Dabar prioritetas nustatomas eksplicitiškai.\n✅ Patikrinta: visas JS kodas (index.html, ble-plugin.js, renogy.js) neturi jokių ES2020+/ES2021+/ES2022 konstrukcijų (optional chaining, ??=, ||=, &&=, replaceAll, Array.at, structuredClone, privatūs #laukai) — suderinama su senomis Android WebView (Chrome 60+)."
 }
