@@ -473,7 +473,7 @@
                 <div class="progress-bar"><div class="progress-fill" id="ren-bat-fill" style="width:0%; background:#238636;"></div></div>
                 <div class="card-subtext">
                     <span id="ren_bat_v">0.0</span>V · <span id="ren_bat_a">0.0</span>A<br>
-                    Temp: <span id="ren_bat_temp">0</span>°C
+                    Modelis: <span id="ren_bat_model">---</span>
                 </div>
                 <div id="ren-bat-sync" class="status-line" style="margin-top:8px;">Atjungta</div>
             </div>
@@ -487,6 +487,36 @@
                     <div style="padding:6px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">3</div><div id="ren_cell_2" style="font-weight:bold;">0.00</div></div>
                     <div style="padding:6px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">4</div><div id="ren_cell_3" style="font-weight:bold;">0.00</div></div>
                 </div>
+            </div>
+
+            <!-- Battery Temperatures -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h3>🌡️ Baterijos temperatūros jutikliai (°C)</h3>
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-top:8px; text-align:center;">
+                    <div style="padding:6px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">1</div><div id="ren_bat_temp" style="font-weight:bold;">0</div></div>
+                    <div style="padding:6px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">2</div><div id="ren_bat_temp_1" style="font-weight:bold;">0</div></div>
+                    <div style="padding:6px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">3</div><div id="ren_bat_temp_2" style="font-weight:bold;">0</div></div>
+                    <div style="padding:6px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">4</div><div id="ren_bat_temp_3" style="font-weight:bold;">0</div></div>
+                </div>
+            </div>
+
+            <!-- DCC50S Daily & Lifetime Stats -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <h3>📊 DCC50S statistika</h3>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:8px; margin-top:8px;">
+                    <div style="padding:8px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">Šiandien Ah</div><div id="dcc_ah_today_v" style="font-weight:bold;">--</div></div>
+                    <div style="padding:8px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">Šiandien Wh</div><div id="dcc_wh_today_v" style="font-weight:bold;">--</div></div>
+                    <div style="padding:8px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">Akum. V šiandien</div><div id="dcc_v_range_today" style="font-weight:bold;">--</div></div>
+                    <div style="padding:8px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">Max srovė šiandien</div><div id="dcc_a_max_today_v" style="font-weight:bold;">--</div></div>
+                    <div style="padding:8px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">Kontrolerio temp.</div><div id="dcc_ctrl_temp_v" style="font-weight:bold;">--</div></div>
+                    <div style="padding:8px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">Baterijos temp. (DCC)</div><div id="dcc_batt_temp_v" style="font-weight:bold;">--</div></div>
+                    <div style="padding:8px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">Darbo dienos</div><div id="dcc_working_days_v" style="font-weight:bold;">--</div></div>
+                    <div style="padding:8px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">Pilnų įkrovimų</div><div id="dcc_count_full_charge_v" style="font-weight:bold;">--</div></div>
+                    <div style="padding:8px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">Iškrovimų perviršiai</div><div id="dcc_count_overdischarge_v" style="font-weight:bold;">--</div></div>
+                    <div style="padding:8px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">Ah viso (gyvenimas)</div><div id="dcc_ah_total_v" style="font-weight:bold;">--</div></div>
+                    <div style="padding:8px; background:#0d1117; border-radius:4px;"><div style="font-size:10px; color:#8b949e;">Wh viso (gyvenimas)</div><div id="dcc_wh_total_v" style="font-weight:bold;">--</div></div>
+                </div>
+                <div class="card-subtext" style="margin-top:8px;">DCC50S nuosava SOC nuomonė: <span id="dcc_batt_soc_v">--</span>% (kryžminė patikra su baterijos BLE SOC)</div>
             </div>
         </div>
 
@@ -2059,6 +2089,10 @@
             setSensorValue('ren_v', 'ren_bat_v', v => v.toFixed(1));
             setSensorValue('ren_a', 'ren_bat_a', v => v.toFixed(1));
             setSensorValue('ren_temp', 'ren_bat_temp');
+            setSensorValue('ren_temp_1', 'ren_bat_temp_1');
+            setSensorValue('ren_temp_2', 'ren_bat_temp_2');
+            setSensorValue('ren_temp_3', 'ren_bat_temp_3');
+            setSensorValue('ren_model', 'ren_bat_model');
 
             setSensorValue('ren_cell_0', 'ren_cell_0');
             setSensorValue('ren_cell_1', 'ren_cell_1');
@@ -2074,6 +2108,23 @@
             setSensorValue('dcc_alt_a', 'ren_alt_a', v => v.toFixed(1));
             setSensorValue('dcc_alt_w', 'ren_alt_w');
             setSensorValue('dcc_stage', 'ren_dcc_stage');
+
+            setSensorValue('dcc_batt_soc', 'dcc_batt_soc_v', v => Math.round(v));
+            setSensorValue('dcc_ah_today', 'dcc_ah_today_v', v => Math.round(v));
+            setSensorValue('dcc_wh_today', 'dcc_wh_today_v', v => Math.round(v));
+            setSensorValue('dcc_a_max_today', 'dcc_a_max_today_v', v => v.toFixed(1));
+            setSensorValue('dcc_ctrl_temp', 'dcc_ctrl_temp_v', v => Math.round(v));
+            setSensorValue('dcc_batt_temp', 'dcc_batt_temp_v', v => Math.round(v));
+            setSensorValue('dcc_working_days', 'dcc_working_days_v', v => Math.round(v));
+            setSensorValue('dcc_count_full_charge', 'dcc_count_full_charge_v', v => Math.round(v));
+            setSensorValue('dcc_count_overdischarge', 'dcc_count_overdischarge_v', v => Math.round(v));
+            setSensorValue('dcc_ah_total', 'dcc_ah_total_v', v => Math.round(v));
+            setSensorValue('dcc_wh_total', 'dcc_wh_total_v', v => Math.round(v));
+            (function() {
+                const vMin = getSensorValue('dcc_v_min_today'), vMax = getSensorValue('dcc_v_max_today');
+                const el = document.getElementById('dcc_v_range_today');
+                if (el) el.textContent = (vMin === null || vMax === null) ? '--' : parseFloat(vMin).toFixed(1) + '–' + parseFloat(vMax).toFixed(1) + 'V';
+            })();
 
             const syncBat = document.getElementById('ren-bat-sync');
             if (syncBat) {

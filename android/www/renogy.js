@@ -13,8 +13,8 @@ const RenogyBLE = (function() {
         scanning: false,
         lastScanTime: 0,
         devices: {
-            battery: { id: null, name: null, connected: false, lastSync: 0, buffer: [], retryCount: 0, lastQuery: 0, queryIndex: 0 },
-            dcc:     { id: null, name: null, connected: false, lastSync: 0, buffer: [], retryCount: 0, lastQuery: 0 }
+            battery: { id: null, name: null, connected: false, lastSync: 0, buffer: [], retryCount: 0, lastQuery: 0, queryIndex: 0, modelFetched: false },
+            dcc:     { id: null, name: null, connected: false, lastSync: 0, buffer: [], retryCount: 0, lastQuery: 0, queryIndex: 0 }
         },
         pollingInterval: null,
         btEnabled: true,
@@ -57,6 +57,9 @@ const RenogyBLE = (function() {
     function u16(b1, b2) { return (b1 << 8) | b2; }
     function s16(b1, b2) { let v = u16(b1, b2); return v > 32767 ? v - 65536 : v; }
     function u32(b1, b2, b3, b4) { return ((b1 << 24) | (b2 << 16) | (b3 << 8) | b4) >>> 0; }
+    // DCC50S 1-baito temperatūros koduotė (sign-magnitude, NE two's complement kaip s16):
+    // bitas7=1 -> neigiama (reikšmė = -(b-128)); bitas7=0 -> teigiama (reikšmė = b)
+    function dccTempByte(b) { return (b & 0x80) ? -(b - 128) : b; }
 
     // --- BLE Core ---
 
@@ -156,6 +159,11 @@ const RenogyBLE = (function() {
                 if (STATE.devices.battery.retryCount < 5 || (now - STATE.devices.battery.lastSync > 60000)) {
                     connectAndNotify('battery');
                 }
+            } else if (!STATE.devices.battery.modelFetched) {
+                // Modelio pavadinimas: reg 5122 (0x1402), count 0x08 — nuskaitoma tik kartą po prisijungimo
+                queryDevice('battery', [0xFF, 0x03, 0x14, 0x02, 0x00, 0x08]);
+                STATE.devices.battery.modelFetched = true;
+                STATE.devices.battery.lastQuery = now;
             } else {
                 if (STATE.devices.battery.queryIndex === 0) {
                     // Cells & Temp: 0x1388 (5000), count 0x22
@@ -178,8 +186,15 @@ const RenogyBLE = (function() {
                         connectAndNotify('dcc');
                     }
                 } else {
-                    // DCC Main: 0x0100, count 0x21
-                    queryDevice('dcc', [0xFF, 0x03, 0x01, 0x00, 0x00, 0x21]);
+                    // Pagrindiniai krovimo duomenys (0x0100) skaitomi KIEKVIENĄ ciklą (~10s), kaip ir anksčiau.
+                    // Kas 6-ą ciklą (~1 min) papildomai įterpiamas gedimų bitų debug zondas (žr. parseFrame) —
+                    // TIK hex logui, jokių aliarmų iš čia dar negeneruojame, kol nepatvirtinta su aparatūra.
+                    STATE.devices.dcc.queryIndex = (STATE.devices.dcc.queryIndex + 1) % 6;
+                    if (STATE.devices.dcc.queryIndex === 0) {
+                        queryDevice('dcc', [0xFF, 0x03, 0x01, 0x20, 0x00, 0x03]); // reg 288 (0x0120), count 0x03
+                    } else {
+                        queryDevice('dcc', [0xFF, 0x03, 0x01, 0x00, 0x00, 0x21]); // reg 256 (0x0100), count 0x21
+                    }
                     STATE.devices.dcc.lastQuery = Date.now();
                 }
             }
@@ -223,6 +238,7 @@ const RenogyBLE = (function() {
     function onDisconnect(type, id) {
         debug(`${type} disconnected`, 'warn');
         STATE.devices[type].connected = false;
+        if (type === 'battery') STATE.devices.battery.modelFetched = false; // vėl nuskaitysime po kito prisijungimo
         if (window.updateUI) window.updateUI();
     }
 
@@ -280,8 +296,11 @@ const RenogyBLE = (function() {
                 window.sensorCache['ren_cell_2'] = u16(data[6], data[7]) / 10.0;
                 window.sensorCache['ren_cell_3'] = u16(data[8], data[9]) / 10.0;
 
-                // R2: Temperatures (reg 5018 / data[36..37])
-                window.sensorCache['ren_temp'] = s16(data[36], data[37]) / 10.0;
+                // R2: Temperatures (reg 5018..5021 / data[36..43]) — baterija turi iki 4 jutiklių
+                window.sensorCache['ren_temp']   = s16(data[36], data[37]) / 10.0;
+                window.sensorCache['ren_temp_1'] = s16(data[38], data[39]) / 10.0;
+                window.sensorCache['ren_temp_2'] = s16(data[40], data[41]) / 10.0;
+                window.sensorCache['ren_temp_3'] = s16(data[42], data[43]) / 10.0;
             } else if (len === 0x0C) { // 0x13B2 (5042) - V/A/Ah/SOC
                 const currentRaw = s16(data[0], data[1]); // 5042
                 window.sensorCache['ren_a'] = currentRaw / 100.0;
@@ -291,13 +310,20 @@ const RenogyBLE = (function() {
                 const capAh = u32(data[8], data[9], data[10], data[11]) / 1000.0; // 5046-47
 
                 if (capAh > 0) window.sensorCache['ren_soc'] = (remAh / capAh) * 100.0;
+            } else if (len === 0x10) { // 0x1402 (5122) - Modelio pavadinimas (8 words, ASCII)
+                let model = '';
+                for (let i = 0; i < 16; i++) { if (data[i] > 0) model += String.fromCharCode(data[i]); }
+                window.sensorCache['ren_model'] = model.trim();
             } else {
                 debug(`Nezinomas baterijos blokas: len=${len}`, 'warn');
             }
         } else if (type === 'dcc') {
             if (len === 0x42) { // Register 0x0100 base
+                window.sensorCache['dcc_batt_soc'] = u16(data[0], data[1]); // 0x100 — DCC50S nuosava SOC nuomone (kryzmine patikra su ren_soc)
                 window.sensorCache['dcc_batt_v'] = u16(data[2], data[3]) / 10.0; // 0x101
                 window.sensorCache['dcc_charge_a'] = u16(data[4], data[5]) / 100.0; // 0x102 (Scale /100 based on renogy-bt)
+                window.sensorCache['dcc_ctrl_temp'] = dccTempByte(data[6]);  // 0x103 hi baitas — kontrolerio temp.
+                window.sensorCache['dcc_batt_temp'] = dccTempByte(data[7]);  // 0x103 lo baitas — baterijos temp. (is DCC50S puses)
 
                 // R2: Alternator (0x104..0x106) -> data[8..13]
                 window.sensorCache['dcc_alt_v'] = u16(data[8], data[9]) / 10.0;
@@ -309,6 +335,21 @@ const RenogyBLE = (function() {
                 window.sensorCache['dcc_pv_a'] = u16(data[16], data[17]) / 100.0;
                 window.sensorCache['dcc_solar_w'] = u16(data[18], data[19]);
 
+                // Dienos statistika (0x111..0x11A) -> data[22..39]
+                window.sensorCache['dcc_v_min_today'] = u16(data[22], data[23]) / 10.0;
+                window.sensorCache['dcc_v_max_today'] = u16(data[24], data[25]) / 10.0;
+                window.sensorCache['dcc_a_max_today'] = u16(data[26], data[27]) / 100.0;
+                window.sensorCache['dcc_w_max_today'] = u16(data[30], data[31]);
+                window.sensorCache['dcc_ah_today']    = u16(data[34], data[35]);
+                window.sensorCache['dcc_wh_today']    = u16(data[38], data[39]);
+
+                // Viso laiko statistika (0x12D..0x139) -> data[42..59]
+                window.sensorCache['dcc_working_days']       = u16(data[42], data[43]);
+                window.sensorCache['dcc_count_overdischarge']= u16(data[44], data[45]);
+                window.sensorCache['dcc_count_full_charge']  = u16(data[46], data[47]);
+                window.sensorCache['dcc_ah_total']           = u32(data[48], data[49], data[50], data[51]);
+                window.sensorCache['dcc_wh_total']           = u32(data[56], data[57], data[58], data[59]);
+
                 // R3: Status (0x120 / data[64..65])
                 const stageCode = data[65];
                 const stages = {
@@ -316,6 +357,13 @@ const RenogyBLE = (function() {
                     4: "Boost", 5: "Palaikymas", 6: "Sroves ribojimas", 8: "Tiesiai is generatoriaus"
                 };
                 window.sensorCache['dcc_stage'] = stages[stageCode] || ("Kodas " + stageCode);
+            } else if (len === 0x06) {
+                // #Pasiruošimas gedimų bitams (reg 288/0x0120, 3 words). Realioje aparatūroje
+                // dar nepatvirtinta tiksli baitų/bitų pozicija (žr. cyrils/renogy-bt parse_state
+                // nenuoseklumą su kitais parseriais) — TIK hex logas patikrai, jokių aliarmų
+                // iš čia dar negeneruojame, kad neatsirastų klaidingų pranešimų.
+                hexLog('dcc_state_probe', frame);
+                debug(`DCC state-probe (reg 288, 3w): ${Array.from(data).map(b=>b.toString(16).padStart(2,'0')).join(' ')}`, 'info');
             } else {
                 debug(`Nezinomas DCC blokas: len=${len}`, 'warn');
             }
