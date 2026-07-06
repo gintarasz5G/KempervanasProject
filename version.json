@@ -1,5 +1,5 @@
 {
-  "version": 48,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v48.apk",
-  "notes": "🚀 v35.1 - OBD Stability & Hardening (v48)\n\n✅ FIXED: ECU lockup after deep scans (auto-reset to default session 10 01).\n✅ FIXED: Stale response overlap (flushing window after timeouts).\n✅ FIXED: Race conditions with multiple scans (UI locking during scan).\n✅ NEW: 'Safe Mode' toggle for lower-quality ELM327 adapters (extra latency).\n✅ NEW: Automated engine state logging (Ignition/RPM detection).\n✅ NEW: SSE unmatched sensor mapping (GPS Fix, Modem State, Last Error)."
+  "version": 49,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v49.apk",
+  "notes": "🚀 v35.2 - OBD Critical Logic Fixes (v49)\n\n✅ FIXED: 'Collect All' deadlock (Bug #1) — sub-scans now correctly run while scanBusy is true.\n✅ FIXED: Auto-recovery deadlock (Bug #2) — recovery commands now correctly process during flushing state.\n✅ FIXED: Native pairing sync — documentation restored to match actual Java implementation (Bluetooth Classic pairing/discovery enabled).\n✅ IMPROVED: Global collection now correctly asks for top-level confirmation."
 }
