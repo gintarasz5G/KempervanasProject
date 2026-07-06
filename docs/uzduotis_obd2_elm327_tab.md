@@ -25,9 +25,10 @@ būtų aišku, kas daroma dabar (app, variklis) ir kas — vėliau (sniffing, vi
 
 - Adapteris: **„OBDII v1.5" / „OBDII to RS232 Interpreter"** — pigus ELM327 klonas.
 - **Bluetooth Classic (SPP)** — patvirtinta: įrenginys matomas ir susietas (PIN) per
-  telefono SISTEMINIUS Bluetooth nustatymus, ne tik per app'o vidinį skenavimą.
-  **`@capacitor-community/bluetooth-le` (naudojamas Renogy tab'e) čia NETINKA** — tai grynai
-  BLE/GATT biblioteka, nekalba su Classic SPP įrenginiais. Reikia naujo native sluoksnio (§2).
+  telefono SISTEMINIUS Bluetooth nustatymus. **SVARBU:** dėl Android 10+ saugumo apribojimų,
+  programinis poravimas be vartotojo įsikišimo („silent pairing") trečiųjų šalių programėlėms
+  yra **blokuojamas**. Vartotojas privalo suporuoti įrenginį per sisteminius Android nustatymus
+  prieš naudodamas programėlę.
 - Protokolas: **ISO 15765-4 (CAN 11-bit ID, 500 kbps)** — patvirtina Gemini spėjimą.
 - ECU atsako adresu **`0x7E8`** (užklausa į `0x7E0` arba broadcast `0x7DF`) — sutampa su
   `research/obd2/ESPobd/src/main.cpp` naudojama schema.
@@ -114,34 +115,16 @@ Tai reiškia:
   `new Thread(() -> {...})` pavyzdžiai `MainActivity.java` (pvz. `httpGet`/`httpPost` async
   pattern, arba TTS bridge su `runOnUiThread` + `evaluateJavascript` callback).
 
-### 1a. Poravimas (pairing) tiesiai iš app'o
+### 1a. Bluetooth įrenginio pasirinkimas
 
-Vartotojas nori pasirinkti/suporuoti ELM327 programėlėje, ne eiti į sistemos Bluetooth
-nustatymus atskirai. Reikia:
+Vartotojas pasirenka ELM327 programėlėje iš jau suporuotų įrenginių sąrašo.
 
-- **Neporuotų įrenginių paieška:** `BluetoothAdapter.startDiscovery()` (reikia `BLUETOOTH_SCAN`
-  — jau deklaruota manifest'e) + `BroadcastReceiver` ant `BluetoothDevice.ACTION_FOUND`,
-  renkant `EXTRA_DEVICE` + RSSI. Rodyti sąrašą kartu su jau susietais (`getBondedDevices()`) —
-  susieti pažymėti kaip „Susietas", nesusieti — su mygtuku „Suporuoti".
-- **Poravimas be vartotojo PIN įvedimo (auto-PIN):** dauguma pigių ELM327/HC-05 klonų naudoja
-  fiksuotą PIN (dažniausiai `1234`, kartais `0000` arba `6789`). Native pusėje:
-  1. `device.createBond()` — inicijuoja poravimą.
-  2. `BroadcastReceiver` ant `BluetoothDevice.ACTION_PAIRING_REQUEST`: iškviesti
-     `device.setPin("1234".getBytes())` (per viešą `BluetoothDevice.setPin()` arba reflection,
-     priklausomai nuo API), tada `abortBroadcast()`, kad sistema neatidarytų PIN įvedimo
-     dialogo vartotojui.
-  3. `BroadcastReceiver` ant `BluetoothDevice.ACTION_BOND_STATE_CHANGED`: jei `BOND_NONE` po
-     bandymo su `1234` — automatiškai bandyti `0000`, tada `6789` (žinomi ELM327 numatytieji
-     PIN pagal bendruomenės patirtį), tik po visų nesėkmių rodyti vartotojui klaidą su
-     pasiūlymu suporuoti rankiniu būdu per sistemos nustatymus.
-  4. Sėkmingo bond'o atveju: `window.onObdPaired && window.onObdPaired(mac, name)`, toliau
-     automatiškai kviesti `connect(mac)`.
-- **Manifest:** `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT` jau yra; papildomai galimai reikės
-  `BLUETOOTH_ADMIN` maxSdk 30 analogiškai Renogy blokui, jei `startDiscovery()`/`createBond()`
-  to pareikalaus senesnėse Android versijose — patikrinti realiu build'u.
-- **UI:** naujas „Ieškoti ELM327" mygtukas OBD tab'e (analogiškai Renogy „Ieškoti įrenginių"),
-  sąrašas su būsenom (Susietas / Suporuoti / Jungiamasi), po sėkmingo prisijungimo — įrašyti
-  MAC į `localStorage` (kaip Renogy `ren_dev_*`), kad kitą kartą jungtųsi be paieškos.
+- **Suporuotų įrenginių sąrašas:** `BluetoothAdapter.getBondedDevices()` grąžina sąrašą.
+  Rodyti MAC + Pavadinimą.
+- **Instrukcija vartotojui:** jei adapterio sąraše nėra, rodyti aiškų pranešimą: „Suporuokite
+  OBDII adapterį Android nustatymuose (PIN: 1234 arba 0000)".
+- **Automatinis jungimasis:** po pirmo sėkmingo pasirinkimo MAC įsimenamas `localStorage`,
+  kitą kartą jungiamasi automatiškai.
 
 ### 2. Native tiltelis — `KemperisObdBridge`
 
@@ -154,12 +137,6 @@ this.getBridge().getWebView().addJavascriptInterface(new KemperisObdBridge(this)
 Metodai (visi `@JavascriptInterface`):
 - `String listPairedDevices()` — grąžina JSON sąrašą susietų BT įrenginių (pavadinimas + MAC)
   iš `BluetoothAdapter.getBondedDevices()`. JS pusėje filtruoti/rodyti vartotojui pasirinkti.
-- `void startDiscovery()` — `BluetoothAdapter.startDiscovery()`; per `ACTION_FOUND` broadcast
-  kiekvienam rastam įrenginiui kviesti `window.onObdDeviceFound && window.onObdDeviceFound(mac, name, rssi)`.
-  `void stopDiscovery()` — sustabdo (Android leidžia ribotą skenavimų dažnį — cooldown UI pusėje,
-  kaip Renogy).
-- `void pair(String mac)` — `device.createBond()` + auto-PIN seka (§1a) background gijoje;
-  rezultatas per `window.onObdPaired`/`window.onObdPairFailed`.
 - `void connect(String mac)` — background gijoje: `device.createRfcommSocketToServiceRecord(SPP_UUID)`,
   `socket.connect()`. **Pasala:** kai kurie klonai numeta standartinį `connect()` — jei nepavyksta,
   fallback per reflection `device.getClass().getMethod("createRfcommSocket", int.class).invoke(device, 1)`
@@ -183,32 +160,34 @@ nereikia (skirtingai nei Renogy BLE, kuriam reikėjo naujo bloko).
 
 ### 3. ELM327 protokolas (JS pusė, `www/obd.js`)
 
-Init seka po `connect()` (siųsti po vieną, laukiant `>` prompto arba ~200ms tarp komandų —
-Gemini teisingai perspėjo dėl mažo buferio pigiuose klonuose):
+**SVARBU: VW TP 2.0 (Transport Protocol 2.0)**
+2008 m. Crafter 2.5 TDI (EDC16) manufacturer duomenims (DPF, purkštukai) naudoja **TP 2.0**
+protokolą virš CAN. Tai yra **būseninis** (stateful) protokolas. Tiesioginis `21 XX` ar
+`22 XXXX` siuntimas per `ATSP6` grąžins `NO DATA`, nes ECU reikalauja „kanalo atidarymo"
+handshake'o.
+
+Init seka (siųsti po vieną, laukiant `>` prompto):
 ```
 ATZ
 ATE0
 ATL0
-ATH0       (numatyta veikla — be CAN headers, paprastesnis Mode01/Pakopa A/B parsinimas)
-ATSP6      (priverstinai ISO 15765-4 CAN 11/500 — jau patvirtinta veikianti šiam automobiliui)
-ATSH 7E0   (tik jei reikės tikslinių/deep PID; standartiniams Mode01 nebūtina)
+ATH1       (Headers ON — būtina matyti atsakymo adresus handshake metu)
+ATAL       (Allow Long messages — TP 2.0 paketai gali būti ilgi)
+ATSTFF     (Timeout MAX — handshake metu ECU gali galvoti ilgiau)
+ATSP6      (Physical layer: CAN 11/500)
+ATSH 200   (Broadcast adresas kanalo atidarymui)
 ```
-**Pastaba:** `ATH1` (headers įjungti) naudoti TIK Pakopos C modulių skenavimo metu (§3), kur
-būtina matyti, koks adresas atsakė — po skenavimo grąžinti į `ATH0` prieš tęsiant normalų
-polling'ą.
 
-**Pakopa 0 — bazinis Mode 01 (visada veikia).** Naudoti tuos pačius PID kaip
-`research/obd2/ESPobd/src/main.cpp` (jau parašytos formulės, patikrintos su tuo pačiu
-automobiliu per CAN):
+**Handshake (Kanalo atidarymas varikliui 0x01):**
+Siųsti: `01 C0 00 10 00 03 01`
+Laukti atsakymo iš `0x201` (pvz. `01 D0 00 03 00 10 01`).
+Atsakyme esantys baitai nurodo **dinaminius CAN ID**, kuriuos ECU ir testeris naudos toliau.
+Po sėkmingo handshake — nustatyti `ATSH <Dynamic_TX_ID>` ir tęsti `21 XX` užklausas.
+Būtinas **Keep-Alive**: kas ~5s siųsti `A0` ar `A3` kadrą, kitaip ECU uždarys kanalą.
 
-| PID | Pavadinimas | Formulė |
-|---|---|---|
-| 0C | RPM | (A*256+B)/4 |
-| 0D | Greitis km/h | A |
-| 05 | Aušinimo skystis °C | A-40 |
-| 04 | Apkrova % | A*100/255 |
-| 0B | Įsiurbimo slėgis kPa | A |
-| 10 | Oro srautas g/s | (A*256+B)/100 |
+**Pakopa 0 — bazinis Mode 01 (visada veikia be handshake).**
+Naudoti standartinį `ATSP6` ir `ATSH 7E0`. Veikia net jei TP 2.0 handshake nepavyksta.
+PIDs: RPM (0C), Greitis (0D), Aušinimo skystis (05), Apkrova (04), MAP (0B), MAF (10).
 
 Papildomai lengva pridėti analogiškai: `0F` įsiurbimo oro temp (A-40), `11` droselis %
 (A*100/255), `1F` veikimo laikas s (A*256+B), `46` aplinkos temp (A-40), Mode `03`/`04`
@@ -228,10 +207,10 @@ užklausa (tas pats formatas kaip Pakopos 0 lentelėje aukščiau):
 |---|---|---|---|
 | 23 | Degalų rail slėgis | (A*256+B)*10 kPa | dyzeliams dažnai palaikoma |
 | 5C | Alyvos temperatūra | A-40 °C | |
-| 2C | EGR komanda | A*100/255 % | |
-| 2D | EGR paklaida | (A-128)*100/128 % | |
-| 7A | DPF diferencinis slėgis | (A*256+B)/100 kPa | TDIClub patvirtinta panašiems dyzeliams |
-| 7C | DPF temperatūra | (A*256+B)/10 - 40 °C | |
+| 01 | RPM / Temp / Inj | 21 01 | KWP block 1 (Engine basic) |
+| 44 | DPF Soot Load | 21 44 | Group 068 (Hex 44) — Soot grams |
+| 43 | DPF Diff. Press | 21 43 | Group 067 (Hex 43) — hPa |
+| 0D | Purkštukai 1-4 | 21 0D | Group 013 (Hex 0D) — Correction |
 
 Jei ECU atsako reikšme (ne `NO DATA`) — rodyti kaip normalią kortelę, **be** eksperimentinio
 žymėjimo (tai standartas, ne spėjimas). Jei `NO DATA` — tiesiog nerodyti tos kortelės (šis
