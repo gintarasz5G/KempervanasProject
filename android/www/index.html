@@ -9,6 +9,7 @@
     <script src="capacitor.js"></script>
     <script src="ble-plugin.js"></script>
     <script src="renogy.js"></script>
+    <script src="obd.js"></script>
     <style>
         :root { --bg-dark: #12151b; --bg-light: #f0f2f5; --card-dark: #1e232b; --card-light: #ffffff; --text-dark: #c9d1d9; --text-light: #1f2328; --accent: #4caf50; --accent-light: #66bb6a; --accent-cyan: #00adb5; --border-dark: #30363d; --border-light: #d0d7de; --danger: #e53935; --green: #238636; --red: #da3633; --grey: #30363d; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -165,6 +166,7 @@
             <option value="leveling">⚖️ Lygiavimas</option>
             <option value="sms">💬 SMS</option>
             <option value="renogy">🔋 Renogy BLE</option>
+            <option value="obd">🔧 OBD</option>
             <option value="settings">⚙️ Nustatymai</option>
             <option value="alarms">🚨 Aliarmai</option>
             <option value="logs">🛠️ Logai</option>
@@ -544,6 +546,89 @@
         </div>
     </div>
 
+    <!-- ==================== OBD / ELM327 ==================== -->
+    <div id="obd" class="tab-content">
+        <div class="card" style="margin-bottom:16px; border-left:4px solid #4caf50;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>🔧 OBD / ELM327 (Bluetooth Classic)</h3>
+                <label class="switch">
+                    <input type="checkbox" id="chk_obd" checked onchange="ObdBLE.toggleGlobal(this.checked)">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="card-subtext">Prisijungia tiesiogiai iš planšetės Bluetooth Classic (SPP) prie ELM327 adapterio, įjungto į variklio diagnostikos lizdą.</div>
+            <div class="status-line" style="margin-top:8px;" id="obd-status">⚪ Atjungta</div>
+        </div>
+
+        <div class="grid">
+            <div class="card" data-offline-dim><h3>RPM</h3><div class="card-value"><span id="obd-rpm">0</span><span class="card-unit">aps/min</span></div></div>
+            <div class="card" data-offline-dim><h3>Greitis</h3><div class="card-value"><span id="obd-speed">0</span><span class="card-unit">km/h</span></div></div>
+            <div class="card" data-offline-dim><h3>Aušinimo skystis</h3><div class="card-value"><span id="obd-coolant">0</span><span class="card-unit">°C</span></div></div>
+            <div class="card" data-offline-dim><h3>Apkrova</h3><div class="card-value"><span id="obd-load">0</span><span class="card-unit">%</span></div></div>
+            <div class="card" data-offline-dim><h3>Įsiurbimo slėgis</h3><div class="card-value"><span id="obd-map">0</span><span class="card-unit">kPa</span></div></div>
+            <div class="card" data-offline-dim><h3>Oro srautas</h3><div class="card-value"><span id="obd-maf">0</span><span class="card-unit">g/s</span></div></div>
+
+            <div class="card" data-offline-dim><h3>Rail slėgis</h3><div class="card-value"><span id="obd-rail-p">--</span><span class="card-unit">kPa</span></div></div>
+            <div class="card" data-offline-dim><h3>Alyvos temp.</h3><div class="card-value"><span id="obd-oil-t">--</span><span class="card-unit">°C</span></div></div>
+            <div class="card" data-offline-dim><h3>EGR</h3><div class="card-value"><span id="obd-egr-cmd">--</span><span class="card-unit">%</span></div><div class="card-subtext">Paklaida: <span id="obd-egr-err">--</span>%</div></div>
+            <div class="card" data-offline-dim><h3>DPF</h3><div class="card-value"><span id="obd-dpf-p">--</span><span class="card-unit">kPa</span></div><div class="card-subtext">Temp: <span id="obd-dpf-t">--</span>°C</div></div>
+        </div>
+
+        <div class="section-title" style="margin-top:24px;">⚙️ Prisijungimas</div>
+        <div class="grid">
+            <div class="card">
+                <h3>Skenavimas</h3>
+                <button class="btn btn-primary" onclick="ObdBLE.startScan()">🔍 Ieškoti ELM327</button>
+                <div id="obd-scan-list" style="margin-top:12px;"></div>
+            </div>
+            <div class="card">
+                <h3>Priskirtas įrenginys</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>🔧 <b id="obd-assigned">---</b></span>
+                    <button class="btn btn-danger" style="width:auto; padding:2px 8px; font-size:10px;" onclick="ObdBLE.forget()">✕</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title" style="margin-top:24px;">🔬 Gilus skenavimas / testavimas</div>
+        <div class="grid">
+            <div class="card" style="grid-column: 1 / -1; border-left:4px solid #d29922;">
+                <h3>🚀 Surinkti VISKĄ (viena kelionė)</h3>
+                <div class="card-subtext">Paeiliui: ECU identitetas → protokolo zondas → DID skenavimas (su automatiniu Service 21 saugikliu) → modulių skenavimas (su patvirtinimo dialogu). Trunka ~3-5 min. Žurnalas išsaugomas automatiškai pabaigoje.</div>
+                <button class="btn btn-warning" style="margin-top:10px;" onclick="ObdBLE.runFullCollection()">🚀 Surinkti VISKĄ ir išsaugoti</button>
+            </div>
+            <div class="card">
+                <h3>Atskiri žingsniai</h3>
+                <button class="btn btn-primary" style="margin-bottom:6px;" onclick="ObdBLE.runIdentity()">1️⃣ ECU identitetas (Mode 09)</button>
+                <button class="btn btn-primary" style="margin-bottom:6px;" onclick="ObdBLE.runProtocolProbe()">2️⃣ Protokolo zondas (KWP/UDS)</button>
+                <button class="btn btn-primary" style="margin-bottom:6px;" onclick="ObdBLE.runDidScan()">3️⃣ DID skenavimas (variklis)</button>
+                <button class="btn btn-primary" style="margin-bottom:6px;" onclick="ObdBLE.runBlockSweep()">3b️⃣ Service 21 blokų sweep</button>
+                <button class="btn btn-danger" onclick="ObdBLE.runModuleScan()">4️⃣ Modulių skenavimas (0x700-0x7FF)</button>
+            </div>
+            <div class="card">
+                <h3>Būsenos žymėjimas (analizei)</h3>
+                <div class="card-subtext">Pažymėk momentą loge prieš keisdamas variklio būseną — palengvina HEX reikšmių analizę.</div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;">
+                    <button class="btn btn-success" style="width:auto; padding:6px 10px; font-size:12px;" onclick="ObdBLE.tagState('Degimas įjungtas, variklis išjungtas')">Variklis išjungtas</button>
+                    <button class="btn btn-success" style="width:auto; padding:6px 10px; font-size:12px;" onclick="ObdBLE.tagState('Laisva eiga')">Laisva eiga</button>
+                    <button class="btn btn-success" style="width:auto; padding:6px 10px; font-size:12px;" onclick="ObdBLE.tagState('Dujinu ~1500 RPM')">~1500 RPM</button>
+                    <button class="btn btn-success" style="width:auto; padding:6px 10px; font-size:12px;" onclick="ObdBLE.tagState('Dujinu ~2500 RPM')">~2500 RPM</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-title" style="margin-top:24px;">📋 OBD diagnostikos žurnalas</div>
+        <div class="grid">
+            <div class="card" style="grid-column: 1 / -1;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h3>🖥️ OBD terminalas</h3>
+                    <div><button class="btn btn-primary" style="width: auto; padding: 6px 12px; margin-right: 8px;" onclick="ObdBLE.clearObdLog()">🧹 Išvalyti</button><button class="btn btn-success" style="width: auto; padding: 6px 12px;" onclick="ObdBLE.saveObdLog()">💾 Išsaugoti logą</button></div>
+                </div>
+                <div id="obd-log-output" class="log-container"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- ==================== SMS ==================== -->
     <div id="sms" class="tab-content">
         <div class="card">
@@ -805,6 +890,10 @@
         'sistema___esp_temperat_ra': 'sys_esp_temp', 'sistema___esp_temperatura': 'sys_esp_temp', 'sistema___esp_temperatra': 'sys_esp_temp',
         // SMS istorija
         'sms_1': 'sms_1', 'sms_2': 'sms_2', 'sms_3': 'sms_3', 'sms_4': 'sms_4', 'sms_5': 'sms_5',
+        // Anksčiau kritę per SSE UNMATCHED (id: iš firmware, žr. audit 2026-07-06)
+        'gsm_signal_dbm': 'gsm_signal_dbm', 'gps_fix_status': 'gps_fix_status',
+        'modem_state_sensor': 'modem_state', 'last_error_sensor': 'last_error',
+        'junc_ah_total': 'junc_ah_total',
     };
 
     let localLogEnabled = false;
@@ -1529,7 +1618,7 @@
 
     // === Skirtukai: dropdown + rodyklės + swipe ===
     // Swipe cikle praleidžiame PIN-saugomas skiltis (settings, alarms) — jas renkamės per sąrašą.
-    const SWIPE_TABS = ['overview','gps','energy','environment','comms','leveling','sms','renogy','logs'];
+    const SWIPE_TABS = ['overview','gps','energy','environment','comms','leveling','sms','renogy','obd','logs'];
     let currentTab = 'overview';
 
     function syncTabSelect() { const s = document.getElementById('tab-select'); if (s) s.value = currentTab; }
@@ -1689,7 +1778,7 @@
             }
         })();
         setSensorValue('gsm_signal_pct', 'gsm-signal', v=>Math.round(v)); setSensorValue('gsm_operator_sensor', 'gsm-operator'); setSensorValue('gsm_network_sensor', 'gsm-network');
-        setSensorValue('gsm_signal_pct', 'gsm-dbm', v=>{ let dbm = Math.round(-113 + v * 0.63); return dbm + ' dBm'; });
+        setSensorValue('gsm_signal_dbm', 'gsm-dbm', v=>Math.round(v) + ' dBm');
         setSensorValue('gsm_roaming_sensor', 'gsm-roaming', v => {
             let el = document.getElementById('gsm-roaming');
             let sub = document.getElementById('gsm-roaming-sub');
@@ -1811,7 +1900,7 @@
         })();
         setSensorValue('gps_coords_sensor', 'gps-coords');
         (function(){ const b=document.getElementById('btn-maps'); if(b){ const lat=parseFloat(sensorCache['gps_lat']||0),lon=parseFloat(sensorCache['gps_lon']||0); b.disabled=(!lat&&!lon)||(lat===0&&lon===0); } })();
-        setSensorValue('gps_sats_total_sensor', 'gps-fix', v=>`Satelitai: ${v}`);
+        (function(){ const el=document.getElementById('gps-fix'); if(!el) return; const fix=sensorCache['gps_fix_status']; const sats=sensorCache['gps_sats_total_sensor']; el.textContent = (fix ? fix + ' fix · ' : '') + 'Satelitai: ' + (sats !== undefined ? sats : 0); })();
         setSensorValue('gps_speed_sensor', 'gps-speed', v=>parseFloat(v).toFixed(1)); setSensorValue('gps_alt_sensor', 'gps-alt', v=>Math.round(v));
         setSensorValue('gps_heading_sensor', 'gps-heading', v=>Math.round(v)); setSensorValue('gps_sats_total_sensor', 'gps-sats-total');
         setSensorValue('sats_gps', 'sats-gps'); setSensorValue('sats_glonass', 'sats-glonass');
@@ -2139,6 +2228,19 @@
                 syncDcc.style.color = d.connected ? '#3fb950' : '#8b949e';
             }
         })();
+
+        setSensorValue('obd_rpm', 'obd-rpm', v => Math.round(v));
+        setSensorValue('obd_speed', 'obd-speed', v => Math.round(v));
+        setSensorValue('obd_coolant', 'obd-coolant', v => Math.round(v));
+        setSensorValue('obd_load', 'obd-load', v => Math.round(v));
+        setSensorValue('obd_map', 'obd-map', v => Math.round(v));
+        setSensorValue('obd_maf', 'obd-maf', v => v.toFixed(1));
+        setSensorValue('obd_rail_p', 'obd-rail-p', v => Math.round(v));
+        setSensorValue('obd_oil_t', 'obd-oil-t', v => Math.round(v));
+        setSensorValue('obd_egr_cmd', 'obd-egr-cmd', v => Math.round(v));
+        setSensorValue('obd_egr_err', 'obd-egr-err', v => Math.round(v));
+        setSensorValue('obd_dpf_p', 'obd-dpf-p', v => v.toFixed(1));
+        setSensorValue('obd_dpf_t', 'obd-dpf-t', v => Math.round(v));
 
         checkAlarms(sensorCache);
         // D: ESP32 sveikatos baneris — RAM < 50KB arba temp > 70°C

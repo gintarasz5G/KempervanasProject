@@ -248,11 +248,19 @@ const RenogyBLE = (function() {
 
         const BleClient = getBle();
         const fullCmd = new Uint8Array([...cmdBase, ...crc16(cmdBase)]);
+        dev.buffer = []; // Reset buffer for new query
         try {
-            dev.buffer = []; // Reset buffer for new query
             await BleClient.write(dev.id, SERVICE_WRITE, CHAR_WRITE, fullCmd);
         } catch (e) {
-            debug(`${type} query failed: ${e.message}`, 'error');
+            // R5: pastebėta, kad GATT write retkarčiais meta klaidą nors komanda vis tiek
+            // pasiekia įrenginį (atsakymas ateina po klaidos) — vienas tylus pakartojimas
+            // prieš žymint tikra klaida, kad nepraleistume poll ciklo be reikalo.
+            debug(`${type} query failed, retrying: ${e.message}`, 'warn');
+            try {
+                await BleClient.write(dev.id, SERVICE_WRITE, CHAR_WRITE, fullCmd);
+            } catch (e2) {
+                debug(`${type} query failed: ${e2.message}`, 'error');
+            }
         }
     }
 

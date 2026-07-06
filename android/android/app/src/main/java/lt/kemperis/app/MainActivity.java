@@ -3,6 +3,11 @@ package lt.kemperis.app;
 import android.Manifest;
 import android.app.Activity;
 import android.app.DownloadManager;
+import android.annotation.SuppressLint;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentValues;
@@ -45,6 +50,7 @@ import androidx.core.content.FileProvider;
 
 import com.getcapacitor.BridgeActivity;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -58,12 +64,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 public class MainActivity extends BridgeActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 123;
     static final String VERSION_JSON_URL = "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
-    static final int CURRENT_VERSION = 46;
+    static final int CURRENT_VERSION = 47;
 
     private Network boundNetwork = null;
     private volatile boolean autoBindPaused = false;
@@ -72,6 +79,7 @@ public class MainActivity extends BridgeActivity {
     private UpdateBridge updateBridge = null;
     private KempTtsBridge ttsBridge = null;
     private WifiManager.WifiLock wifiLock = null;
+    private KemperisObdBridge obdBridge = null;
 
     private void sendNativeLog(String msg) {
         final String js = "window.onNativeLog && window.onNativeLog(" + JSONObject.quote(msg) + ")";
@@ -151,6 +159,8 @@ public class MainActivity extends BridgeActivity {
         this.getBridge().getWebView().addJavascriptInterface(updateBridge, "KemperisUpdate");
         this.getBridge().getWebView().addJavascriptInterface(new SmsBridge(this), "KemperisSms");
         this.getBridge().getWebView().addJavascriptInterface(new KemperisFileBridge(this), "KemperisFile");
+        obdBridge = new KemperisObdBridge(this);
+        this.getBridge().getWebView().addJavascriptInterface(obdBridge, "KemperisObd");
 
         requestNecessaryPermissions();
         registerAutoWifiCallback();
@@ -179,6 +189,7 @@ public class MainActivity extends BridgeActivity {
         }
         if (updateBridge != null) updateBridge.cleanup();
         if (ttsBridge != null) ttsBridge.shutdown();
+        if (obdBridge != null) obdBridge.cleanup();
     }
 
     private void registerSmsReceiver() {
@@ -294,6 +305,11 @@ public class MainActivity extends BridgeActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) permissions.add(Manifest.permission.READ_PHONE_NUMBERS);
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
         permissions.add(Manifest.permission.RECEIVE_BOOT_COMPLETED);
+        // KemperisObdBridge (ELM327 Bluetooth Classic) — reikia runtime leidimo Android 12+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissions.add(Manifest.permission.BLUETOOTH_SCAN);
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT);
+        }
 
         List<String> toRequest = new ArrayList<>();
         for (String p : permissions) {
@@ -780,6 +796,281 @@ public class MainActivity extends BridgeActivity {
         public void rebindNetwork() {
             ConnectivityManager cm = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && boundNetwork != null) cm.bindProcessToNetwork(boundNetwork);
+        }
+    }
+
+    /**
+     * KemperisObdBridge — ELM327 Bluetooth Classic (SPP) tiltelis.
+     * Skirtingai nuo Renogy (BLE per @capacitor-community/bluetooth-le), pigūs ELM327
+     * klonai naudoja Bluetooth Classic SPP, kuriam reikia BluetoothSocket/RFCOMM, ne GATT.
+     * Žr. docs/uzduotis_obd2_elm327_tab.md.
+     */
+    // SuppressLint: kiekvienas metodas žemiau patikrina hasConnectPerm()/hasScanPerm() prieš
+    // Bluetooth API kvietimą IR/ARBA yra apgaubtas try-catch(Exception), kuris pagauna ir
+    // SecurityException — lint statinis analizatorius neatseka leidimo patikros per pagalbinius
+    // metodus (hasConnectPerm/hasScanPerm), todėl klaidingai žymi kaip trūkstamą patikrą.
+    @SuppressLint("MissingPermission")
+    public class KemperisObdBridge {
+        private static final String[] FALLBACK_PINS = {"1234", "0000", "6789"};
+        private final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+
+        private final Context ctx;
+        private final BluetoothAdapter adapter;
+        private BroadcastReceiver discoveryReceiver;
+        private BroadcastReceiver pairingReceiver;
+        private BroadcastReceiver bondReceiver;
+        private String pairingMac = null;
+        private int pinAttemptIndex = 0;
+
+        private volatile boolean connected = false;
+        private BluetoothSocket socket;
+        private java.io.InputStream in;
+        private OutputStream out;
+
+        public KemperisObdBridge(Context c) {
+            this.ctx = c;
+            BluetoothManager bm = (BluetoothManager) ctx.getSystemService(Context.BLUETOOTH_SERVICE);
+            this.adapter = (bm != null) ? bm.getAdapter() : null;
+            registerReceivers();
+        }
+
+        private boolean hasConnectPerm() {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true;
+            return ContextCompat.checkSelfPermission(ctx, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+        }
+
+        private boolean hasScanPerm() {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true;
+            return ContextCompat.checkSelfPermission(ctx, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
+        }
+
+        private void evalJs(String js) {
+            runOnUiThread(() -> {
+                try {
+                    if (getBridge() != null && getBridge().getWebView() != null) getBridge().getWebView().evaluateJavascript(js, null);
+                } catch (Exception ignored) {}
+            });
+        }
+
+        private void registerReceivers() {
+            IntentFilter foundFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+            IntentFilter pairFilter = new IntentFilter(BluetoothDevice.ACTION_PAIRING_REQUEST);
+            pairFilter.setPriority(999);
+            IntentFilter bondFilter = new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+
+            discoveryReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    if (device == null) return;
+                    short rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE);
+                    String name = "";
+                    try { if (hasConnectPerm() && device.getName() != null) name = device.getName(); } catch (SecurityException ignored) {}
+                    evalJs("window.onObdDeviceFound && window.onObdDeviceFound("
+                        + JSONObject.quote(device.getAddress()) + "," + JSONObject.quote(name) + "," + rssi + ")");
+                }
+            };
+
+            pairingReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    if (device == null || pairingMac == null || !pairingMac.equals(device.getAddress())) return;
+                    int variant = intent.getIntExtra(BluetoothDevice.EXTRA_PAIRING_VARIANT, -1);
+                    if (variant == BluetoothDevice.PAIRING_VARIANT_PIN) {
+                        try {
+                            String pin = FALLBACK_PINS[Math.min(pinAttemptIndex, FALLBACK_PINS.length - 1)];
+                            device.setPin(pin.getBytes(StandardCharsets.UTF_8));
+                            abortBroadcast();
+                        } catch (Exception ignored) {}
+                    }
+                }
+            };
+
+            bondReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    if (device == null || pairingMac == null || !pairingMac.equals(device.getAddress())) return;
+                    int state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, -1);
+                    if (state == BluetoothDevice.BOND_BONDED) {
+                        String name = "";
+                        try { if (hasConnectPerm() && device.getName() != null) name = device.getName(); } catch (SecurityException ignored) {}
+                        evalJs("window.onObdPaired && window.onObdPaired(" + JSONObject.quote(device.getAddress()) + "," + JSONObject.quote(name) + ")");
+                        pairingMac = null;
+                        pinAttemptIndex = 0;
+                    } else if (state == BluetoothDevice.BOND_NONE) {
+                        pinAttemptIndex++;
+                        if (pinAttemptIndex < FALLBACK_PINS.length) {
+                            try { device.createBond(); } catch (Exception ignored) {}
+                        } else {
+                            evalJs("window.onObdPairFailed && window.onObdPairFailed(" + JSONObject.quote(device.getAddress())
+                                + "," + JSONObject.quote("Automatinis PIN nepavyko - suporuokite rankiniu būdu per sistemos Bluetooth nustatymus") + ")");
+                            pairingMac = null;
+                            pinAttemptIndex = 0;
+                        }
+                    }
+                }
+            };
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ctx.registerReceiver(discoveryReceiver, foundFilter, Context.RECEIVER_EXPORTED);
+                ctx.registerReceiver(pairingReceiver, pairFilter, Context.RECEIVER_EXPORTED);
+                ctx.registerReceiver(bondReceiver, bondFilter, Context.RECEIVER_EXPORTED);
+            } else {
+                ctx.registerReceiver(discoveryReceiver, foundFilter);
+                ctx.registerReceiver(pairingReceiver, pairFilter);
+                ctx.registerReceiver(bondReceiver, bondFilter);
+            }
+        }
+
+        public void cleanup() {
+            try { ctx.unregisterReceiver(discoveryReceiver); } catch (Exception ignored) {}
+            try { ctx.unregisterReceiver(pairingReceiver); } catch (Exception ignored) {}
+            try { ctx.unregisterReceiver(bondReceiver); } catch (Exception ignored) {}
+            disconnectInternal();
+        }
+
+        @JavascriptInterface
+        public String listPairedDevices() {
+            JSONArray arr = new JSONArray();
+            try {
+                if (adapter == null || !hasConnectPerm()) return arr.toString();
+                for (BluetoothDevice d : adapter.getBondedDevices()) {
+                    JSONObject o = new JSONObject();
+                    o.put("mac", d.getAddress());
+                    o.put("name", d.getName() != null ? d.getName() : "");
+                    arr.put(o);
+                }
+            } catch (Exception ignored) {}
+            return arr.toString();
+        }
+
+        @JavascriptInterface
+        public void startDiscovery() {
+            if (adapter == null || !hasScanPerm()) return;
+            try {
+                if (adapter.isDiscovering()) adapter.cancelDiscovery();
+                adapter.startDiscovery();
+            } catch (SecurityException ignored) {}
+        }
+
+        @JavascriptInterface
+        public void stopDiscovery() {
+            try { if (adapter != null && hasScanPerm() && adapter.isDiscovering()) adapter.cancelDiscovery(); } catch (SecurityException ignored) {}
+        }
+
+        @JavascriptInterface
+        public void pair(String mac) {
+            if (adapter == null || !hasConnectPerm()) {
+                evalJs("window.onObdPairFailed && window.onObdPairFailed(" + JSONObject.quote(mac) + "," + JSONObject.quote("Trūksta Bluetooth leidimo") + ")");
+                return;
+            }
+            try {
+                BluetoothDevice device = adapter.getRemoteDevice(mac);
+                if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
+                    String name = device.getName() != null ? device.getName() : "";
+                    evalJs("window.onObdPaired && window.onObdPaired(" + JSONObject.quote(mac) + "," + JSONObject.quote(name) + ")");
+                    return;
+                }
+                pairingMac = mac;
+                pinAttemptIndex = 0;
+                device.createBond();
+            } catch (Exception e) {
+                final String msg = e.getMessage() == null ? "nezinoma klaida" : e.getMessage();
+                evalJs("window.onObdPairFailed && window.onObdPairFailed(" + JSONObject.quote(mac) + "," + JSONObject.quote(msg) + ")");
+            }
+        }
+
+        @JavascriptInterface
+        public void connect(String mac) {
+            new Thread(() -> {
+                try {
+                    if (adapter == null || !hasConnectPerm()) throw new java.io.IOException("Trūksta Bluetooth leidimo");
+                    BluetoothDevice device = adapter.getRemoteDevice(mac);
+                    if (hasScanPerm() && adapter.isDiscovering()) adapter.cancelDiscovery();
+                    BluetoothSocket s;
+                    try {
+                        s = device.createRfcommSocketToServiceRecord(SPP_UUID);
+                        s.connect();
+                    } catch (Exception firstErr) {
+                        // Pasala: kai kurie HC-05 klonai numeta standartinį connect() - reflection fallback (kanalas 1)
+                        s = (BluetoothSocket) device.getClass()
+                                .getMethod("createRfcommSocket", int.class).invoke(device, 1);
+                        s.connect();
+                    }
+                    socket = s;
+                    in = socket.getInputStream();
+                    out = socket.getOutputStream();
+                    connected = true;
+                    evalJs("window.onObdConnected && window.onObdConnected()");
+                    startReadLoop();
+                } catch (Exception e) {
+                    connected = false;
+                    final String msg = e.getMessage() == null ? "nezinoma klaida" : e.getMessage();
+                    evalJs("window.onObdDisconnected && window.onObdDisconnected(" + JSONObject.quote(msg) + ")");
+                }
+            }).start();
+        }
+
+        @JavascriptInterface
+        public void send(String data) {
+            if (!connected || out == null) return;
+            new Thread(() -> {
+                try {
+                    out.write((data + "\r").getBytes(StandardCharsets.US_ASCII));
+                    out.flush();
+                } catch (Exception e) {
+                    connected = false;
+                    final String msg = e.getMessage() == null ? "nezinoma klaida" : e.getMessage();
+                    evalJs("window.onObdDisconnected && window.onObdDisconnected(" + JSONObject.quote("Rašymo klaida: " + msg) + ")");
+                }
+            }).start();
+        }
+
+        @JavascriptInterface
+        public void disconnect() {
+            new Thread(this::disconnectInternal).start();
+        }
+
+        private void disconnectInternal() {
+            boolean wasConnected = connected;
+            connected = false;
+            try { if (in != null) in.close(); } catch (Exception ignored) {}
+            try { if (out != null) out.close(); } catch (Exception ignored) {}
+            try { if (socket != null) socket.close(); } catch (Exception ignored) {}
+            in = null; out = null; socket = null;
+            if (wasConnected) evalJs("window.onObdDisconnected && window.onObdDisconnected('')");
+        }
+
+        private void startReadLoop() {
+            new Thread(() -> {
+                StringBuilder buf = new StringBuilder();
+                byte[] chunk = new byte[256];
+                try {
+                    while (connected) {
+                        int n = in.read(chunk);
+                        if (n < 0) break;
+                        buf.append(new String(chunk, 0, n, StandardCharsets.US_ASCII));
+                        int promptIdx;
+                        while ((promptIdx = buf.indexOf(">")) != -1) {
+                            String full = buf.substring(0, promptIdx);
+                            buf.delete(0, promptIdx + 1);
+                            final String line = full.trim();
+                            if (!line.isEmpty()) {
+                                evalJs("window.onObdData && window.onObdData(" + JSONObject.quote(line) + ")");
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // socket uzdarytas arba rysio klaida - disconnectInternal() jau apdoroja praneisma
+                } finally {
+                    if (connected) {
+                        connected = false;
+                        evalJs("window.onObdDisconnected && window.onObdDisconnected('Rysys nutruko')");
+                    }
+                }
+            }).start();
         }
     }
 }
