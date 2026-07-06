@@ -578,7 +578,7 @@
         <div class="grid">
             <div class="card">
                 <h3>Skenavimas</h3>
-                <button class="btn btn-primary" onclick="ObdBLE.startScan()">🔍 Ieškoti ELM327</button>
+                <button class="btn btn-primary obd-scan-btn" onclick="ObdBLE.startScan()">🔍 Ieškoti ELM327</button>
                 <div id="obd-scan-list" style="margin-top:12px;"></div>
             </div>
             <div class="card">
@@ -586,6 +586,13 @@
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span>🔧 <b id="obd-assigned">---</b></span>
                     <button class="btn btn-danger" style="width:auto; padding:2px 8px; font-size:10px;" onclick="ObdBLE.forget()">✕</button>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; margin-top:16px;">
+                    <label class="switch">
+                        <input type="checkbox" id="chk_obd_safe_mode" onchange="ObdBLE.toggleSafeMode(this.checked)">
+                        <span class="slider round"></span>
+                    </label>
+                    <span style="font-size:13px;">🐢 Saugus režimas (lėčiau)</span>
                 </div>
             </div>
         </div>
@@ -595,15 +602,15 @@
             <div class="card" style="grid-column: 1 / -1; border-left:4px solid #d29922;">
                 <h3>🚀 Surinkti VISKĄ (viena kelionė)</h3>
                 <div class="card-subtext">Paeiliui: ECU identitetas → protokolo zondas → DID skenavimas (su automatiniu Service 21 saugikliu) → modulių skenavimas (su patvirtinimo dialogu). Trunka ~3-5 min. Žurnalas išsaugomas automatiškai pabaigoje.</div>
-                <button class="btn btn-warning" style="margin-top:10px;" onclick="ObdBLE.runFullCollection()">🚀 Surinkti VISKĄ ir išsaugoti</button>
+                <button class="btn btn-warning obd-scan-btn" style="margin-top:10px;" onclick="ObdBLE.runFullCollection()">🚀 Surinkti VISKĄ ir išsaugoti</button>
             </div>
             <div class="card">
                 <h3>Atskiri žingsniai</h3>
-                <button class="btn btn-primary" style="margin-bottom:6px;" onclick="ObdBLE.runIdentity()">1️⃣ ECU identitetas (Mode 09)</button>
-                <button class="btn btn-primary" style="margin-bottom:6px;" onclick="ObdBLE.runProtocolProbe()">2️⃣ Protokolo zondas (KWP/UDS)</button>
-                <button class="btn btn-primary" style="margin-bottom:6px;" onclick="ObdBLE.runDidScan()">3️⃣ DID skenavimas (variklis)</button>
-                <button class="btn btn-primary" style="margin-bottom:6px;" onclick="ObdBLE.runBlockSweep()">3b️⃣ Service 21 blokų sweep</button>
-                <button class="btn btn-danger" onclick="ObdBLE.runModuleScan()">4️⃣ Modulių skenavimas (0x700-0x7FF)</button>
+                <button class="btn btn-primary obd-scan-btn" style="margin-bottom:6px;" onclick="ObdBLE.runIdentity()">1️⃣ ECU identitetas (Mode 09)</button>
+                <button class="btn btn-primary obd-scan-btn" style="margin-bottom:6px;" onclick="ObdBLE.runProtocolProbe()">2️⃣ Protokolo zondas (KWP/UDS)</button>
+                <button class="btn btn-primary obd-scan-btn" style="margin-bottom:6px;" onclick="ObdBLE.runDidScan()">3️⃣ DID skenavimas (variklis)</button>
+                <button class="btn btn-primary obd-scan-btn" style="margin-bottom:6px;" onclick="ObdBLE.runBlockSweep()">3b️⃣ Service 21 blokų sweep</button>
+                <button class="btn btn-danger obd-scan-btn" onclick="ObdBLE.runModuleScan()">4️⃣ Modulių skenavimas (0x700-0x7FF)</button>
             </div>
             <div class="card">
                 <h3>Būsenos žymėjimas (analizei)</h3>
@@ -2950,6 +2957,10 @@
                 else if (rawId.includes('gps_alt') || rawId.includes('gps_aukstis')) sensorCache['gps_alt_sensor'] = value;
                 else if (rawId.includes('gps_heading') || rawId.includes('gps_kryptis')) sensorCache['gps_heading_sensor'] = value;
                 else if (rawId.includes('gps_sats_total') || rawId.includes('visi_palydovai')) sensorCache['gps_sats_total_sensor'] = value;
+                else if (rawId.endsWith('_fix_statusas') || rawId.endsWith('_fix_status')) sensorCache['gps_fix_status'] = value;
+                else if (rawId.endsWith('_paskutine_klaida') || rawId.endsWith('_last_error')) sensorCache['last_error'] = value;
+                else if (rawId.endsWith('_modemo_busena') || rawId.endsWith('_modem_state')) sensorCache['modem_state'] = value;
+                else if (rawId.endsWith('_signalas_dbm_') || rawId.endsWith('_signal_dbm')) sensorCache['gsm_signal_dbm'] = value;
                 else if ((rawId.includes('gsm_signal') || rawId.includes('signalas_')) && !rawId.includes('dbm')) sensorCache['gsm_signal_pct'] = value;
                 else if (rawId.includes('gsm_operator_sensor') || rawId.includes('operatorius')) sensorCache['gsm_operator_sensor'] = value;
                 else if (rawId.includes('gsm_network_sensor') || rawId.includes('gsm___tinklas') || rawId.includes('gsm_tinklas')) sensorCache['gsm_network_sensor'] = value;

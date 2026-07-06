@@ -1,0 +1,500 @@
+[19:55:11] [ESP32] ⚪ [I][junc_hex:1262]: buf[11]: 10 89 77 D2 01 41 77 00 D4 66 EE
+[19:55:11] [DEBUG] [SSE] sensor_energija_akum_ah_likutis=108.977
+[19:55:11] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=11 b)
+[19:55:11] [ESP32] ⚪ [I][gps:2522]: AT+CGNSSINFO issiustas
+[19:55:11] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 02 30 C1 33 18 D8 21 EE
+[19:55:11] [DEBUG] [SSE] sensor_energija_akum_srove=2.3
+[19:55:11] [DEBUG] [SSE] sensor_energija_akum_galia=33.18
+[19:55:11] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[19:55:11] [DEBUG] [SSE] sensor_pokrypis_soninis_k_d=0.1
+[19:55:11] [DEBUG] [SSE] sensor_pokrypis_isilginis_p_g=0.4
+[19:55:11] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=4.112648
+[19:55:11] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 02 00 C1 28 86 D8 72 EE
+[19:55:11] [DEBUG] [SSE] sensor_energija_akum_srove=2
+[19:55:11] [DEBUG] [SSE] sensor_energija_akum_galia=28.86
+[19:55:11] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[19:55:11] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 41 77 01 D4 85 EE
+[19:55:11] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:12] [DEBUG] [SSE] sensor_gps_kryptis=0
+[19:55:12] [DEBUG] [SSE] text_sensor_sauga_judejimo_aliarmas=false
+[19:55:12] [DEBUG] [SSE] sensor_resursai_dujos_likutis_=91.25612
+[19:55:12] [DEBUG] [SSE] text_sensor_energija_220v_saltinis=Isorine 220V
+[19:55:12] [DEBUG] [SSE] sensor_resursai_vanduo_lygis_=56.11815
+[19:55:12] [DEBUG] [SSE] text_sensor_sistema_modemo_busena=idle
+[19:55:12] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_modemo_busena=idle
+[19:55:12] [DEBUG] [SSE] sensor_gps_greitis=0
+[19:55:12] [DEBUG] [SSE] sensor_gps_aukstis=76.6
+[19:55:12] [DEBUG] [SSE] sensor_energija_akum_soc_=100
+[19:55:12] [DEBUG] [SSE] text_sensor_gps_fix_statusas=3D
+[19:55:12] [DEBUG] [SSE UNMATCHED] text_sensor_gps_fix_statusas=3D
+[19:55:12] [DEBUG] [SSE] text_sensor_gps_koordinates=55.724697,24.360598
+[19:55:12] [DEBUG] [SSE] sensor_resursai_vandens_atstumas_lazeris_=17.9
+[19:55:12] [ESP32] ⚪ [I][junc_hex:1262]: buf[14]: 01 70 C1 00 D6 02 05 88 D7 24 53 D8 00 EE
+[19:55:12] [DEBUG] [SSE] sensor_energija_akum_srove=1.7
+[19:55:12] [DEBUG] [SSE] sensor_energija_akum_veikimo_laikas=0
+[19:55:12] [DEBUG] [SSE] sensor_energija_akum_galia=24.53
+[19:55:12] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=14 b)
+[19:55:12] [ESP32] ⚪ [I][junc_hex:1262]: buf[11]: 10 89 78 D2 01 41 77 02 D4 69 EE
+[19:55:12] [DEBUG] [SSE] sensor_energija_akum_ah_likutis=108.978
+[19:55:12] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=11 b)
+[19:55:13] [ESP32] ⚪ [I][junc_hex:1262]: buf[11]: 14 44 C0 01 60 C1 23 10 D8 24 EE
+[19:55:13] [ESP32] ⚪ [I][junc_ble:1279]: C0 val=1444 -> 14.44V OK
+[19:55:13] [DEBUG] [SSE] sensor_energija_akum_itampa=14.44
+[19:55:13] [DEBUG] [SSE] sensor_energija_akum_srove=1.6
+[19:55:13] [DEBUG] [SSE] sensor_energija_akum_galia=23.1
+[19:55:13] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=11 b)
+[19:55:13] [DEBUG] [SSE] sensor_pokrypis_soninis_k_d=0.2
+[19:55:13] [DEBUG] [SSE] sensor_pokrypis_isilginis_p_g=0.4
+[19:55:13] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=3.755198
+[19:55:13] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 40 C1 20 21 D8 26 EE
+[19:55:13] [DEBUG] [SSE] sensor_energija_akum_srove=1.4
+[19:55:13] [DEBUG] [SSE] sensor_energija_akum_galia=20.21
+[19:55:13] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[19:55:14] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 30 C1 18 77 D8 88 EE
+[19:55:14] [DEBUG] [SSE] sensor_energija_akum_srove=1.3
+[19:55:14] [DEBUG] [SSE] sensor_energija_akum_galia=18.77
+[19:55:14] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[19:55:14] [DEBUG] [SSE] sensor_pokrypis_soninis_k_d=0.1
+[19:55:14] [DEBUG] [SSE] sensor_pokrypis_isilginis_p_g=0.3
+[19:55:14] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 10 C1 15 88 D8 70 EE
+[19:55:14] [DEBUG] [SSE] sensor_energija_akum_srove=1.1
+[19:55:14] [DEBUG] [SSE] sensor_energija_akum_galia=15.88
+[19:55:14] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[19:55:14] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 41 77 03 D4 87 EE
+[19:55:14] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:15] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=5.410047
+[19:55:15] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 10 89 79 D2 71 EE
+[19:55:15] [DEBUG] [SSE] sensor_energija_akum_ah_likutis=108.979
+[19:55:15] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[19:55:16] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 14 43 C0 15 87 D8 38 EE
+[19:55:16] [ESP32] ⚪ [I][junc_ble:1279]: C0 val=1443 -> 14.43V OK
+[19:55:16] [DEBUG] [SSE] sensor_energija_akum_itampa=14.43
+[19:55:16] [DEBUG] [SSE] sensor_energija_akum_galia=15.87
+[19:55:16] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[19:55:16] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 00 C1 00 D8 96 EE
+[19:55:16] [DEBUG] [SSE] sensor_energija_akum_srove=0
+[19:55:16] [DEBUG] [SSE] sensor_energija_akum_galia=0
+[19:55:16] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[19:55:17] [DEBUG] [SSE] text_sensor_gps_fix_statusas=3D
+[19:55:17] [DEBUG] [SSE UNMATCHED] text_sensor_gps_fix_statusas=3D
+[19:55:17] [DEBUG] [SSE] text_sensor_gps_koordinates=55.724697,24.360598
+[19:55:17] [DEBUG] [SSE] sensor_energija_akum_soc_=100
+[19:55:17] [DEBUG] [SSE] sensor_gps_kryptis=0
+[19:55:17] [DEBUG] [SSE] sensor_resursai_vanduo_lygis_=54.00844
+[19:55:17] [DEBUG] [SSE] text_sensor_energija_220v_saltinis=Isorine 220V
+[19:55:17] [DEBUG] [SSE] sensor_resursai_dujos_likutis_=91.2567
+[19:55:17] [DEBUG] [SSE] text_sensor_sauga_judejimo_aliarmas=false
+[19:55:17] [DEBUG] [SSE] text_sensor_sistema_modemo_busena=idle
+[19:55:17] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_modemo_busena=idle
+[19:55:17] [DEBUG] [SSE] sensor_gps_aukstis=76.6
+[19:55:17] [DEBUG] [SSE] sensor_gps_greitis=0
+[19:55:17] [DEBUG] [SSE] sensor_resursai_vandens_atstumas_lazeris_=17.9
+[19:55:17] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 60 C1 08 65 D8 01 EE
+[19:55:17] [DEBUG] [SSE] sensor_energija_akum_srove=0.6
+[19:55:17] [DEBUG] [SSE] sensor_energija_akum_galia=8.65
+[19:55:17] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:17] [DEBUG] [SSE] sensor_pokrypis_soninis_k_d=0.2
+[19:55:17] [DEBUG] [SSE] sensor_pokrypis_isilginis_p_g=0.4
+[19:55:17] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=3.760923
+[19:55:17] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 30 C1 18 75 D8 86 EE
+[19:55:17] [DEBUG] [SSE] sensor_energija_akum_srove=1.3
+[19:55:17] [DEBUG] [SSE] sensor_energija_akum_galia=18.75
+[19:55:17] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[19:55:17] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 41 77 04 D4 88 EE
+[19:55:17] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:18] [DEBUG] [SSE] sensor_pokrypis_soninis_k_d=0.1
+[19:55:18] [DEBUG] [SSE] sensor_pokrypis_isilginis_p_g=0.4
+[19:55:18] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 01 20 C1 17 31 D8 01 EE
+[19:55:18] [DEBUG] [SSE] sensor_energija_akum_srove=1.2
+[19:55:18] [DEBUG] [SSE] sensor_energija_akum_galia=17.31
+[19:55:18] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[19:55:18] [Renogy HEX] dcc: ff 03 42 00 64 00 90 00 d0 1d 15 00 82 00 fb 00 21 00 d6 00 00 00 1e 00 00 00 84 00 90 0a 09 00 8d 01 6a 01 30 00 14 00 14 01 10 01 10 01 89 00 00 0f 9b 00 00 17 e4 00 00 14 cd 00 01 43 39 00 01 19 4a 00 04 39 0e
+[19:55:19] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 90 C1 12 98 D8 10 EE
+[19:55:19] [DEBUG] [SSE] sensor_energija_akum_srove=0.9
+[19:55:19] [DEBUG] [SSE] sensor_energija_akum_galia=12.98
+[19:55:19] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:19] [DEBUG] [SSE] text_sensor_sistema_paskutine_klaida=HTTP POST klaida (rysys/serveris)
+[19:55:19] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_paskutine_klaida=HTTP POST klaida (rysys/serveris)
+[19:55:19] [DEBUG] [SSE] sensor_gps_palydovai_glonass_rusija_=0
+[19:55:19] [DEBUG] [SSE] text_sensor_gsm_roaming_statusas=Namu tinklas
+[19:55:19] [DEBUG] [SSE] sensor_gps_palydovai_navstar_jav_=19
+[19:55:19] [DEBUG] [SSE] text_sensor_gsm_tinklas=Bite
+[19:55:19] [DEBUG] [SSE] sensor_gsm_signalas_dbm_=-57
+[19:55:19] [DEBUG] [SSE UNMATCHED] sensor_gsm_signalas_dbm_=-57
+[19:55:19] [DEBUG] [SSE] sensor_resursai_vandens_tds_ppm_=null
+[19:55:19] [DEBUG] [SSE] text_sensor_gsm_operatorius=teledema
+[19:55:19] [DEBUG] [SSE] text_sensor_sistema_google_buferis=0 B / 10000
+[19:55:19] [DEBUG] [SSE] sensor_gps_palydovai_beidou_kinija_=11
+[19:55:19] [DEBUG] [SSE] sensor_gps_visi_palydovai=31
+[19:55:19] [DEBUG] [SSE] sensor_gsm_signalas_=90.32258
+[19:55:19] [DEBUG] [SSE] sensor_gps_palydovai_galileo_europa_=1
+[19:55:19] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=4.002852
+[19:55:19] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 10 89 80 D2 78 EE
+[19:55:19] [DEBUG] [SSE] sensor_energija_akum_ah_likutis=108.98
+[19:55:19] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[19:55:20] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 70 C1 10 10 D8 40 EE
+[19:55:20] [DEBUG] [SSE] sensor_energija_akum_srove=0.7
+[19:55:20] [DEBUG] [SSE] sensor_energija_akum_galia=10.1
+[19:55:20] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:20] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 80 C1 11 54 D8 25 EE
+[19:55:20] [DEBUG] [SSE] sensor_energija_akum_srove=0.8
+[19:55:20] [DEBUG] [SSE] sensor_energija_akum_galia=11.54
+[19:55:20] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:21] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 41 77 05 D4 89 EE
+[19:55:21] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:21] [ESP32] ⚪ [I][gps:2522]: AT+CGNSSINFO issiustas
+[19:55:21] [DEBUG] [SSE] sensor_pokrypis_soninis_k_d=0.2
+[19:55:21] [DEBUG] [SSE] sensor_pokrypis_isilginis_p_g=0.4
+[19:55:21] [Renogy] battery query failed, retrying: Writing characteristic failed.
+[19:55:21] [Renogy HEX] battery: ff 03 0c 00 09 00 90 00 01 ad 10 00 01 ad 10 8b 88
+[19:55:21] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=3.791398
+[19:55:21] [Renogy] battery query failed: Writing characteristic failed.
+[19:55:21] [Renogy HEX] battery: ff 03 0c 00 09 00 90 00 01 ad 10 00 01 ad 10 8b 88
+[19:55:22] [DEBUG] [SSE] sensor_gps_greitis=0
+[19:55:22] [DEBUG] [SSE] sensor_gps_aukstis=76.5
+[19:55:22] [DEBUG] [SSE] sensor_resursai_vanduo_lygis_=54.00844
+[19:55:22] [DEBUG] [SSE] text_sensor_gps_fix_statusas=3D
+[19:55:22] [DEBUG] [SSE UNMATCHED] text_sensor_gps_fix_statusas=3D
+[19:55:22] [DEBUG] [SSE] text_sensor_gps_koordinates=55.724812,24.360588
+[19:55:22] [DEBUG] [SSE] sensor_gps_kryptis=0
+[19:55:22] [DEBUG] [SSE] sensor_energija_akum_soc_=100
+[19:55:22] [DEBUG] [SSE] text_sensor_energija_220v_saltinis=Isorine 220V
+[19:55:22] [DEBUG] [SSE] text_sensor_sistema_modemo_busena=idle
+[19:55:22] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_modemo_busena=idle
+[19:55:22] [DEBUG] [SSE] text_sensor_sauga_judejimo_aliarmas=false
+[19:55:22] [DEBUG] [SSE] sensor_resursai_dujos_likutis_=91.25644
+[19:55:22] [DEBUG] [SSE] sensor_resursai_vandens_atstumas_lazeris_=17.9
+[19:55:22] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 14 44 C0 11 55 D8 85 EE
+[19:55:22] [ESP32] ⚪ [I][junc_ble:1279]: C0 val=1444 -> 14.44V OK
+[19:55:22] [DEBUG] [SSE] sensor_energija_akum_itampa=14.44
+[19:55:22] [DEBUG] [SSE] sensor_energija_akum_galia=11.55
+[19:55:22] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[19:55:22] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 70 C1 10 10 D8 40 EE
+[19:55:22] [DEBUG] [SSE] sensor_energija_akum_srove=0.7
+[19:55:22] [DEBUG] [SSE] sensor_energija_akum_galia=10.1
+[19:55:22] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:23] [ESP32] ⚪ [I][junc_hex:1262]: buf[12]: 60 C1 01 D6 16 66 D7 08 66 D8 56 EE
+[19:55:23] [DEBUG] [SSE] sensor_energija_akum_srove=0.6
+[19:55:23] [DEBUG] [SSE] sensor_energija_akum_veikimo_laikas=1
+[19:55:23] [DEBUG] [SSE] sensor_energija_akum_galia=8.66
+[19:55:23] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=12 b)
+[19:55:23] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=4.197785
+[19:55:23] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 70 C1 10 10 D8 40 EE
+[19:55:23] [DEBUG] [SSE] sensor_energija_akum_srove=0.7
+[19:55:23] [DEBUG] [SSE] sensor_energija_akum_galia=10.1
+[19:55:23] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:23] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 41 77 06 D4 90 EE
+[19:55:23] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:24] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 60 C1 08 66 D8 02 EE
+[19:55:24] [DEBUG] [SSE] sensor_energija_akum_srove=0.6
+[19:55:24] [DEBUG] [SSE] sensor_energija_akum_galia=8.66
+[19:55:24] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:24] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 10 89 81 D2 79 EE
+[19:55:24] [DEBUG] [SSE] sensor_energija_akum_ah_likutis=108.981
+[19:55:24] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[19:55:25] [DEBUG] [SSE] sensor_pokrypis_soninis_k_d=0.4
+[19:55:25] [DEBUG] [SSE] sensor_pokrypis_isilginis_p_g=0.4
+[19:55:25] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=6.616915
+[19:55:26] [ESP32] ⚪ [I][junc_hex:1262]: buf[8]: 14 43 C0 08 65 D8 91 EE
+[19:55:26] [ESP32] ⚪ [I][junc_ble:1279]: C0 val=1443 -> 14.43V OK
+[19:55:26] [DEBUG] [SSE] sensor_energija_akum_itampa=14.43
+[19:55:26] [DEBUG] [SSE] sensor_energija_akum_galia=8.65
+[19:55:26] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=8 b)
+[19:55:27] [DEBUG] [SSE] text_sensor_sauga_judejimo_aliarmas=false
+[19:55:27] [DEBUG] [SSE] sensor_resursai_dujos_likutis_=91.25644
+[19:55:27] [DEBUG] [SSE] sensor_gps_greitis=0
+[19:55:27] [DEBUG] [SSE] sensor_gps_kryptis=0
+[19:55:27] [DEBUG] [SSE] text_sensor_sistema_modemo_busena=idle
+[19:55:27] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_modemo_busena=idle
+[19:55:27] [DEBUG] [SSE] text_sensor_gps_koordinates=55.724812,24.360588
+[19:55:27] [DEBUG] [SSE] text_sensor_gps_fix_statusas=3D
+[19:55:27] [DEBUG] [SSE UNMATCHED] text_sensor_gps_fix_statusas=3D
+[19:55:27] [DEBUG] [SSE] sensor_resursai_vanduo_lygis_=54.00844
+[19:55:27] [DEBUG] [SSE] sensor_gps_aukstis=76.5
+[19:55:27] [DEBUG] [SSE] sensor_energija_akum_soc_=100
+[19:55:27] [DEBUG] [SSE] text_sensor_energija_220v_saltinis=Isorine 220V
+[19:55:27] [DEBUG] [SSE] sensor_resursai_vandens_atstumas_lazeris_=17.8
+[19:55:27] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=8.282289
+[19:55:27] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 50 C1 07 21 D8 16 EE
+[19:55:27] [DEBUG] [SSE] sensor_energija_akum_srove=0.5
+[19:55:27] [DEBUG] [SSE] sensor_energija_akum_galia=7.21
+[19:55:27] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:27] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 41 77 07 D4 91 EE
+[19:55:27] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:28] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 60 C1 08 65 D8 01 EE
+[19:55:28] [DEBUG] [SSE] sensor_energija_akum_srove=0.6
+[19:55:28] [DEBUG] [SSE] sensor_energija_akum_galia=8.65
+[19:55:28] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:28] [ESP32] ⚪ [I][junc_hex:1262]: buf[10]: 14 44 C0 50 C1 07 22 D8 97 EE
+[19:55:28] [ESP32] ⚪ [I][junc_ble:1279]: C0 val=1444 -> 14.44V OK
+[19:55:28] [DEBUG] [SSE] sensor_energija_akum_itampa=14.44
+[19:55:28] [DEBUG] [SSE] sensor_energija_akum_srove=0.5
+[19:55:28] [DEBUG] [SSE] sensor_energija_akum_galia=7.22
+[19:55:28] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=10 b)
+[19:55:29] [Renogy HEX] dcc: ff 03 42 00 64 00 90 00 92 1d 15 00 81 00 aa 00 16 00 d6 00 00 00 15 00 00 00 84 00 90 0a 09 00 8d 01 6a 01 30 00 14 00 14 01 10 01 10 01 89 00 00 0f 9b 00 00 17 e4 00 00 14 cd 00 01 43 39 00 01 19 4a 00 04 9c 1b
+[19:55:29] [DEBUG] [SSE] sensor_gsm_signalas_=90.32258
+[19:55:29] [DEBUG] [SSE] text_sensor_sistema_paskutine_klaida=HTTP POST klaida (rysys/serveris)
+[19:55:29] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_paskutine_klaida=HTTP POST klaida (rysys/serveris)
+[19:55:29] [DEBUG] [SSE] sensor_gps_palydovai_galileo_europa_=1
+[19:55:29] [DEBUG] [SSE] sensor_gps_visi_palydovai=31
+[19:55:29] [DEBUG] [SSE] text_sensor_gsm_roaming_statusas=Namu tinklas
+[19:55:29] [DEBUG] [SSE] sensor_gps_palydovai_glonass_rusija_=0
+[19:55:29] [DEBUG] [SSE] sensor_gps_palydovai_beidou_kinija_=11
+[19:55:29] [DEBUG] [SSE] sensor_resursai_vandens_tds_ppm_=null
+[19:55:29] [DEBUG] [SSE] sensor_gsm_signalas_dbm_=-57
+[19:55:29] [DEBUG] [SSE UNMATCHED] sensor_gsm_signalas_dbm_=-57
+[19:55:29] [DEBUG] [SSE] text_sensor_gsm_tinklas=Bite
+[19:55:29] [DEBUG] [SSE] sensor_gps_palydovai_navstar_jav_=19
+[19:55:29] [DEBUG] [SSE] text_sensor_gsm_operatorius=teledema
+[19:55:29] [DEBUG] [SSE] text_sensor_sistema_google_buferis=0 B / 10000
+[19:55:29] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=6.878322
+[19:55:29] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 60 C1 08 66 D8 02 EE
+[19:55:29] [DEBUG] [SSE] sensor_energija_akum_srove=0.6
+[19:55:29] [DEBUG] [SSE] sensor_energija_akum_galia=8.66
+[19:55:29] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:31] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 50 C1 07 22 D8 17 EE
+[19:55:31] [DEBUG] [SSE] sensor_energija_akum_srove=0.5
+[19:55:31] [DEBUG] [SSE] sensor_energija_akum_galia=7.22
+[19:55:31] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:31] [ESP32] ⚪ [I][gps:2522]: AT+CGNSSINFO issiustas
+[19:55:31] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=5.140378
+[19:55:31] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 10 89 82 D2 80 EE
+[19:55:31] [DEBUG] [SSE] sensor_energija_akum_ah_likutis=108.982
+[19:55:31] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[19:55:32] [DEBUG] [SSE] text_sensor_energija_220v_saltinis=Isorine 220V
+[19:55:32] [DEBUG] [SSE] text_sensor_gps_koordinates=55.724819,24.360556
+[19:55:32] [DEBUG] [SSE] text_sensor_sauga_judejimo_aliarmas=false
+[19:55:32] [DEBUG] [SSE] sensor_resursai_dujos_likutis_=91.26922
+[19:55:32] [DEBUG] [SSE] text_sensor_sistema_modemo_busena=idle
+[19:55:32] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_modemo_busena=idle
+[19:55:32] [DEBUG] [SSE] sensor_gps_kryptis=352.24
+[19:55:32] [DEBUG] [SSE] sensor_gps_greitis=9.684108
+[19:55:32] [DEBUG] [SSE] text_sensor_gps_fix_statusas=3D
+[19:55:32] [DEBUG] [SSE UNMATCHED] text_sensor_gps_fix_statusas=3D
+[19:55:32] [DEBUG] [SSE] sensor_energija_akum_soc_=100
+[19:55:32] [DEBUG] [SSE] sensor_gps_aukstis=75.9
+[19:55:32] [DEBUG] [SSE] sensor_resursai_vanduo_lygis_=54.43038
+[19:55:32] [DEBUG] [SSE] sensor_resursai_vandens_atstumas_lazeris_=17.7
+[19:55:32] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 60 C1 08 66 D8 02 EE
+[19:55:32] [DEBUG] [SSE] sensor_energija_akum_srove=0.6
+[19:55:32] [DEBUG] [SSE] sensor_energija_akum_galia=8.66
+[19:55:32] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:32] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 41 77 08 D4 92 EE
+[19:55:32] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:33] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 50 C1 07 22 D8 17 EE
+[19:55:33] [DEBUG] [SSE] sensor_energija_akum_srove=0.5
+[19:55:33] [DEBUG] [SSE] sensor_energija_akum_galia=7.22
+[19:55:33] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:33] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=4.468785
+[19:55:33] [ESP32] ⚪ [I][junc_hex:1262]: buf[10]: 40 C1 25 00 D7 05 77 D8 36 EE
+[19:55:33] [DEBUG] [SSE] sensor_energija_akum_srove=0.4
+[19:55:33] [DEBUG] [SSE] sensor_energija_akum_galia=5.77
+[19:55:33] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=10 b)
+[19:55:33] [DEBUG] [SSE] sensor_aplinka_aukstis_slegis_=113.4936
+[19:55:34] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 50 C1 07 22 D8 17 EE
+[19:55:34] [DEBUG] [SSE] sensor_energija_akum_srove=0.5
+[19:55:34] [DEBUG] [SSE] sensor_energija_akum_galia=7.22
+[19:55:34] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:35] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=3.929704
+[19:55:36] [DEBUG] [SSE] text_sensor_miegamasis_oro_kokybe=Puiki
+[19:55:36] [DEBUG] [SSE] sensor_aplinka_slegio_tendencija=-0.629944
+[19:55:36] [DEBUG] [SSE] sensor_miegamasis_co2=441
+[19:55:36] [DEBUG] [SSE] sensor_miegamasis_temperatura=20.68375
+[19:55:36] [DEBUG] [SSE] sensor_miegamasis_dregme=53.46527
+[19:55:36] [DEBUG] [SSE] sensor_aplinka_temperatura=21.15787
+[19:55:36] [DEBUG] [SSE] sensor_aplinka_slegis=999.6909
+[19:55:36] [DEBUG] [SSE] sensor_aplinka_dregme=54.66772
+[19:55:36] [Renogy] battery query failed, retrying: Writing characteristic failed.
+[19:55:36] [Renogy HEX] battery: ff 03 44 00 04 00 24 00 24 00 24 00 24 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 bc 00 bc 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 4c d3
+[19:55:36] [Renogy] battery query failed: Writing characteristic failed.
+[19:55:36] [Renogy HEX] battery: ff 03 44 00 04 00 24 00 24 00 24 00 24 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 bc 00 bc 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 4c d3
+[19:55:36] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 40 C1 05 77 D8 84 EE
+[19:55:36] [DEBUG] [SSE] sensor_energija_akum_srove=0.4
+[19:55:36] [DEBUG] [SSE] sensor_energija_akum_galia=5.77
+[19:55:36] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:37] [DEBUG] [SSE] sensor_gps_aukstis=75.9
+[19:55:37] [DEBUG] [SSE] sensor_resursai_vanduo_lygis_=54.85232
+[19:55:37] [DEBUG] [SSE] sensor_energija_akum_soc_=100
+[19:55:37] [DEBUG] [SSE] sensor_resursai_dujos_likutis_=91.28667
+[19:55:37] [DEBUG] [SSE] text_sensor_sauga_judejimo_aliarmas=false
+[19:55:37] [DEBUG] [SSE] text_sensor_gps_koordinates=55.724819,24.360556
+[19:55:37] [DEBUG] [SSE] text_sensor_energija_220v_saltinis=Isorine 220V
+[19:55:37] [DEBUG] [SSE] text_sensor_sistema_modemo_busena=idle
+[19:55:37] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_modemo_busena=idle
+[19:55:37] [DEBUG] [SSE] text_sensor_gps_fix_statusas=3D
+[19:55:37] [DEBUG] [SSE UNMATCHED] text_sensor_gps_fix_statusas=3D
+[19:55:37] [DEBUG] [SSE] sensor_gps_greitis=9.684108
+[19:55:37] [DEBUG] [SSE] sensor_gps_kryptis=352.24
+[19:55:37] [DEBUG] [SSE] sensor_resursai_vandens_atstumas_lazeris_=17.7
+[19:55:37] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 50 C1 07 22 D8 17 EE
+[19:55:37] [DEBUG] [SSE] sensor_energija_akum_srove=0.5
+[19:55:37] [DEBUG] [SSE] sensor_energija_akum_galia=7.22
+[19:55:37] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:37] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=3.365555
+[19:55:37] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 41 77 09 D4 93 EE
+[19:55:37] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:38] [DEBUG] [SSE] text_sensor_sistema_patarimai=Viskas normalu.
+[19:55:38] [DEBUG] [SSE] text_sensor_aplinka_oru_prognoze=Kinta ↘
+[19:55:38] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 10 89 83 D2 81 EE
+[19:55:38] [DEBUG] [SSE] sensor_energija_akum_ah_likutis=108.983
+[19:55:38] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[19:55:39] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 40 C1 05 77 D8 84 EE
+[19:55:39] [DEBUG] [SSE] sensor_energija_akum_srove=0.4
+[19:55:39] [DEBUG] [SSE] sensor_energija_akum_galia=5.77
+[19:55:39] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:39] [DEBUG] [SSE] text_sensor_sistema_paskutine_klaida=HTTP POST klaida (rysys/serveris)
+[19:55:39] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_paskutine_klaida=HTTP POST klaida (rysys/serveris)
+[19:55:39] [DEBUG] [SSE] text_sensor_sistema_google_buferis=0 B / 10000
+[19:55:39] [DEBUG] [SSE] sensor_gsm_signalas_=90.32258
+[19:55:39] [DEBUG] [SSE] sensor_gps_palydovai_galileo_europa_=1
+[19:55:39] [DEBUG] [SSE] sensor_gps_palydovai_beidou_kinija_=11
+[19:55:39] [DEBUG] [SSE] sensor_gps_palydovai_glonass_rusija_=0
+[19:55:39] [DEBUG] [SSE] text_sensor_gsm_roaming_statusas=Namu tinklas
+[19:55:39] [DEBUG] [SSE] sensor_gps_visi_palydovai=31
+[19:55:39] [DEBUG] [SSE] sensor_resursai_vandens_tds_ppm_=null
+[19:55:39] [DEBUG] [SSE] text_sensor_gsm_operatorius=teledema
+[19:55:39] [DEBUG] [SSE] sensor_gsm_signalas_dbm_=-57
+[19:55:39] [DEBUG] [SSE UNMATCHED] sensor_gsm_signalas_dbm_=-57
+[19:55:39] [DEBUG] [SSE] sensor_gps_palydovai_navstar_jav_=19
+[19:55:39] [DEBUG] [SSE] text_sensor_gsm_tinklas=Bite
+[19:55:39] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=3.779122
+[19:55:40] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 30 C1 04 33 D8 99 EE
+[19:55:40] [DEBUG] [SSE] sensor_energija_akum_srove=0.3
+[19:55:40] [DEBUG] [SSE] sensor_energija_akum_galia=4.33
+[19:55:40] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:41] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=4.101769
+[19:55:42] [DEBUG] [SSE] sensor_gps_kryptis=352.24
+[19:55:42] [DEBUG] [SSE] sensor_gps_greitis=9.684108
+[19:55:42] [DEBUG] [SSE] text_sensor_gps_fix_statusas=3D
+[19:55:42] [DEBUG] [SSE UNMATCHED] text_sensor_gps_fix_statusas=3D
+[19:55:42] [DEBUG] [SSE] sensor_resursai_dujos_likutis_=91.28667
+[19:55:42] [DEBUG] [SSE] sensor_gps_aukstis=75.9
+[19:55:42] [DEBUG] [SSE] sensor_resursai_vanduo_lygis_=54.85232
+[19:55:42] [DEBUG] [SSE] sensor_energija_akum_soc_=100
+[19:55:42] [DEBUG] [SSE] text_sensor_sauga_judejimo_aliarmas=false
+[19:55:42] [DEBUG] [SSE] text_sensor_sistema_modemo_busena=idle
+[19:55:42] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_modemo_busena=idle
+[19:55:42] [DEBUG] [SSE] text_sensor_energija_220v_saltinis=Isorine 220V
+[19:55:42] [DEBUG] [SSE] text_sensor_gps_koordinates=55.724819,24.360556
+[19:55:42] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 40 C1 05 77 D8 84 EE
+[19:55:42] [DEBUG] [SSE] sensor_energija_akum_srove=0.4
+[19:55:42] [DEBUG] [SSE] sensor_energija_akum_galia=5.77
+[19:55:42] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:42] [DEBUG] [SSE] sensor_resursai_vandens_atstumas_lazeris_=18.5
+[19:55:43] [DEBUG] [SSE] sensor_pokrypis_soninis_k_d=0.2
+[19:55:43] [DEBUG] [SSE] sensor_pokrypis_isilginis_p_g=0.3
+[19:55:43] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=5.039867
+[19:55:43] [DEBUG] [SSE] sensor_miegamasis_co2_tendencija=-50
+[19:55:43] [ESP32] ⚪ [I][junc_hex:1262]: buf[4]: 02 D6 03 EE
+[19:55:43] [DEBUG] [SSE] sensor_energija_akum_veikimo_laikas=2
+[19:55:43] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=4 b)
+[19:55:43] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 01 41 77 10 D4 00 EE
+[19:55:43] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:44] [DEBUG] [SSE] sensor_pokrypis_soninis_k_d=0.3
+[19:55:44] [DEBUG] [SSE] sensor_pokrypis_isilginis_p_g=0.3
+[19:55:44] [Renogy HEX] dcc: ff 03 42 00 64 00 90 00 7d 1d 15 00 80 00 93 00 13 00 d6 00 00 00 12 00 00 00 84 00 90 0a 09 00 8d 01 6a 01 30 00 14 00 14 01 10 01 10 01 89 00 00 0f 9b 00 00 17 e4 00 00 14 cd 00 01 43 39 00 01 19 4a 00 04 cf dc
+[19:55:45] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 30 C1 04 33 D8 99 EE
+[19:55:45] [DEBUG] [SSE] sensor_energija_akum_srove=0.3
+[19:55:45] [DEBUG] [SSE] sensor_energija_akum_galia=4.33
+[19:55:45] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:45] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=5.469535
+[19:55:46] [ESP32] ⚪ [I][junc_hex:1262]: buf[12]: 14 43 C0 40 C1 00 D1 05 77 D8 72 EE
+[19:55:46] [ESP32] ⚪ [I][junc_ble:1279]: C0 val=1443 -> 14.43V OK
+[19:55:46] [DEBUG] [SSE] sensor_energija_akum_itampa=14.43
+[19:55:46] [DEBUG] [SSE] sensor_energija_akum_srove=0.4
+[19:55:46] [DEBUG] [SSE] sensor_energija_akum_galia=5.77
+[19:55:46] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=12 b)
+[19:55:46] [Renogy] battery query failed, retrying: Writing characteristic failed.
+[19:55:46] [Renogy HEX] battery: ff 03 0c 00 00 00 90 00 01 ad 10 00 01 ad 10 a5 14
+[19:55:46] [Renogy HEX] battery: ff 03 0c 00 00 00 90 00 01 ad 10 00 01 ad 10 a5 14
+[19:55:46] [Renogy] battery query failed: Writing characteristic failed.
+[19:55:46] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 60 C1 08 65 D8 01 EE
+[19:55:46] [DEBUG] [SSE] sensor_energija_akum_srove=-0.6
+[19:55:46] [DEBUG] [SSE] sensor_energija_akum_galia=8.65
+[19:55:46] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:47] [DEBUG] [SSE] text_sensor_energija_220v_saltinis=Isorine 220V
+[19:55:47] [DEBUG] [SSE] text_sensor_gps_koordinates=55.724819,24.360556
+[19:55:47] [DEBUG] [SSE] sensor_gps_kryptis=352.24
+[19:55:47] [DEBUG] [SSE] text_sensor_sistema_modemo_busena=idle
+[19:55:47] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_modemo_busena=idle
+[19:55:47] [DEBUG] [SSE] sensor_gps_greitis=9.684108
+[19:55:47] [DEBUG] [SSE] sensor_resursai_vanduo_lygis_=51.4768
+[19:55:47] [DEBUG] [SSE] sensor_gps_aukstis=75.9
+[19:55:47] [DEBUG] [SSE] sensor_resursai_dujos_likutis_=91.3015
+[19:55:47] [DEBUG] [SSE] text_sensor_gps_fix_statusas=3D
+[19:55:47] [DEBUG] [SSE UNMATCHED] text_sensor_gps_fix_statusas=3D
+[19:55:47] [DEBUG] [SSE] text_sensor_sauga_judejimo_aliarmas=false
+[19:55:47] [DEBUG] [SSE] sensor_energija_akum_soc_=100
+[19:55:47] [DEBUG] [SSE] sensor_resursai_vandens_atstumas_lazeris_=19.4
+[19:55:47] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=3.700072
+[19:55:47] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 50 C1 07 21 D8 16 EE
+[19:55:47] [DEBUG] [SSE] sensor_energija_akum_srove=-0.5
+[19:55:47] [DEBUG] [SSE] sensor_energija_akum_galia=7.21
+[19:55:47] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:47] [ESP32] ⚪ [I][junc_hex:1262]: buf[10]: 10 89 82 D2 93 09 89 D3 84 EE
+[19:55:47] [DEBUG] [SSE] sensor_energija_akum_ah_likutis=108.982
+[19:55:47] [DEBUG] [SSE] sensor_energija_akum_total_ah=930.989
+[19:55:47] [DEBUG] [SSE UNMATCHED] sensor_energija_akum_total_ah=930.989
+[19:55:47] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=10 b)
+[19:55:48] [ESP32] ⚪ [I][junc_hex:1262]: buf[9]: 14 42 C0 00 C1 00 D8 74 EE
+[19:55:48] [ESP32] ⚪ [I][junc_ble:1279]: C0 val=1442 -> 14.42V OK
+[19:55:48] [DEBUG] [SSE] sensor_energija_akum_itampa=14.42
+[19:55:48] [DEBUG] [SSE] sensor_energija_akum_srove=0
+[19:55:48] [DEBUG] [SSE] sensor_energija_akum_galia=0
+[19:55:48] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=9 b)
+[19:55:48] [ESP32] ⚪ [I][junc_hex:1262]: buf[9]: 20 C1 01 D1 02 88 D8 76 EE
+[19:55:48] [DEBUG] [SSE] sensor_energija_akum_srove=-0.2
+[19:55:48] [DEBUG] [SSE] sensor_energija_akum_galia=2.88
+[19:55:48] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=9 b)
+[19:55:49] [DEBUG] [SSE] sensor_gps_palydovai_navstar_jav_=19
+[19:55:49] [DEBUG] [SSE] text_sensor_sistema_paskutine_klaida=HTTP POST klaida (rysys/serveris)
+[19:55:49] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_paskutine_klaida=HTTP POST klaida (rysys/serveris)
+[19:55:49] [DEBUG] [SSE] text_sensor_gsm_tinklas=Bite
+[19:55:49] [DEBUG] [SSE] sensor_gsm_signalas_dbm_=-57
+[19:55:49] [DEBUG] [SSE UNMATCHED] sensor_gsm_signalas_dbm_=-57
+[19:55:49] [DEBUG] [SSE] sensor_gsm_signalas_=90.32258
+[19:55:49] [DEBUG] [SSE] text_sensor_sistema_google_buferis=0 B / 10000
+[19:55:49] [DEBUG] [SSE] text_sensor_gsm_operatorius=teledema
+[19:55:49] [DEBUG] [SSE] sensor_gps_palydovai_galileo_europa_=1
+[19:55:49] [DEBUG] [SSE] sensor_gps_palydovai_beidou_kinija_=11
+[19:55:49] [DEBUG] [SSE] sensor_resursai_vandens_tds_ppm_=null
+[19:55:49] [DEBUG] [SSE] sensor_gps_palydovai_glonass_rusija_=0
+[19:55:49] [DEBUG] [SSE] sensor_gps_visi_palydovai=31
+[19:55:49] [DEBUG] [SSE] text_sensor_gsm_roaming_statusas=Namu tinklas
+[19:55:49] [ESP32] ⚪ [I][junc_hex:1262]: buf[6]: 00 C1 00 D8 96 EE
+[19:55:49] [DEBUG] [SSE] sensor_energija_akum_srove=0
+[19:55:49] [DEBUG] [SSE] sensor_energija_akum_galia=0
+[19:55:49] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=6 b)
+[19:55:49] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=2.833035
+[19:55:51] [ESP32] ⚪ [I][junc_hex:1262]: buf[4]: 00 D1 96 EE
+[19:55:51] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=4 b)
+[19:55:51] [ESP32] ⚪ [I][gps:2522]: AT+CGNSSINFO issiustas
+[19:55:51] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=2.318187
+[19:55:51] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 10 C1 01 44 D8 81 EE
+[19:55:51] [DEBUG] [SSE] sensor_energija_akum_srove=-0.1
+[19:55:51] [DEBUG] [SSE] sensor_energija_akum_galia=1.44
+[19:55:51] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:52] [DEBUG] [SSE] sensor_energija_akum_soc_=100
+[19:55:52] [DEBUG] [SSE] text_sensor_sauga_judejimo_aliarmas=false
+[19:55:52] [DEBUG] [SSE] sensor_resursai_vanduo_lygis_=47.67933
+[19:55:52] [DEBUG] [SSE] text_sensor_energija_220v_saltinis=Isorine 220V
+[19:55:52] [DEBUG] [SSE] text_sensor_gps_koordinates=55.724670,24.360609
+[19:55:52] [DEBUG] [SSE] sensor_gps_greitis=3.672516
+[19:55:52] [DEBUG] [SSE] text_sensor_sistema_modemo_busena=idle
+[19:55:52] [DEBUG] [SSE UNMATCHED] text_sensor_sistema_modemo_busena=idle
+[19:55:52] [DEBUG] [SSE] sensor_gps_kryptis=352.24
+[19:55:52] [DEBUG] [SSE] sensor_gps_aukstis=76.2
+[19:55:52] [DEBUG] [SSE] text_sensor_gps_fix_statusas=3D
+[19:55:52] [DEBUG] [SSE UNMATCHED] text_sensor_gps_fix_statusas=3D
+[19:55:52] [DEBUG] [SSE] sensor_resursai_dujos_likutis_=91.29123
+[19:55:52] [DEBUG] [SSE] sensor_resursai_vandens_atstumas_lazeris_=19.8
+[19:55:53] [DEBUG] [SSE] sensor_pokrypis_vibracija_ema_=2.245912
+[19:55:53] [ESP32] ⚪ [I][junc_hex:1262]: buf[5]: 14 41 C0 64 EE
+[19:55:53] [ESP32] ⚪ [I][junc_ble:1279]: C0 val=1441 -> 14.41V OK
+[19:55:53] [DEBUG] [SSE] sensor_energija_akum_itampa=14.41
+[19:55:53] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=5 b)
+[19:55:54] [ESP32] ⚪ [I][junc_hex:1262]: buf[7]: 20 C1 02 88 D8 66 EE
+[19:55:54] [DEBUG] [SSE] sensor_energija_akum_srove=-0.2
+[19:55:54] [DEBUG] [SSE] sensor_energija_akum_galia=2.88
+[19:55:54] [ESP32] ⚪ [I][junc_ble:1305]: D9 nerasta (buf=7 b)
+[19:55:59] [DEBUG] [SSE] sensor_pokrypis_soninis_k_d=0.3

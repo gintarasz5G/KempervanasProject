@@ -15,7 +15,13 @@ const ObdBLE = (function() {
         connecting: false,
         pending: null,       // {cmd, sentAt, resolve, timer}
         queue: [],
-        pollTimer: null
+        pollTimer: null,
+        scanBusy: false,
+        flushing: false,
+        consecutiveTimeouts: 0,
+        autoResetCount: 0,
+        safeMode: localStorage.getItem('obd_safe_mode') === 'true',
+        lastEngineRunning: null
     };
 
     // Pakopa 0 — bazinis Mode 01 (visada veikia, žr. research/obd2/ESPobd/src/main.cpp)
@@ -44,23 +50,19 @@ const ObdBLE = (function() {
         { did: 'F190', label: 'VIN (sanity-check, standartizuota)' },
         { did: 'F18C', label: 'ECU serijos nr. (standartizuota)' },
         { did: 'F19F', label: 'SW versija (standartizuota)' },
-        { did: '114C', label: 'DPF suodziai (Gemini kandidatas)' },
+        { did: '114E', label: 'DPF suodziai matuoti (22 11 4E)' },
+        { did: '114F', label: 'DPF suodziai apskaiciuoti (22 11 4F)' },
+        { did: '178C', label: 'DPF pelenai (Ash, 22 17 8C)' },
+        { did: '1191', label: 'Turbo slegis faktinis (22 11 91)' },
+        { did: '1235', label: 'Purkstukas 1 korekcija (22 12 35)' },
+        { did: '1236', label: 'Purkstukas 2 korekcija (22 12 36)' },
+        { did: '1156', label: 'Atstumas nuo regeneracijos (22 11 56)' },
         { did: '111F', label: 'Alyvos temp (Gemini kandidatas)' },
         { did: '1310', label: 'Alyvos temp (XGauge kandidatas)' },
         { did: '116B', label: 'Turbo praeasomas (Gemini kandidatas)' },
         { did: '116C', label: 'Turbo faktinis (Gemini kandidatas)' },
         { did: '1193', label: 'Rail slegis (Gemini kandidatas)' },
-        { did: '12A0', label: 'Purkstukas 1 korekcija (Gemini)' },
-        { did: '12A1', label: 'Purkstukas 2 korekcija (Gemini)' },
-        { did: '12A2', label: 'Purkstukas 3 korekcija (Gemini)' },
-        { did: '12A3', label: 'Purkstukas 4 korekcija (Gemini)' },
-        { did: '12A4', label: 'Purkstukas 5 korekcija (Gemini)' },
         { did: '0380', label: 'Visu purkstuku korekcijos (2-as kandidatas)' },
-        { did: '0381', label: 'Purkstukas 1 korekcija (2-as kandidatas)' },
-        { did: '0382', label: 'Purkstukas 2 korekcija (2-as kandidatas)' },
-        { did: '0383', label: 'Purkstukas 3 korekcija (2-as kandidatas)' },
-        { did: '0384', label: 'Purkstukas 4 korekcija (2-as kandidatas)' },
-        { did: '0385', label: 'Purkstukas 5 korekcija (2-as kandidatas)' },
         { did: '0370', label: 'Smooth running / RPM deviation' },
         { did: '0108', label: 'Fuel injection quantity' },
         { did: '0390', label: 'Ismoktos purkstuku vertes (adaptacija)' }
@@ -119,7 +121,7 @@ const ObdBLE = (function() {
     }
 
     function pumpQueue() {
-        if (STATE.pending || STATE.queue.length === 0) return;
+        if (STATE.pending || STATE.queue.length === 0 || STATE.flushing) return;
         if (!STATE.connected) { STATE.queue = []; return; }
         const item = STATE.queue.shift();
         const bridge = getBridge();
@@ -127,25 +129,57 @@ const ObdBLE = (function() {
         STATE.pending = { cmd: item.cmd, resolve: item.resolve, sentAt: Date.now() };
         obdLog('TX: ' + item.cmd);
         bridge.send(item.cmd);
-        STATE.pending.timer = setTimeout(() => {
+        STATE.pending.timer = setTimeout(async () => {
             if (STATE.pending && STATE.pending.cmd === item.cmd) {
                 obdLog('RX: (timeout, be atsakymo)', 'warn');
                 const p = STATE.pending; STATE.pending = null;
+                STATE.consecutiveTimeouts++;
+
+                // Taisymas 6b: Auto-ATZ atsigavimas po 3 timeoutų
+                if (STATE.consecutiveTimeouts >= 3 && STATE.autoResetCount < 2) {
+                    STATE.flushing = true;
+                    await handleAutoRecovery();
+                    STATE.flushing = false;
+                    pumpQueue();
+                } else {
+                    STATE.flushing = true;
+                    setTimeout(() => {
+                        STATE.flushing = false;
+                        pumpQueue();
+                    }, 250); // settle window
+                }
                 p.resolve(null);
-                pumpQueue();
             }
         }, item.timeoutMs);
     }
 
+    async function handleAutoRecovery() {
+        obdLog('⚠️ Pasikartojantys timeoutai — bandoma perkrauti adapterį (ATZ)...', 'error');
+        STATE.autoResetCount++;
+        const bridge = getBridge();
+        if (bridge) bridge.send('ATZ');
+        await new Promise(r => setTimeout(r, 1500));
+        await initSequence(true); // silent init be polling restarto
+        STATE.consecutiveTimeouts = 0;
+    }
+
     function onDataLine(line) {
+        if (STATE.flushing) {
+            obdLog('(ignoruotas pasenęs atsakymas po timeout): ' + line, 'warn');
+            return;
+        }
         if (!STATE.pending) { obdLog('RX (nelaukta): ' + line, 'warn'); return; }
         const p = STATE.pending;
         clearTimeout(p.timer);
         STATE.pending = null;
+        STATE.consecutiveTimeouts = 0; // reset timeouts on success
         const dt = Date.now() - p.sentAt;
         obdLog('RX: ' + line.replace(/[\r\n]+/g, ' ') + ' (Δ' + dt + 'ms)', 'data');
         p.resolve(line);
-        pumpQueue();
+
+        // Taisymas 7: Saugus režimas (pauzė tarp komandų)
+        const delay = STATE.safeMode ? 300 : 0;
+        setTimeout(pumpQueue, delay);
     }
 
     // --- Parsinimas ---
@@ -157,27 +191,34 @@ const ObdBLE = (function() {
     }
 
     function isNoData(line) {
-        return /NO DATA|UNABLE TO CONNECT|ERROR|STOPPED|CAN ERROR|\?/i.test(line);
+        return /NO DATA|UNABLE TO CONNECT|ERROR|STOPPED|CAN ERROR|\?|TIMEOUT/i.test(line);
     }
 
     // --- ELM327 init + polling ---
 
-    async function initSequence() {
-        obdLog('ELM327 inicijavimas...', 'info');
+    async function initSequence(isRecovery = false) {
+        if (!isRecovery) obdLog('ELM327 inicijavimas...', 'info');
         await sendCmd('ATZ', 3000);
         await sendCmd('ATE0');
         await sendCmd('ATL0');
         await sendCmd('ATH0');
         await sendCmd('ATSP6');
-        obdLog('Inicijavimas baigtas, pradedamas PID skaitymas.', 'success');
-        startPolling();
+        await sendCmd('ATSTFF'); // Taisymas 6a: padidintas vidinis timeout
+        await sendCmd('ATAT1');  // Adaptyvus laikas
+        await sendCmd('ATCFC1'); // Auto Flow Control (Taisymas 7)
+
+        if (!isRecovery) {
+            obdLog('Inicijavimas baigtas, pradedamas PID skaitymas.', 'success');
+            STATE.autoResetCount = 0;
+            startPolling();
+        }
     }
 
     function startPolling() {
         stopPolling();
         let idx = 0;
         STATE.pollTimer = setInterval(async () => {
-            if (!STATE.connected || ALL_PIDS.length === 0) return;
+            if (!STATE.connected || ALL_PIDS.length === 0 || STATE.scanBusy) return;
             const def = ALL_PIDS[idx % ALL_PIDS.length];
             idx++;
             const resp = await sendCmd('01' + def.pid);
@@ -192,6 +233,16 @@ const ObdBLE = (function() {
             const A = bytes[hdrIdx + 2], B = bytes[hdrIdx + 3];
             if (A === undefined) return;
             const value = def.fmt(A, B);
+
+            // Taisymas 8: Automatinis būsenos žymėjimas pagal RPM
+            if (def.pid === '0C') {
+                const running = (value > 0);
+                if (running !== STATE.lastEngineRunning) {
+                    STATE.lastEngineRunning = running;
+                    obdLog('=== BŪSENA (auto): ' + (running ? ('Variklis veikia, RPM=' + Math.round(value)) : 'Variklis sustabdytas') + ' ===', 'warn');
+                }
+            }
+
             if (window.sensorCache) window.sensorCache[def.key] = value;
             if (window.updateUI) window.updateUI();
         }, 600);
@@ -252,8 +303,7 @@ const ObdBLE = (function() {
             renderAssigned();
             connectSaved();
         } else {
-            obdLog('Poruojama su ' + mac + '...', 'info');
-            bridge.pair(mac);
+            obdLog('Pasirinktas įrenginys nėra suporuotas. Suporuokite jį Android nustatymuose.', 'warn');
         }
     }
 
@@ -269,6 +319,12 @@ const ObdBLE = (function() {
             STATE.connected = false;
             renderAssigned();
         }
+    }
+
+    function toggleSafeMode(on) {
+        STATE.safeMode = on;
+        localStorage.setItem('obd_safe_mode', on);
+        obdLog('🐢 Saugus režimas: ' + (on ? 'ĮJUNGTAS' : 'IŠJUNGTAS'), on ? 'success' : 'warn');
     }
 
     function forget() {
@@ -302,7 +358,7 @@ const ObdBLE = (function() {
                         <div style="font-weight:bold;">${d.name || 'Nežinomas'} ${d.paired ? '(Susietas)' : ''}</div>
                         <div style="font-size:11px; color:#8b949e;">${d.mac}</div>
                     </div>
-                    <button class="btn btn-primary" style="width:auto; padding:6px 10px; font-size:11px;" onclick="ObdBLE.pairAndConnect('${d.mac}')">${d.paired ? 'Prisijungti' : 'Suporuoti'}</button>
+                    <button class="btn btn-primary" style="width:auto; padding:6px 10px; font-size:11px;" onclick="ObdBLE.pairAndConnect('${d.mac}')">${d.paired ? 'Pasirinkti' : '---'}</button>
                 </div>
             </div>
         `).join('');
@@ -313,6 +369,10 @@ const ObdBLE = (function() {
         if (el) el.textContent = STATE.connectedMac ? (STATE.connectedName || STATE.connectedMac) : '---';
         const statusEl = document.getElementById('obd-status');
         if (statusEl) statusEl.textContent = STATE.connected ? '🟢 Prijungta' : (STATE.connecting ? '🟡 Jungiamasi...' : '⚪ Atjungta');
+
+        // Disable buttons if busy
+        const btns = document.querySelectorAll('.obd-scan-btn');
+        btns.forEach(b => b.disabled = STATE.scanBusy || !STATE.connected);
     }
 
     // --- Native callback'ai (kviečiami iš KemperisObdBridge.java per evaluateJavascript) ---
@@ -320,20 +380,6 @@ const ObdBLE = (function() {
     window.onObdDeviceFound = function(mac, name, rssi) {
         STATE.devices[mac] = Object.assign(STATE.devices[mac] || {}, { mac: mac, name: name, rssi: rssi });
         renderScanList();
-    };
-    window.onObdPaired = function(mac, name) {
-        obdLog('Suporuota: ' + (name || mac), 'success');
-        STATE.connectedMac = mac;
-        STATE.connectedName = name;
-        localStorage.setItem('obd_dev_mac', mac);
-        localStorage.setItem('obd_dev_name', name || '');
-        renderAssigned();
-        connectSaved();
-    };
-    window.onObdPairFailed = function(mac, reason) {
-        obdLog('Poravimo klaida (' + mac + '): ' + reason, 'error');
-        STATE.connecting = false;
-        renderAssigned();
     };
     window.onObdConnected = function() {
         STATE.connected = true;
@@ -355,7 +401,7 @@ const ObdBLE = (function() {
         renderAssigned();
     };
 
-    // --- Pakopa B/C/C+ — gilus skenavimas (žr. docs/uzduotis_obd2_elm327_tab.md) ---
+    // --- Pakopa B/C/C+ — gilus skenavimas ---
 
     function decodeAsciiFromBytes(bytes, skipCount) {
         let text = '';
@@ -373,50 +419,84 @@ const ObdBLE = (function() {
         obdLog(label + ': ' + text + '  [raw: ' + resp.replace(/[\r\n]+/g, ' ') + ']', 'success');
     }
 
-    // 3. ECU identitetas (Mode 09) — standartinis SAE J1979 servisas
     async function runIdentity() {
-        obdLog('=== ECU IDENTITETAS (Mode 09) ===', 'info');
-        const vin = await sendCmd('0902', 3000);
-        logDecoded('VIN', vin, 3);
-        const calid = await sendCmd('0904', 3000);
-        logDecoded('Calibration ID', calid, 3);
-        const ecuname = await sendCmd('090A', 3000);
-        logDecoded('ECU Name', ecuname, 3);
+        if (STATE.scanBusy) return;
+        STATE.scanBusy = true;
+        renderAssigned();
+        try {
+            obdLog('=== ECU IDENTITETAS (Mode 09) ===', 'info');
+            const vin = await sendCmd('0902', 3000);
+            logDecoded('VIN', vin, 3);
+            const calid = await sendCmd('0904', 3000);
+            logDecoded('Calibration ID', calid, 3);
+            const ecuname = await sendCmd('090A', 3000);
+            logDecoded('ECU Name', ecuname, 3);
+        } finally {
+            STATE.scanBusy = false;
+            renderAssigned();
+        }
     }
 
-    // 4. Protokolo zondas — KWP (Service 21) vs UDS (Service 22)
     async function runProtocolProbe() {
-        obdLog('=== PROTOKOLO ZONDAS (KWP vs UDS) ===', 'info');
-        const kwp = await sendCmd('2101', 2000);
-        const uds = await sendCmd('22F190', 2000);
-        const kwpOk = !!kwp && !isNoData(kwp);
-        const udsOk = !!uds && !isNoData(uds);
-        obdLog('Service 21 (KWP): ' + (kwpOk ? ('ATSAKO - ' + kwp.replace(/[\r\n]+/g, ' ')) : 'NO DATA'), kwpOk ? 'success' : 'warn');
-        obdLog('Service 22 (UDS): ' + (udsOk ? ('ATSAKO - ' + uds.replace(/[\r\n]+/g, ' ')) : 'NO DATA'), udsOk ? 'success' : 'warn');
-        return { kwpOk: kwpOk, udsOk: udsOk };
+        if (STATE.scanBusy) return;
+        STATE.scanBusy = true;
+        renderAssigned();
+        try {
+            obdLog('=== PROTOKOLO ZONDAS (KWP vs UDS) ===', 'info');
+            const kwp = await sendCmd('2101', 2000);
+            const uds = await sendCmd('22F190', 2000);
+            const kwpOk = !!kwp && !isNoData(kwp);
+            const udsOk = !!uds && !isNoData(uds);
+            obdLog('Service 21 (KWP): ' + (kwpOk ? ('ATSAKO - ' + kwp.replace(/[\r\n]+/g, ' ')) : 'NO DATA'), kwpOk ? 'success' : 'warn');
+            obdLog('Service 22 (UDS): ' + (udsOk ? ('ATSAKO - ' + uds.replace(/[\r\n]+/g, ' ')) : 'NO DATA'), udsOk ? 'success' : 'warn');
+            return { kwpOk: kwpOk, udsOk: udsOk };
+        } finally {
+            STATE.scanBusy = false;
+            renderAssigned();
+        }
     }
 
-    // Pakopa B — Mode 22 DID skenavimas variklio adresui + automatinis saugiklis į Service 21
     async function runDidScan() {
-        obdLog('=== DID SKENAVIMAS (Service 22, variklis 0x7E0) ===', 'info');
-        await sendCmd('1003', 2000); // extended diagnostic session - kai kurie DID reikalauja (pasala #5)
-        let anyRealData = false;
-        for (const c of DID_CANDIDATES) {
-            const resp = await sendCmd('22' + c.did, 1500);
-            const clean = resp ? resp.replace(/\s/g, '') : '';
-            const isPositive = /^62/i.test(clean);
-            if (isPositive) anyRealData = true;
-            const status = resp ? resp.replace(/[\r\n]+/g, ' ') : 'be atsakymo';
-            obdLog(c.label + ' (22' + c.did + '): ' + status, isPositive ? 'success' : (resp && !isNoData(resp) ? 'warn' : 'info'));
-        }
-        if (!anyRealData) {
-            obdLog('Visi DID be teigiamo atsakymo (62...) - automatiškai perjungiama į Service 21 block sweep (saugiklis).', 'warn');
-            await runBlockSweep();
+        if (STATE.scanBusy) return;
+        STATE.scanBusy = true;
+        renderAssigned();
+        try {
+            obdLog('=== DID SKENAVIMAS (Service 22, variklis 0x7E0) ===', 'info');
+            await sendCmd('1003', 2000);
+            let anyRealData = false;
+            for (const c of DID_CANDIDATES) {
+                const resp = await sendCmd('22' + c.did, 1500);
+                const clean = resp ? resp.replace(/\s/g, '') : '';
+                const isPositive = /^62/i.test(clean);
+                if (isPositive) anyRealData = true;
+                const status = resp ? resp.replace(/[\r\n]+/g, ' ') : 'be atsakymo';
+                obdLog(c.label + ' (22' + c.did + '): ' + status, isPositive ? 'success' : (resp && !isNoData(resp) ? 'warn' : 'info'));
+            }
+            if (!anyRealData) {
+                obdLog('Visi DID be teigiamo atsakymo (62...) - automatiškai perjungiama į Service 21 block sweep.', 'warn');
+                await runBlockSweepInternal();
+            }
+            await sendCmd('1001', 1000); // Taisymas 1: grąžinti default sesiją
+        } finally {
+            STATE.scanBusy = false;
+            renderAssigned();
         }
     }
 
-    // Automatinis saugiklis / Planas B — Service 21 (KWP measuring blocks) 0x01-0xFF
     async function runBlockSweep() {
+        if (STATE.scanBusy) return;
+        STATE.scanBusy = true;
+        renderAssigned();
+        try {
+            await runBlockSweepInternal();
+            await sendCmd('1001', 1000);
+        } finally {
+            STATE.scanBusy = false;
+            renderAssigned();
+        }
+    }
+
+    async function runBlockSweepInternal() {
         obdLog('=== SERVICE 21 BLOKŲ SWEEP (0x01-0xFF) ===', 'info');
         for (let i = 1; i <= 255; i++) {
             const hex = i.toString(16).padStart(2, '0').toUpperCase();
@@ -425,58 +505,67 @@ const ObdBLE = (function() {
                 obdLog('Grupė ' + i + ' (21' + hex + '): ' + resp.replace(/[\r\n]+/g, ' '), 'success');
             }
         }
-        obdLog('Service 21 sweep baigtas.', 'info');
     }
 
-    // Pakopa C — modulių adresų skenavimas (0x700-0x7FF) su dvigubu 10 01 / 10 03 zondu + ATCS stebėjimas
     async function runModuleScan() {
-        if (!window.confirm('Ar automobilis STOVI (variklis išjungtas arba laisva eiga, automobilis nejuda)? ' +
-                'Skenavimas siunčia diagnostikos užklausas į nežinomus modulius (ABS/SRS ir kt.) - tęskite TIK jei automobilis stovi.')) {
-            obdLog('Modulių skenavimas atšauktas (vartotojas nepatvirtino saugumo sąlygos).', 'warn');
-            return;
-        }
-        obdLog('=== MODULIŲ SKENAVIMAS (0x700-0x7FF, 10 01 + 10 03) ===', 'info');
-        for (let addr = 0x700; addr <= 0x7FF; addr++) {
-            const hex = addr.toString(16).toUpperCase();
-            await sendCmd('ATSH' + hex, 500);
-            const r1 = await sendCmd('1001', 400);
-            const r2 = await sendCmd('1003', 400);
-            const ok1 = !!r1 && !isNoData(r1);
-            const ok2 = !!r2 && !isNoData(r2);
-            if (ok1 || ok2) {
-                obdLog('Adresas 0x' + hex + ' ATSAKO: 10 01=' + (r1 || '-').replace(/[\r\n]+/g, ' ') + ' | 10 03=' + (r2 || '-').replace(/[\r\n]+/g, ' '), 'success');
+        if (STATE.scanBusy) return;
+        if (!window.confirm('Ar automobilis STOVI? Skenavimas siunčia diagnostikos užklausas į nežinomus modulius.')) return;
+        STATE.scanBusy = true;
+        renderAssigned();
+        try {
+            obdLog('=== MODULIŲ SKENAVIMAS (0x700-0x7FF, 10 01 + 10 03) ===', 'info');
+            for (let addr = 0x700; addr <= 0x7FF; addr++) {
+                const hex = addr.toString(16).toUpperCase();
+                await sendCmd('ATSH' + hex, 600);
+                const r1 = await sendCmd('1001', 600);
+                const r2 = await sendCmd('1003', 600);
+                const ok1 = !!r1 && !isNoData(r1);
+                const ok2 = !!r2 && !isNoData(r2);
+                if (ok1 || ok2) {
+                    obdLog('Adresas 0x' + hex + ' ATSAKO: 10 01=' + (r1 || '-').replace(/[\r\n]+/g, ' ') + ' | 10 03=' + (r2 || '-').replace(/[\r\n]+/g, ' '), 'success');
+                }
+                if ((addr - 0x700) % 25 === 0) {
+                    const cs = await sendCmd('ATCS', 600);
+                    obdLog('CAN būsena (ATCS) ties 0x' + hex + ': ' + (cs || '-'), 'info');
+                }
             }
-            if ((addr - 0x700) % 25 === 0) {
-                const cs = await sendCmd('ATCS', 500);
-                obdLog('CAN būsena (ATCS) ties 0x' + hex + ': ' + (cs || '-'), 'info');
-            }
+            await sendCmd('ATSH7E0', 1000);
+            await sendCmd('ATSP6', 1000);
+            await sendCmd('1001', 1000); // Taisymas 1
+            obdLog('Modulių skenavimas baigtas.', 'success');
+        } finally {
+            STATE.scanBusy = false;
+            renderAssigned();
         }
-        await sendCmd('ATSH7E0', 500);
-        await sendCmd('ATSP6', 500);
-        obdLog('Modulių skenavimas baigtas, grąžinta prie variklio adreso (0x7E0).', 'success');
     }
 
-    // 8. Būsenos žymėjimas loge (analizei — koreliuoti HEX su realia variklio būsena)
     function tagState(label) {
         obdLog('=== BŪSENA: ' + label + ' ===', 'warn');
     }
 
-    // "Surinkti viską" — vienas mygtukas, viena kelionė prie automobilio, max duomenų
     async function runFullCollection() {
-        if (!STATE.connected) { obdLog('Nėra ryšio - pirma prisijunkite prie ELM327.', 'error'); return; }
-        obdLog('########## PRADEDAMAS PILNAS DUOMENŲ RINKIMAS ##########', 'success');
-        stopPolling();
-        await runIdentity();
-        await runProtocolProbe();
-        await runDidScan();
-        await runModuleScan();
-        obdLog('########## RINKIMAS BAIGTAS - žurnalas išsaugomas automatiškai ##########', 'success');
-        saveObdLog();
-        startPolling();
+        if (STATE.scanBusy || !STATE.connected) { obdLog('Nėra ryšio arba skenavimas jau vyksta.', 'error'); return; }
+        STATE.scanBusy = true;
+        renderAssigned();
+        try {
+            obdLog('########## PRADEDAMAS PILNAS DUOMENŲ RINKIMAS ##########', 'success');
+            stopPolling();
+            await runIdentity();
+            await runProtocolProbe();
+            await runDidScan();
+            await runModuleScan();
+            await sendCmd('1001', 1000); // Taisymas 1 final
+            obdLog('########## RINKIMAS BAIGTAS - žurnalas išsaugomas automatiškai ##########', 'success');
+            saveObdLog();
+        } finally {
+            STATE.scanBusy = false;
+            renderAssigned();
+            startPolling();
+        }
     }
 
     return {
-        init, toggleGlobal, startScan, pairAndConnect, forget,
+        init, toggleGlobal, startScan, pairAndConnect, forget, toggleSafeMode,
         obdLog, clearObdLog, saveObdLog,
         runIdentity, runProtocolProbe, runDidScan, runBlockSweep, runModuleScan,
         tagState, runFullCollection,
