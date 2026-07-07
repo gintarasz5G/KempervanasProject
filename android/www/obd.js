@@ -280,28 +280,9 @@ async function handleAutoRecovery() {
     function startPolling() {
         stopPolling();
         let idx = 0;
-        let lastV = 0;
         STATE.pollTimer = setInterval(async () => {
             if (!STATE.connected || STATE.scanBusy || STATE.flushing) return;
 
-<<<<<<< Updated upstream
-            // 6a: Baterijos/borto įtampa kas 10s (ATRV)
-            if (Date.now() - lastV > 10000) {
-                const v = await sendCmd('ATRV', 800);
-                if (v && !isNoData(v)) {
-                    const match = v.match(/[\d.]+/);
-                    if (match) {
-                        const val = parseFloat(match[0]);
-                        window.sensorCache['obd_battery_v'] = val;
-                        const el = document.getElementById('obd-battery-v');
-                        if (el) el.innerText = val.toFixed(1);
-                    }
-                }
-                lastV = Date.now();
-            }
-
-=======
->>>>>>> Stashed changes
             if (ALL_PIDS.length === 0) return;
             // Standartinis Mode 01 polling (išjungtas v51, bet kodas lieka)
             // return;
