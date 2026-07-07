@@ -248,19 +248,20 @@ const RenogyBLE = (function() {
 
         const BleClient = getBle();
         const fullCmd = new Uint8Array([...cmdBase, ...crc16(cmdBase)]);
-        dev.buffer = []; // Reset buffer for new query
         try {
-            await BleClient.write(dev.id, SERVICE_WRITE, CHAR_WRITE, fullCmd);
-        } catch (e) {
-            // R5: pastebėta, kad GATT write retkarčiais meta klaidą nors komanda vis tiek
-            // pasiekia įrenginį (atsakymas ateina po klaidos) — vienas tylus pakartojimas
-            // prieš žymint tikra klaida, kad nepraleistume poll ciklo be reikalo.
-            debug(`${type} query failed, retrying: ${e.message}`, 'warn');
-            try {
+            dev.buffer = []; // Reset buffer for new query
+
+            // Taisymas C (v51): Baterijos BLE modulis reikalauja 'writeWithoutResponse'.
+            // DCC50S veikia su standartiniu 'write'.
+            if (type === 'battery') {
+                await BleClient.writeWithoutResponse(dev.id, SERVICE_WRITE, CHAR_WRITE, fullCmd);
+            } else {
                 await BleClient.write(dev.id, SERVICE_WRITE, CHAR_WRITE, fullCmd);
-            } catch (e2) {
-                debug(`${type} query failed: ${e2.message}`, 'error');
             }
+        } catch (e) {
+            // R5: "Writing characteristic failed" frequently occurs on some devices
+            // but the command often actually reaches the device.
+            debug(`${type} query failed: ${e.message}`, 'error');
         }
     }
 
@@ -304,11 +305,19 @@ const RenogyBLE = (function() {
                 window.sensorCache['ren_cell_2'] = u16(data[6], data[7]) / 10.0;
                 window.sensorCache['ren_cell_3'] = u16(data[8], data[9]) / 10.0;
 
-                // R2: Temperatures (reg 5018..5021 / data[36..43]) — baterija turi iki 4 jutiklių
-                window.sensorCache['ren_temp']   = s16(data[36], data[37]) / 10.0;
-                window.sensorCache['ren_temp_1'] = s16(data[38], data[39]) / 10.0;
-                window.sensorCache['ren_temp_2'] = s16(data[40], data[41]) / 10.0;
-                window.sensorCache['ren_temp_3'] = s16(data[42], data[43]) / 10.0;
+                // Taisymas B (v51): Temperatūrų skaičius ir reikšmės (reg 5017-5021)
+                // data[34..35] = jutiklių skaičius (reg 5017)
+                // data[36..37] = temp 1 (reg 5018), etc.
+                const tempCount = u16(data[34], data[35]);
+
+                if (tempCount >= 1) window.sensorCache['ren_temp']   = s16(data[36], data[37]) / 10.0;
+                if (tempCount >= 2) window.sensorCache['ren_temp_1'] = s16(data[38], data[39]) / 10.0;
+
+                // Išvalome senas/nenaudojamas reikšmes, jei jutiklių skaičius mažas
+                if (tempCount < 2) delete window.sensorCache['ren_temp_1'];
+                delete window.sensorCache['ren_temp_2']; // Reg 5020 (data[40..41]) dazniausiai 0
+                delete window.sensorCache['ren_temp_3']; // Reg 5021 (data[42..43]) dazniausiai 0
+
             } else if (len === 0x0C) { // 0x13B2 (5042) - V/A/Ah/SOC
                 const currentRaw = s16(data[0], data[1]); // 5042
                 window.sensorCache['ren_a'] = currentRaw / 100.0;

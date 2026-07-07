@@ -210,9 +210,9 @@ async function handleAutoRecovery() {
         await sendCmd('ATCFC1'); // Auto Flow Control (Taisymas 7)
 
         if (!isRecovery) {
-            obdLog('Inicijavimas baigtas, pradedamas PID skaitymas.', 'success');
+            obdLog('Inicijavimas baigtas, laukiama vartotojo veiksmo.', 'success');
             STATE.autoResetCount = 0;
-            startPolling();
+            // startPolling() - isjungta v51 (neveikia EDC16)
         }
     }
 
@@ -541,21 +541,24 @@ async function handleAutoRecovery() {
 
     async function runModuleScanInternal() {
         obdLog('=== MODULIŲ SKENAVIMAS (0x700-0x7FF, 10 01 + 10 03) ===', 'info');
+        const startCs = await sendCmd('ATCS', 600);
+        obdLog('CAN būsena (ATCS) pradžioje: ' + (startCs || '-'), 'info');
+
         for (let addr = 0x700; addr <= 0x7FF; addr++) {
             const hex = addr.toString(16).toUpperCase();
             await sendCmd('ATSH' + hex, 600);
             const r1 = await sendCmd('1001', 600);
             const r2 = await sendCmd('1003', 600);
-            const ok1 = !!r1 && !isNoData(r1);
-            const ok2 = !!r2 && !isNoData(r2);
+            const ok1 = !!r1 && !isNoData(r1) && r1.trim() !== 'OK';
+            const ok2 = !!r2 && !isNoData(r2) && r2.trim() !== 'OK';
             if (ok1 || ok2) {
                 obdLog('Adresas 0x' + hex + ' ATSAKO: 10 01=' + (r1 || '-').replace(/[\r\n]+/g, ' ') + ' | 10 03=' + (r2 || '-').replace(/[\r\n]+/g, ' '), 'success');
             }
-            if ((addr - 0x700) % 25 === 0) {
-                const cs = await sendCmd('ATCS', 600);
-                obdLog('CAN būsena (ATCS) ties 0x' + hex + ': ' + (cs || '-'), 'info');
-            }
         }
+
+        const endCs = await sendCmd('ATCS', 600);
+        obdLog('CAN būsena (ATCS) pabaigoje: ' + (endCs || '-'), 'info');
+
         await sendCmd('ATSH7E0', 1000);
         await sendCmd('ATSP6', 1000);
         await sendCmd('1001', 1000); // Taisymas 1
@@ -569,23 +572,23 @@ async function handleAutoRecovery() {
     // "Surinkti viską" — vienas mygtukas, viena kelionė prie automobilio, max duomenų
     async function runFullCollection() {
         if (STATE.scanBusy || !STATE.connected) { obdLog('Nėra ryšio arba skenavimas jau vyksta.', 'error'); return; }
-        if (!window.confirm('Ar automobilis STOVI? Vyks pilnas skenavimas su modulių adresavimu.')) return;
+        if (!window.confirm('Ar automobilis STOVI? Vyks pilnas skenavimas.')) return;
         STATE.scanBusy = true;
         renderAssigned();
         try {
-            obdLog('########## PRADEDAMAS PILNAS DUOMENŲ RINKIMAS ##########', 'success');
+            obdLog('########## PRADEDAMAS OPTIMIZUOTAS DUOMENŲ RINKIMAS ##########', 'success');
             stopPolling();
-            await runIdentityInternal();
+            // await runIdentityInternal(); // Isjungta v51 (neveikia EDC16)
             await runProtocolProbeInternal();
             await runDidScanInternal();
-            await runModuleScanInternal();
+            // await runModuleScanInternal(); // Isjungta v51 (neveikia EDC16)
             await sendCmd('1001', 1000); // Taisymas 1 final
             obdLog('########## RINKIMAS BAIGTAS - žurnalas išsaugomas automatiškai ##########', 'success');
             saveObdLog();
         } finally {
             STATE.scanBusy = false;
             renderAssigned();
-            startPolling();
+            // startPolling(); // Isjungta v51
         }
     }
 
