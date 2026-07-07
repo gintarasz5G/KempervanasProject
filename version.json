@@ -1,5 +1,5 @@
 {
-  "version": 49,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v49.apk",
-  "notes": "🚀 v35.2 - OBD Critical Logic Fixes (v49)\n\n✅ FIXED: 'Collect All' deadlock (Bug #1) — sub-scans now correctly run while scanBusy is true.\n✅ FIXED: Auto-recovery deadlock (Bug #2) — recovery commands now correctly process during flushing state.\n✅ FIXED: Native pairing sync — documentation restored to match actual Java implementation (Bluetooth Classic pairing/discovery enabled).\n✅ IMPROVED: Global collection now correctly asks for top-level confirmation."
+  "version": 50,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v50.apk",
+  "notes": "🚀 v35.3 - OBD Cleanup & Documentation Fix (v50)\n\n✅ FIXED: 'Collect All' deadlock (Bug #1) — sub-scans now correctly run while scanBusy is true.\n✅ FIXED: Auto-recovery deadlock (Bug #2) — recovery commands now correctly process during flushing state.\n✅ FIXED: Documentation encoding — restored UTF-8 integrity in uzduotis_obd2_elm327_tab.md.\n✅ IMPROVED: Global collection confirm dialog logic — reduced redundant popups."
 }
