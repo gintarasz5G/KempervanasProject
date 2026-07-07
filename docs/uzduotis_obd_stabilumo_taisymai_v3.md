@@ -1,9 +1,19 @@
-# Užduotis: v51 patikrinimas ir Renogy BLE rašymo klaidos taisymas
+# Užduotis: v52 patikrinimas realiu testu
 
-**Statusas:** kodo pakeitimai (OBD apribojimas, Renogy temp. jutikliai, Renogy write fix'as)
-YRA `main` šakoje (commit `a1efe0a`), bet **NĖ VIENAS DAR NEPATVIRTINTAS realiu telefono
-testu** — telefone šiuo metu veikia SENA `35.3` (versionCode 50) APK, kurioje šių pakeitimų
-NĖRA. Vykdyk žingsnius tiksliai šia tvarka.
+**Statusas (atnaujinta):** Žingsniai 0, 2, 3a, 4, 5, 6b, 6c **IMPLEMENTUOTI IR SUKOMPILIUOTI**
+į `kemperis_v52.apk` (commit'ai `35081db`, `806ba7b`, `f848ca0`). `cap sync` MD5 patikrintas —
+SUTAMPA. Versijos (`versionCode`/`CURRENT_VERSION`/`version.json`) — visos **52**, po šios
+sesijos suvienodintos (buvo `git stash` konfliktas keturiuose failuose, žr. pastabą apačioje).
+
+**⚠️ RASTA REALI KLAIDA (nepataisyta):** Žingsnis 6a (`ATRV` baterijos įtampa) kodas įdėtas
+`startPolling()` viduje, bet `startPolling()` **NIEKUR nebekviečiama** (sąmoningai išjungta
+Žingsnyje 1, kad neveiktų Mode 01 polling). Todėl `ATRV` periodinis skaitymas **NIEKADA
+NEPASILEIS**, `obd-battery-v` kortelė visada rodys `--`. Reikia atskiro `setInterval`
+mechanizmo TIK `ATRV`, NEPRIKLAUSOMO nuo `startPolling()`. Žr. Žingsnis 6a pataisą apačioje.
+
+**Kitas žingsnis:** NĖRA jokio naujo realaus testo žurnalo su v52 APK — Žingsniai 1-3 (OBD/
+Renogy patikrinimas) lieka NEATLIKTI. Reikia įdiegti `kemperis_v52.apk` telefone ir pakartoti
+testus.
 
 ---
 
@@ -37,6 +47,18 @@ NĖRA. Vykdyk žingsnius tiksliai šia tvarka.
 Su nauja APK (35.4), prijungtu ELM327 adapteriu, paspausti „🚀 Surinkti VISKĄ".
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+**⚠️ SVARBU (patikslinta po 2026-07-06 žurnalų chronologijos analizės):** ankstesniame
+teste `tagState('Dujinu ~1500 RPM')` (19:47:27) sutapo su MODULIŲ SKENAVIMU, o Service21
+grupių sweep'as (`runBlockSweep()`) įvyko ~2.5 min VĖLIAU, kai variklis jau buvo pažymėtas
+kaip išjungtas — todėl vis dar NETURIME nė vieno Service21 grupės atsakymo, užfiksuoto kol
+RPM > 0. **Šiame teste būtina:** prieš paleidžiant „🚀 Surinkti VISKĄ" (arba atskirą „3b️⃣
+Service 21 blokų sweep" mygtuką), PIRMA paspausti `tagState()` mygtuką atitinkančiai
+būsenai (pvz. „~1500 RPM"), TADA IŠKART paleisti sweep'ą, KOL variklis realiai tebesuka tą
+apsukų skaičių — ne tik pažymėti būseną kada nors anksčiau tame pačiame važiavime.
+
+>>>>>>> Stashed changes
 **Tikrintina:**
 - Žurnale NĖRA `0902`/`0904`/`090A` (Mode 09) komandų.
 - Žurnale NĖRA `0x700-0x7FF` adresų sekos (modulių skenavimas).
@@ -198,6 +220,7 @@ rezultatus į `STATE.blockResults` (Map arba objektas: `blockNum -> {timestamp, 
 kad juos galėtų nuskaityti UI (žr. Žingsnis 5).
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 **Patikrinimo pastaba (jau atlikta, nebekartoti):** dekoderis buvo paleistas prieš esamus
 `docs/logs/obd_log_2026-07-06T16-*.txt` duomenis (offline, Node/Python skriptu) —
 **95 iš 100 pagautų grupių turėjo bent vieną atpažįstamą tipo baitą**, ir rezultatai atrodo
@@ -208,23 +231,53 @@ NESUGENDA ir duoda tikėtinus rezultatus statinei/nulinei būsenai — **jis NEP
 konkrečios grupė→parametras lentelės teisingumo dinaminėms reikšmėms** (RPM>0, kintantis
 slėgis ir t.t.). Tam reikalingas Žingsnio 1 realaus OBD testo pakartojimas SU veikiančiu
 varikliu ir `tagState()` mygtukais (jau yra UI, [index.html:614-621](../android/www/index.html#L614)).
+=======
+**Patikrinimo pastaba (jau atlikta, nebekartoti, PATIKSLINTA):** pradžioje dekoderis buvo
+paleistas GRUPĖS lygiu (95/100 grupių turėjo atpažįstamą tipą). Vėliau atlikta TIKSLESNĖ
+**LAUKO lygio** analizė — kiekvienas iš 4 laukų grupėse 1,2,3,4,10,11,12,13,14 dekoduotas
+individualiai IR palygintas su bendruomenės lentelės teiginiu TAM KONKREČIAM laukui (ne tik
+visai grupei). Šaltinis: `docs/logs/obd_log_2026-07-06T16-52-42.txt`, variklis IŠJUNGTAS
+visą laiką (tai riboja patikrinimą — žr. žemiau).
+>>>>>>> Stashed changes
 
-**Orientacinė grupių lentelė** — TIK etikečių pasiūlymas, NE patvirtintas faktas (surinkta iš
-3+ nepriklausomų VAG PD TDI bendruomenės šaltinių skirtingiems, bet giminingiems varikliams —
-mūsų tikslus EDC16CP34/Crafter derinys atskirai netikrintas):
+**Lauko lygio patikrinimo lentelė** (✅ = tipo baitas ATITINKA teiginį prasme/vienetais;
+❌ = tipo baitas NEATITINKA arba NEŽINOMAS mūsų 24-tipo lentelėje):
 
-| Grupė | Galimas turinys |
-|---|---|
-| 0 / 1 | RPM + įpurškimo kiekis + trukmė/kampas + aušinimo skysčio temp. |
-| 2 | Tuščios eigos reguliavimas |
-| 3 | EGR |
-| 4 | Purkštuko laikas |
-| 10 / 11 | Turbo slėgis |
-| 12 | Kaitinimo žvakės |
-| 13 / 14 | Cilindrų balansas (įpurškimo korekcija/cilindrui) |
+| Grupė | L1 | L2 | L3 | L4 |
+|---|---|---|---|---|
+| 1 | ✅ RPM=0 | ✅ inj.kiekis=0mg/gūž | ❌ tipas 0x64 nežinomas | ❌ tipas 0x05 nežinomas |
+| 2 | ✅ RPM=0 | ✅ pedalas=0% | ✅ Binary (tinka „režimo bitai") | ❌ tipas 0x05 nežinomas |
+| 3 | ✅ RPM=0 | ✅ MAF norimas=320mg/gūž | ✅ MAF realus=0mg/gūž | ✅ EGR DC=100.6% |
+| 4 | ✅ RPM=0 | ❌ tipas 0x1B nežinomas | ✅ trukmė=0ms | ❌ tipas 0x64 nežinomas |
+| 10 | ❌ tipas 0x31 (NE RPM!) | ✅ slėgis=989mbar | ✅ slėgis=989mbar | ✅ DC=0% |
+| 11 | ✅ RPM=0 | ✅ slėgis=999.6mbar | ✅ slėgis=989mbar | ✅ DC=4.7% |
+| 12 | ✅ Binary (tinka „būsenos bitai") | ✅ trukmė=0s | ❌ tipas 0x06 nežinomas | ❌ tipas 0x05 nežinomas |
+| **13** | **✅ korekcija=0** | **✅ korekcija=0** | **✅ korekcija=0** | **✅ korekcija=0** |
+| 14 | ✅ korekcija=0 | ✅ Binary (nenaudojama) | ✅ Binary (nenaudojama) | ✅ Binary (nenaudojama) |
 
-**NENAUDOTI šios lentelės UI etiketėms be patvirtinimo** — žr. Žingsnis 5, kur UI rodo grupės
-NUMERĮ, ne spėjamą pavadinimą, kol nepatvirtinta realiais duomenimis.
+**Grupė 13 — stipriausias patvirtinimas:** VISI 4 laukai naudoja tipą `0x33` (pagal jazdw/
+vag-blocks formulę = „mg/stk Δ", įpurškimo korekcija) — TIKSLIAI atitinka „cilindrų balanso"
+teiginį visuose 4 laukuose vienu metu. Tai stipru, nes atsitiktinis 4/4 sutapimas
+mažai tikėtinas.
+
+**Grupė 10 vs 11 — bendruomenės lentelė NETIKSLI:** ji sujungė „10/11" į vieną eilutę, bet
+realybėje TIK grupė 11 turi RPM pirmame lauke (kaip 1,2,3,4) — grupė 10 pirmame lauke turi
+`mg/stk` tipą, NE RPM. Tai reiškia grupės 10 ir 11 turi SKIRTINGĄ išdėstymą, nepaisant to,
+ką teigia sujungta lentelės eilutė — **grupę 10 laikyti neaiškia**, grupę 11 — gerai
+patvirtinta.
+
+**Vis dar TIKRA riba (nepašalinta šia analize):** visos šios reikšmės — arba 0, arba
+statiškas slėgis/duomenys, nes **variklis buvo išjungtas**. Tipo baitas + vienetai SUTAMPA su
+teiginiu (tai jau nemenkas patvirtinimas — atsitiktinis 20+ laukų sutapimas su teisingais
+vienetais/kategorijomis mažai tikėtinas), bet **dinaminis** patvirtinimas (RPM keičiasi nuo
+0 iki >0 tiksliai grupėje, kurią tikimasi; slėgis kyla su turbo ir t.t.) įmanomas TIK su
+veikiančiu varikliu ir `tagState()` žymėmis — tai lieka Žingsnio 1 dalimi.
+
+**Praktinė išvada šiam UI etapui:** grupes **1, 2, 3, 11, 13, 14** galima žymėti UI kaip
+„tikėtina: <pavadinimas>" (su aiškiu vizualiu skirtumu nuo patvirtintų 0x50/51/52), grupes
+**4, 10, 12** — tik kaip žalius skaičius be pavadinimo (per daug nežinomų/prieštaringų
+laukų). Tai TIKSLESNIS nurodymas nei ankstesnis „nenaudoti nieko" — žr. atnaujintą
+Žingsnio 5 UI planą.
 
 **Priėmimo kriterijus:** `node --check android/www/obd.js` praeina.
 
@@ -307,18 +360,25 @@ elementų. Draudžiama:
 <div class="section-title" style="margin-top:24px;">📊 Service 21 dekoduoti duomenys</div>
 <div class="card" style="grid-column: 1 / -1;">
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     <div class="card-subtext">Kiekviena grupė = neverifikuota reikšmė. Grupių numeriai
         rodomi tokie, kokie yra — NEBANDYTA spėti pavadinimų be patvirtinimo.</div>
 =======
+=======
+>>>>>>> Stashed changes
     <div class="card-subtext">Grupės su „tikėtina:" etikete — patvirtinta lauko-lygio analize
         prieš realius duomenis (žr. Dalis D), bet TIK statinei/nulinei būsenai (variklis
         išjungtas testavimo metu) — dinaminės reikšmės (RPM>0 ir pan.) dar nepatvirtintos.
         Grupės be etiketės — tipas nežinomas arba prieštaringas, rodomas žalias skaičius.</div>
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     <div id="obd-block-results" style="margin-top:10px; font-family:monospace; font-size:12px;"></div>
 </div>
 ```
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 `obd.js` viduje pridėti funkciją, kuri perpiešia `#obd-block-results` iš `STATE.blockResults`
 (atnaujinama po kiekvieno `runBlockSweepInternal()` gauto atsakymo — kviesti tą pačią
@@ -333,6 +393,14 @@ patvirtinti lauko-lygio analizėje (Dalis D lentelė), (2) perpiešimo funkciją
 patogesnis):
 
 ```js
+=======
+`obd.js` viduje pridėti (1) etikečių žemėlapį TIK toms grupėms/laukams, kurie realiai
+patvirtinti lauko-lygio analizėje (Dalis D lentelė), (2) perpiešimo funkciją, kviečiamą iš
+`runBlockSweepInternal()` po kiekvieno dekodavimo (arba per `window.updateUI()`, jei tas
+patogesnis):
+
+```js
+>>>>>>> Stashed changes
 // TIK patvirtinti laukai (žr. Dalis D lauko-lygio lentelę) — NEPRIDĖTI daugiau be patikrinimo
 const GROUP_FIELD_LABELS = {
     1:  ['RPM', 'Įpurškimo kiekis', null, null],
@@ -343,6 +411,9 @@ const GROUP_FIELD_LABELS = {
     14: ['Cil.5 korekcija (?)', null, null, null],
 };
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 function renderBlockResults() {
     const el = document.getElementById('obd-block-results');
@@ -350,16 +421,22 @@ function renderBlockResults() {
     const rows = Array.from(STATE.blockResults.entries()).sort((a,b) => a[0]-b[0]);
     el.innerHTML = rows.map(([block, data]) => {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         const fieldsStr = data.fields.map(f =>
             `${f.v !== null ? (typeof f.v === 'number' ? f.v.toFixed(2) : f.v) : '?'} ${f.u}`
         ).join(' | ');
 =======
+=======
+>>>>>>> Stashed changes
         const labels = GROUP_FIELD_LABELS[block];
         const fieldsStr = data.fields.map((f, i) => {
             const val = f.v !== null ? (typeof f.v === 'number' ? f.v.toFixed(2) : f.v) : '?';
             const label = labels && labels[i] ? ` (tikėtina: ${labels[i]})` : '';
             return `${val} ${f.u}${label}`;
         }).join(' | ');
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         return `<div>Grupė ${block}: ${fieldsStr}</div>`;
     }).join('');
@@ -387,6 +464,40 @@ ryšio su ECU. Patvirtinta 3 nepriklausomose programėlėse.
 **Failas:** `android/www/obd.js`. Pridėti periodinį (pvz. kas 10s, panašiai kaip Renogy
 `pollCycle`) `sendCmd('ATRV', 1000)` iškvietimą, atsakymą (formatas paprastai `"12.6V"`)
 išsaugoti į `window.sensorCache['obd_battery_v']` arba `STATE.batteryVoltage`.
+
+**⚠️ PATAISA (rasta po įgyvendinimo, 2026-07-07):** esamas kodas įdėjo šią logiką
+`startPolling()` funkcijos viduje ([obd.js:261](../android/www/obd.js#L261)), bet
+`startPolling()` PATI niekada nebekviečiama (sąmoningai išjungta Žingsnyje 1) — todėl `ATRV`
+niekada nepasileidžia. **Reikia atskiro, NEPRIKLAUSOMO intervalo**, kuris veiktų
+NEPRIKLAUSOMAI nuo to, ar `startPolling()`/Mode 01 ciklas aktyvus:
+
+```js
+// Pridėti kaip atskirą funkciją, kviečiamą IŠ init'o (NE iš startPolling())
+let batteryVoltageInterval = null;
+function startBatteryVoltagePolling() {
+    if (batteryVoltageInterval) return;
+    batteryVoltageInterval = setInterval(async () => {
+        if (!STATE.connected || STATE.scanBusy || STATE.flushing) return;
+        const v = await sendCmd('ATRV', 800);
+        if (v && !isNoData(v)) {
+            const match = v.match(/[\d.]+/);
+            if (match) {
+                const val = parseFloat(match[0]);
+                window.sensorCache['obd_battery_v'] = val;
+                const el = document.getElementById('obd-battery-v');
+                if (el) el.innerText = val.toFixed(1);
+            }
+        }
+    }, 10000);
+}
+```
+Iškviesti `startBatteryVoltagePolling()` ten, kur šiuo metu būtų kviečiama `startPolling()`
+(pvz. `initSequence()` pabaigoje, [obd.js:212-216](../android/www/obd.js#L212)) — TAI
+NEPRIEŠTARAUJA Žingsnio 1 reikalavimui (kuris draudžia Mode 01 PID ciklą, ne ATRV).
+Perkelti/pašalinti seną, neveikiantį ATRV bloką iš `startPolling()` vidaus.
+
+**Priėmimo kriterijus:** po šios pataisos, `obd-battery-v` kortelė realiai atsinaujina kas
+~10s po prisijungimo prie ELM327, NEPRIKLAUSOMAI nuo to, ar vyksta koks nors kitas skenavimas.
 
 ### 6b. Klaidų kodai — KWP Service `0x18` (`readDiagnosticTroubleCodesByStatus`)
 

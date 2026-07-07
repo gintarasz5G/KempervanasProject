@@ -23,8 +23,13 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         versionCode 51
         versionName "35.4"
+=======
+        versionCode 52
+        versionName "35.5"
+>>>>>>> Stashed changes
 =======
         versionCode 52
         versionName "35.5"

@@ -255,7 +255,26 @@ async function handleAutoRecovery() {
             obdLog('Inicijavimas baigtas, laukiama vartotojo veiksmo.', 'success');
             STATE.autoResetCount = 0;
             // startPolling() - isjungta v51 (neveikia EDC16)
+            startBatteryVoltagePolling(); // v53: ATRV veikia nepriklausomai
         }
+    }
+
+    let batteryVoltageInterval = null;
+    function startBatteryVoltagePolling() {
+        if (batteryVoltageInterval) return;
+        batteryVoltageInterval = setInterval(async () => {
+            if (!STATE.connected || STATE.scanBusy || STATE.flushing) return;
+            const v = await sendCmd('ATRV', 800);
+            if (v && !isNoData(v)) {
+                const match = v.match(/[\d.]+/);
+                if (match) {
+                    const val = parseFloat(match[0]);
+                    window.sensorCache['obd_battery_v'] = val;
+                    const el = document.getElementById('obd-battery-v');
+                    if (el) el.innerText = val.toFixed(1);
+                }
+            }
+        }, 10000);
     }
 
     function startPolling() {
@@ -265,6 +284,7 @@ async function handleAutoRecovery() {
         STATE.pollTimer = setInterval(async () => {
             if (!STATE.connected || STATE.scanBusy || STATE.flushing) return;
 
+<<<<<<< Updated upstream
             // 6a: Baterijos/borto įtampa kas 10s (ATRV)
             if (Date.now() - lastV > 10000) {
                 const v = await sendCmd('ATRV', 800);
@@ -280,6 +300,8 @@ async function handleAutoRecovery() {
                 lastV = Date.now();
             }
 
+=======
+>>>>>>> Stashed changes
             if (ALL_PIDS.length === 0) return;
             // Standartinis Mode 01 polling (išjungtas v51, bet kodas lieka)
             // return;

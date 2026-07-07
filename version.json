@@ -1,8 +1,14 @@
 {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   "version": 51,
   "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v51.apk",
   "notes": "🚀 v35.4 - OBD Scope Optimization & Renogy Hardening (v51)\n\n✅ OBD: Disables non-functional Mode 01/09 auto-polling for EDC16 ECU.\n✅ OBD: Optimized 'Collect All' (removes identity/module scan, saving ~100s).\n✅ OBD: Fixed ATCS probe bug in module scan causing ghost responses.\n✅ RENOGY: Dynamic temp sensor display based on probe count (reg 5017).\n✅ RENOGY: Stabilized battery queries with writeWithoutResponse to fix GATT errors."
+=======
+  "version": 52,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v52.apk",
+  "notes": "🚀 v35.5 - OBD Diagnostic Engine & Renogy PRO Fix (v52)\n\n✅ OBD: New KWP Service 21 Data Decoder with 20+ field types support.\n✅ OBD: Confirmed Data section (Battery Voltage, VIN, SW-ID auto-extraction).\n✅ OBD: Diagnostic Trouble Codes (DTC) checker (KWP Service 0x18).\n✅ OBD: Debug Log toggle switch and UI layout improvements.\n✅ RENOGY: Log level downgraded to WARN for known Renogy PRO hardware GATT quirk."
+>>>>>>> Stashed changes
 =======
   "version": 52,
   "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v52.apk",
