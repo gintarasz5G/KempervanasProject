@@ -70,7 +70,11 @@ public class MainActivity extends BridgeActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 123;
     static final String VERSION_JSON_URL = "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
+<<<<<<< Updated upstream
     static final int CURRENT_VERSION = 51;
+=======
+    static final int CURRENT_VERSION = 52;
+>>>>>>> Stashed changes
 
     private Network boundNetwork = null;
     private volatile boolean autoBindPaused = false;

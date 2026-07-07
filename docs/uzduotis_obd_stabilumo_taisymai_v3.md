@@ -36,6 +36,7 @@ NĖRA. Vykdyk žingsnius tiksliai šia tvarka.
 
 Su nauja APK (35.4), prijungtu ELM327 adapteriu, paspausti „🚀 Surinkti VISKĄ".
 
+<<<<<<< Updated upstream
 **Tikrintina:**
 - Žurnale NĖRA `0902`/`0904`/`090A` (Mode 09) komandų.
 - Žurnale NĖRA `0x700-0x7FF` adresų sekos (modulių skenavimas).
@@ -44,6 +45,25 @@ Su nauja APK (35.4), prijungtu ELM327 adapteriu, paspausti „🚀 Surinkti VISK
 - Standartinis Mode 01 PID polling'as (`010C`, `010D` ir t.t.) NEPASILEIDŽIA automatiškai
   po inicijavimo ar po „Surinkti VISKĄ".
 
+=======
+**⚠️ SVARBU (patikslinta po 2026-07-06 žurnalų chronologijos analizės):** ankstesniame
+teste `tagState('Dujinu ~1500 RPM')` (19:47:27) sutapo su MODULIŲ SKENAVIMU, o Service21
+grupių sweep'as (`runBlockSweep()`) įvyko ~2.5 min VĖLIAU, kai variklis jau buvo pažymėtas
+kaip išjungtas — todėl vis dar NETURIME nė vieno Service21 grupės atsakymo, užfiksuoto kol
+RPM > 0. **Šiame teste būtina:** prieš paleidžiant „🚀 Surinkti VISKĄ" (arba atskirą „3b️⃣
+Service 21 blokų sweep" mygtuką), PIRMA paspausti `tagState()` mygtuką atitinkančiai
+būsenai (pvz. „~1500 RPM"), TADA IŠKART paleisti sweep'ą, KOL variklis realiai tebesuka tą
+apsukų skaičių — ne tik pažymėti būseną kada nors anksčiau tame pačiame važiavime.
+
+**Tikrintina:**
+- Žurnale NĖRA `0902`/`0904`/`090A` (Mode 09) komandų.
+- Žurnale NĖRA `0x700-0x7FF` adresų sekos (modulių skenavimas).
+- Jei modulių skenavimas vis dėlto paleidžiamas rankiniu mygtuku „4️⃣" — patikrinti, kad
+  `ATCS` komanda pasirodo TIK du kartus (prieš ir po `for` ciklo), NE kas 25 adresus.
+- Standartinis Mode 01 PID polling'as (`010C`, `010D` ir t.t.) NEPASILEIDŽIA automatiškai
+  po inicijavimo ar po „Surinkti VISKĄ".
+
+>>>>>>> Stashed changes
 **Failas jei problema:** `android/www/obd.js`, funkcijos `runFullCollection()`,
 `runModuleScanInternal()`, `startPolling()`.
 
@@ -177,6 +197,7 @@ Panaudoti `decodeKwpBlockResponse()` `runBlockSweepInternal()` viduje
 rezultatus į `STATE.blockResults` (Map arba objektas: `blockNum -> {timestamp, fields}`),
 kad juos galėtų nuskaityti UI (žr. Žingsnis 5).
 
+<<<<<<< Updated upstream
 **Patikrinimo pastaba (jau atlikta, nebekartoti):** dekoderis buvo paleistas prieš esamus
 `docs/logs/obd_log_2026-07-06T16-*.txt` duomenis (offline, Node/Python skriptu) —
 **95 iš 100 pagautų grupių turėjo bent vieną atpažįstamą tipo baitą**, ir rezultatai atrodo
@@ -207,6 +228,56 @@ NUMERĮ, ne spėjamą pavadinimą, kol nepatvirtinta realiais duomenimis.
 
 **Priėmimo kriterijus:** `node --check android/www/obd.js` praeina.
 
+=======
+**Patikrinimo pastaba (jau atlikta, nebekartoti, PATIKSLINTA):** pradžioje dekoderis buvo
+paleistas GRUPĖS lygiu (95/100 grupių turėjo atpažįstamą tipą). Vėliau atlikta TIKSLESNĖ
+**LAUKO lygio** analizė — kiekvienas iš 4 laukų grupėse 1,2,3,4,10,11,12,13,14 dekoduotas
+individualiai IR palygintas su bendruomenės lentelės teiginiu TAM KONKREČIAM laukui (ne tik
+visai grupei). Šaltinis: `docs/logs/obd_log_2026-07-06T16-52-42.txt`, variklis IŠJUNGTAS
+visą laiką (tai riboja patikrinimą — žr. žemiau).
+
+**Lauko lygio patikrinimo lentelė** (✅ = tipo baitas ATITINKA teiginį prasme/vienetais;
+❌ = tipo baitas NEATITINKA arba NEŽINOMAS mūsų 24-tipo lentelėje):
+
+| Grupė | L1 | L2 | L3 | L4 |
+|---|---|---|---|---|
+| 1 | ✅ RPM=0 | ✅ inj.kiekis=0mg/gūž | ❌ tipas 0x64 nežinomas | ❌ tipas 0x05 nežinomas |
+| 2 | ✅ RPM=0 | ✅ pedalas=0% | ✅ Binary (tinka „režimo bitai") | ❌ tipas 0x05 nežinomas |
+| 3 | ✅ RPM=0 | ✅ MAF norimas=320mg/gūž | ✅ MAF realus=0mg/gūž | ✅ EGR DC=100.6% |
+| 4 | ✅ RPM=0 | ❌ tipas 0x1B nežinomas | ✅ trukmė=0ms | ❌ tipas 0x64 nežinomas |
+| 10 | ❌ tipas 0x31 (NE RPM!) | ✅ slėgis=989mbar | ✅ slėgis=989mbar | ✅ DC=0% |
+| 11 | ✅ RPM=0 | ✅ slėgis=999.6mbar | ✅ slėgis=989mbar | ✅ DC=4.7% |
+| 12 | ✅ Binary (tinka „būsenos bitai") | ✅ trukmė=0s | ❌ tipas 0x06 nežinomas | ❌ tipas 0x05 nežinomas |
+| **13** | **✅ korekcija=0** | **✅ korekcija=0** | **✅ korekcija=0** | **✅ korekcija=0** |
+| 14 | ✅ korekcija=0 | ✅ Binary (nenaudojama) | ✅ Binary (nenaudojama) | ✅ Binary (nenaudojama) |
+
+**Grupė 13 — stipriausias patvirtinimas:** VISI 4 laukai naudoja tipą `0x33` (pagal jazdw/
+vag-blocks formulę = „mg/stk Δ", įpurškimo korekcija) — TIKSLIAI atitinka „cilindrų balanso"
+teiginį visuose 4 laukuose vienu metu. Tai stipru, nes atsitiktinis 4/4 sutapimas
+mažai tikėtinas.
+
+**Grupė 10 vs 11 — bendruomenės lentelė NETIKSLI:** ji sujungė „10/11" į vieną eilutę, bet
+realybėje TIK grupė 11 turi RPM pirmame lauke (kaip 1,2,3,4) — grupė 10 pirmame lauke turi
+`mg/stk` tipą, NE RPM. Tai reiškia grupės 10 ir 11 turi SKIRTINGĄ išdėstymą, nepaisant to,
+ką teigia sujungta lentelės eilutė — **grupę 10 laikyti neaiškia**, grupę 11 — gerai
+patvirtinta.
+
+**Vis dar TIKRA riba (nepašalinta šia analize):** visos šios reikšmės — arba 0, arba
+statiškas slėgis/duomenys, nes **variklis buvo išjungtas**. Tipo baitas + vienetai SUTAMPA su
+teiginiu (tai jau nemenkas patvirtinimas — atsitiktinis 20+ laukų sutapimas su teisingais
+vienetais/kategorijomis mažai tikėtinas), bet **dinaminis** patvirtinimas (RPM keičiasi nuo
+0 iki >0 tiksliai grupėje, kurią tikimasi; slėgis kyla su turbo ir t.t.) įmanomas TIK su
+veikiančiu varikliu ir `tagState()` žymėmis — tai lieka Žingsnio 1 dalimi.
+
+**Praktinė išvada šiam UI etapui:** grupes **1, 2, 3, 11, 13, 14** galima žymėti UI kaip
+„tikėtina: <pavadinimas>" (su aiškiu vizualiu skirtumu nuo patvirtintų 0x50/51/52), grupes
+**4, 10, 12** — tik kaip žalius skaičius be pavadinimo (per daug nežinomų/prieštaringų
+laukų). Tai TIKSLESNIS nurodymas nei ankstesnis „nenaudoti nieko" — žr. atnaujintą
+Žingsnio 5 UI planą.
+
+**Priėmimo kriterijus:** `node --check android/www/obd.js` praeina.
+
+>>>>>>> Stashed changes
 **Kontekstas (nekeičia užduoties, tik paaiškina apimtį):** 2006-2016 VW Crafter buvo statomas
 kartu su Mercedes Sprinter (ta pati platforma/gamykla). Automobilis NETURI VAG Gateway
 modulio; tik variklis, imobilaizeris ir centrinis užraktas yra VW/VCDS-native, likę moduliai
@@ -235,26 +306,61 @@ elementų. Draudžiama:
 ```html
 <div class="section-title" style="margin-top:24px;">📊 Service 21 dekoduoti duomenys</div>
 <div class="card" style="grid-column: 1 / -1;">
+<<<<<<< Updated upstream
     <div class="card-subtext">Kiekviena grupė = neverifikuota reikšmė. Grupių numeriai
         rodomi tokie, kokie yra — NEBANDYTA spėti pavadinimų be patvirtinimo.</div>
+=======
+    <div class="card-subtext">Grupės su „tikėtina:" etikete — patvirtinta lauko-lygio analize
+        prieš realius duomenis (žr. Dalis D), bet TIK statinei/nulinei būsenai (variklis
+        išjungtas testavimo metu) — dinaminės reikšmės (RPM>0 ir pan.) dar nepatvirtintos.
+        Grupės be etiketės — tipas nežinomas arba prieštaringas, rodomas žalias skaičius.</div>
+>>>>>>> Stashed changes
     <div id="obd-block-results" style="margin-top:10px; font-family:monospace; font-size:12px;"></div>
 </div>
 ```
 
+<<<<<<< Updated upstream
 `obd.js` viduje pridėti funkciją, kuri perpiešia `#obd-block-results` iš `STATE.blockResults`
 (atnaujinama po kiekvieno `runBlockSweepInternal()` gauto atsakymo — kviesti tą pačią
 `window.updateUI()` konvenciją, kurią jau naudoja kiti moduliai, arba atskirą
 `renderBlockResults()`, iškviečiamą iš `runBlockSweepInternal()` po kiekvieno dekodavimo):
 
 ```js
+=======
+`obd.js` viduje pridėti (1) etikečių žemėlapį TIK toms grupėms/laukams, kurie realiai
+patvirtinti lauko-lygio analizėje (Dalis D lentelė), (2) perpiešimo funkciją, kviečiamą iš
+`runBlockSweepInternal()` po kiekvieno dekodavimo (arba per `window.updateUI()`, jei tas
+patogesnis):
+
+```js
+// TIK patvirtinti laukai (žr. Dalis D lauko-lygio lentelę) — NEPRIDĖTI daugiau be patikrinimo
+const GROUP_FIELD_LABELS = {
+    1:  ['RPM', 'Įpurškimo kiekis', null, null],
+    2:  ['RPM', 'Pedalas %', 'Režimo bitai', null],
+    3:  ['RPM', 'EGR MAF (norimas)', 'EGR MAF (realus)', 'EGR vožtuvo DC%'],
+    11: ['RPM', 'Turbo slėgis (norimas)', 'Turbo slėgis (realus)', 'Wastegate DC%'],
+    13: ['Cil.1 korekcija', 'Cil.2 korekcija', 'Cil.3 korekcija', 'Cil.4 korekcija'],
+    14: ['Cil.5 korekcija (?)', null, null, null],
+};
+
+>>>>>>> Stashed changes
 function renderBlockResults() {
     const el = document.getElementById('obd-block-results');
     if (!el || !STATE.blockResults) return;
     const rows = Array.from(STATE.blockResults.entries()).sort((a,b) => a[0]-b[0]);
     el.innerHTML = rows.map(([block, data]) => {
+<<<<<<< Updated upstream
         const fieldsStr = data.fields.map(f =>
             `${f.v !== null ? (typeof f.v === 'number' ? f.v.toFixed(2) : f.v) : '?'} ${f.u}`
         ).join(' | ');
+=======
+        const labels = GROUP_FIELD_LABELS[block];
+        const fieldsStr = data.fields.map((f, i) => {
+            const val = f.v !== null ? (typeof f.v === 'number' ? f.v.toFixed(2) : f.v) : '?';
+            const label = labels && labels[i] ? ` (tikėtina: ${labels[i]})` : '';
+            return `${val} ${f.u}${label}`;
+        }).join(' | ');
+>>>>>>> Stashed changes
         return `<div>Grupė ${block}: ${fieldsStr}</div>`;
     }).join('');
 }

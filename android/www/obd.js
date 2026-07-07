@@ -196,6 +196,48 @@ async function handleAutoRecovery() {
         return /NO DATA|UNABLE TO CONNECT|ERROR|STOPPED|CAN ERROR|\?|TIMEOUT/i.test(line);
     }
 
+    function decodeKwpField(type, a, b) {
+        // Šaltinis: jazdw/vag-blocks (GPLv3) kwp2000.cpp decodeBlockData()
+        switch (type) {
+            case 0x01: return { v: a*b/5.0, u: 'rpm' };
+            case 0x04: return { v: Math.abs(b-127)*0.01*a, u: (b>127?'° ATDC':'° BTDC') };
+            case 0x07: return { v: 0.01*a*b, u: 'km/h' };
+            case 0x08: case 0x10: case 0x25: return { v: (a<<8)|b, u: 'Binary' };
+            case 0x11: return { v: String.fromCharCode(a,b), u: 'ASCII' };
+            case 0x12: return { v: a*b/25.0, u: 'mbar' };
+            case 0x14: return { v: a*b/128.0-1, u: '%' };
+            case 0x15: return { v: a*b/1000.0, u: 'V' };
+            case 0x16: return { v: 0.001*a*b, u: 'ms' };
+            case 0x17: return { v: b*a/256.0, u: '%' };
+            case 0x1A: return { v: b-a, u: '°C' };
+            case 0x21: return { v: a===0 ? 100*b : 100*b/a, u: '%' };
+            case 0x22: return { v: (b-128)*0.01*a, u: 'kW' };
+            case 0x23: return { v: a*b/100.0, u: 'l/h' };
+            case 0x27: return { v: a*b/256.0, u: 'mg/stk' };
+            case 0x31: return { v: a*b/40.0, u: 'mg/stk' };
+            case 0x33: return { v: ((b-128)/255.0)*a, u: 'mg/stk Δ' };
+            case 0x36: return { v: a*256+b, u: 'Count' };
+            case 0x37: return { v: a*b/200.0, u: 's' };
+            case 0x51: return { v: (a*112000+b*436)/1000, u: '° CF' };
+            case 0x5E: return { v: a*(b/50.0-1), u: 'Nm' };
+            default:   return { v: (a<<8)|b, u: 'Raw (tipas 0x' + type.toString(16) + ')' };
+        }
+    }
+
+    function decodeKwpBlockResponse(hexResp) {
+        const bytes = parseHexBytes(hexResp);
+        // Atsakymas: [61, block, T1, A1, B1, T2, A2, B2, T3, A3, B3, T4, A4, B4]
+        if (bytes.length < 14 || bytes[0] !== 0x61) return null;
+        const block = bytes[1];
+        const fields = [];
+        for (let i = 0; i < 4; i++) {
+            const off = 2 + i*3;
+            if (off+2 >= bytes.length) break;
+            fields.push(decodeKwpField(bytes[off], bytes[off+1], bytes[off+2]));
+        }
+        return { block, fields };
+    }
+
     // --- ELM327 init + polling ---
 
     async function initSequence(isRecovery = false) {
@@ -219,8 +261,29 @@ async function handleAutoRecovery() {
     function startPolling() {
         stopPolling();
         let idx = 0;
+        let lastV = 0;
         STATE.pollTimer = setInterval(async () => {
-            if (!STATE.connected || ALL_PIDS.length === 0 || STATE.scanBusy) return;
+            if (!STATE.connected || STATE.scanBusy || STATE.flushing) return;
+
+            // 6a: Baterijos/borto įtampa kas 10s (ATRV)
+            if (Date.now() - lastV > 10000) {
+                const v = await sendCmd('ATRV', 800);
+                if (v && !isNoData(v)) {
+                    const match = v.match(/[\d.]+/);
+                    if (match) {
+                        const val = parseFloat(match[0]);
+                        window.sensorCache['obd_battery_v'] = val;
+                        const el = document.getElementById('obd-battery-v');
+                        if (el) el.innerText = val.toFixed(1);
+                    }
+                }
+                lastV = Date.now();
+            }
+
+            if (ALL_PIDS.length === 0) return;
+            // Standartinis Mode 01 polling (išjungtas v51, bet kodas lieka)
+            // return;
+
             const def = ALL_PIDS[idx % ALL_PIDS.length];
             idx++;
             const resp = await sendCmd('01' + def.pid);
@@ -341,6 +404,54 @@ async function handleAutoRecovery() {
         renderAssigned();
     }
 
+    async function readDtcCodes() {
+        if (STATE.scanBusy || !STATE.connected) { obdLog('Nėra ryšio arba skenavimas jau vyksta.', 'error'); return; }
+        STATE.scanBusy = true;
+        renderAssigned();
+        try {
+            obdLog('=== KLAIDŲ KODŲ SKAITYMAS (Service 0x18) ===', 'info');
+            await sendCmd('1003', 2000); // Extended session
+            const resp = await sendCmd('1802FF00', 2000);
+            const el = document.getElementById('obd-dtc-list');
+
+            if (!resp || isNoData(resp)) {
+                obdLog('DTC servisas neatsakė arba klaidų nėra.', 'warn');
+                if (el) el.innerText = 'DTC servisas neatsakė arba klaidų nėra.';
+            } else {
+                obdLog('DTC Atsakymas: ' + resp.trim(), 'success');
+                const bytes = parseHexBytes(resp);
+                if (bytes.length >= 2 && bytes[0] === 0x58) {
+                    const count = bytes[1];
+                    const codes = [];
+                    for (let i = 0; i < count; i++) {
+                        const off = 2 + i * 2;
+                        if (off + 1 < bytes.length) {
+                            codes.push('P' + bytes[off].toString(16).padStart(2, '0') + bytes[off+1].toString(16).padStart(2, '0'));
+                        }
+                    }
+                    if (el) el.innerText = codes.length > 0 ? codes.join(', ') : 'Klaidų nėra.';
+                    obdLog('Rasta klaidų: ' + (codes.length > 0 ? codes.join(', ') : '0'), 'success');
+                } else {
+                    if (el) el.innerText = 'Gautas nepažįstamas formatas: ' + resp.trim();
+                }
+            }
+        } catch (e) {
+            obdLog('DTC klaida: ' + e.message, 'error');
+        } finally {
+            STATE.scanBusy = false;
+            renderAssigned();
+        }
+    }
+
+    function toggleDebugLog(visible) {
+        localStorage.setItem('obd_debug_log_visible', visible);
+        const el = document.getElementById('obd-log-output');
+        if (el) {
+            const card = el.closest('.card');
+            if (card) card.style.display = visible ? '' : 'none';
+        }
+    }
+
     // --- UI atvaizdavimas ---
 
     function renderScanList() {
@@ -375,6 +486,33 @@ async function handleAutoRecovery() {
         // Disable buttons if busy
         const btns = document.querySelectorAll('.obd-scan-btn');
         btns.forEach(b => b.disabled = STATE.scanBusy || !STATE.connected);
+
+        renderBlockResults();
+    }
+
+    // TIK patvirtinti laukai (žr. Dalis D lauko-lygio lentelę) — NEPRIDĖTI daugiau be patikrinimo
+    const GROUP_FIELD_LABELS = {
+        1:  ['RPM', 'Įpurškimo kiekis', null, null],
+        2:  ['RPM', 'Pedalas %', 'Režimo bitai', null],
+        3:  ['RPM', 'EGR MAF (norimas)', 'EGR MAF (realus)', 'EGR vožtuvo DC%'],
+        11: ['RPM', 'Turbo slėgis (norimas)', 'Turbo slėgis (realus)', 'Wastegate DC%'],
+        13: ['Cil.1 korekcija', 'Cil.2 korekcija', 'Cil.3 korekcija', 'Cil.4 korekcija'],
+        14: ['Cil.5 korekcija (?)', null, null, null],
+    };
+
+    function renderBlockResults() {
+        const el = document.getElementById('obd-block-results');
+        if (!el || !STATE.blockResults) return;
+        const rows = Array.from(STATE.blockResults.entries()).sort((a,b) => a[0]-b[0]);
+        el.innerHTML = rows.map(([block, data]) => {
+            const labels = GROUP_FIELD_LABELS[block];
+            const fieldsStr = data.fields.map((f, i) => {
+                const val = f.v !== null ? (typeof f.v === 'number' ? f.v.toFixed(2) : f.v) : '?';
+                const label = labels && labels[i] ? ` (tikėtina: ${labels[i]})` : '';
+                return `${val} ${f.u}${label}`;
+            }).join(' | ');
+            return `<div style="border-bottom:1px solid rgba(255,255,255,0.05); padding:2px 0;">Grupė ${block}: ${fieldsStr}</div>`;
+        }).join('');
     }
 
     // --- Native callback'ai (kviečiami iš KemperisObdBridge.java per evaluateJavascript) ---
@@ -520,13 +658,38 @@ async function handleAutoRecovery() {
 
     async function runBlockSweepInternal() {
         obdLog('=== SERVICE 21 BLOKŲ SWEEP (0x01-0xFF) ===', 'info');
+        if (!STATE.blockResults) STATE.blockResults = new Map();
+
         for (let i = 1; i <= 255; i++) {
             const hex = i.toString(16).padStart(2, '0').toUpperCase();
             const resp = await sendCmd('21' + hex, 800);
             if (resp && !isNoData(resp)) {
-                obdLog('Grupė ' + i + ' (21' + hex + '): ' + resp.replace(/[\r\n]+/g, ' '), 'success');
+                const decoded = decodeKwpBlockResponse(resp);
+                if (decoded) {
+                    STATE.blockResults.set(i, { timestamp: Date.now(), fields: decoded.fields });
+                    let decodedStr = decoded.fields.map(f => `${f.v} ${f.u}`).join(' | ');
+                    obdLog(`Grupė 0x${hex} ATSAKO: ${decodedStr} (${resp.trim()})`, 'success');
+
+                    // Automatiškai užpildome VIN/SW-ID jei randame (0x51=VIN, 0x50=SW-ID)
+                    if (i === 81) {
+                        const vin = decoded.fields.map(f => f.v).join('').replace(/[^a-zA-Z0-9]/g, '');
+                        if (vin.length > 5) {
+                            const el = document.getElementById('obd-vin');
+                            if (el) el.innerText = vin;
+                        }
+                    } else if (i === 80) {
+                        const sw = decoded.fields.map(f => f.v).join('').trim();
+                        const el = document.getElementById('obd-sw-id');
+                        if (el) el.innerText = sw;
+                    }
+
+                    renderBlockResults();
+                } else {
+                    obdLog('Grupė ' + i + ' (21' + hex + '): ' + resp.replace(/[\r\n]+/g, ' '), 'success');
+                }
             }
         }
+        obdLog('Grupių skenavimas baigtas.', 'success');
     }
 
     // Pakopa C — modulių adresų skenavimas (0x700-0x7FF) su dvigubu 10 01 / 10 03 zondu + ATCS stebėjimas
@@ -598,9 +761,9 @@ async function handleAutoRecovery() {
 
     return {
         init, toggleGlobal, startScan, pairAndConnect, forget, toggleSafeMode,
-        obdLog, clearObdLog, saveObdLog,
+        obdLog, clearObdLog, saveObdLog, toggleDebugLog,
         runIdentity, runProtocolProbe, runDidScan, runBlockSweep, runModuleScan,
-        tagState, runFullCollection,
+        tagState, runFullCollection, readDtcCodes,
         getState: () => STATE
     };
 })();

@@ -259,9 +259,11 @@ const RenogyBLE = (function() {
                 await BleClient.write(dev.id, SERVICE_WRITE, CHAR_WRITE, fullCmd);
             }
         } catch (e) {
-            // R5: "Writing characteristic failed" frequently occurs on some devices
-            // but the command often actually reaches the device.
-            debug(`${type} query failed: ${e.message}`, 'error');
+            // Žinomas Renogy PRO baterijos BLE modulio ypatumas (patvirtinta nepriklausomai kitoje
+            // platformoje: github.com/cyrils/renogy-bt issue #80, ta pati baterijų serija) — GATT
+            // rašymo patvirtinimas kartais "klysta", bet duomenys vis tiek sėkmingai ateina per
+            // notifikaciją. NE mūsų kodo ar Capacitor plugin'o klaida — nekenksminga, ignoruoti.
+            debug(`${type} query failed: ${e.message}`, 'warn');
         }
     }
 

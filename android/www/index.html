@@ -624,7 +624,34 @@
             </div>
         </div>
 
-        <div class="section-title" style="margin-top:24px;">📋 OBD diagnostikos žurnalas</div>
+        <div class="section-title" style="margin-top:24px;">✅ Patvirtinti duomenys</div>
+        <div class="grid">
+            <div class="card"><h3>Baterijos įtampa</h3><div class="card-value"><span id="obd-battery-v">--</span><span class="card-unit">V</span></div></div>
+            <div class="card"><h3>VIN</h3><div class="card-value" style="font-size:14px;"><span id="obd-vin">--</span></div></div>
+            <div class="card"><h3>SW-ID</h3><div class="card-value" style="font-size:12px;"><span id="obd-sw-id">--</span></div></div>
+            <div class="card" style="grid-column: 1 / -1;">
+                <h3>Klaidų kodai (DTC)</h3>
+                <button class="btn btn-primary obd-scan-btn" onclick="ObdBLE.readDtcCodes()">🔍 Tikrinti klaidų kodus</button>
+                <div id="obd-dtc-list" style="margin-top:10px; font-family:monospace; font-size:12px;">Nepatikrinta.</div>
+            </div>
+        </div>
+
+        <div class="section-title" style="margin-top:24px;">📊 Service 21 dekoduoti duomenys</div>
+        <div class="card" style="grid-column: 1 / -1;">
+            <div class="card-subtext">Grupės su „tikėtina:" etikete — patvirtinta lauko-lygio analize
+                prieš realius duomenis (žr. Dalis D), bet TIK statinei/nulinei būsenai (variklis
+                išjungtas testavimo metu) — dinaminės reikšmės (RPM>0 ir pan.) dar nepatvirtintos.
+                Grupės be etiketės — tipas nežinomas arba prieštaringas, rodomas žalias skaičius.</div>
+            <div id="obd-block-results" style="margin-top:10px; font-family:monospace; font-size:12px;"></div>
+        </div>
+
+        <div class="section-title" style="margin-top:24px;">
+            📋 OBD diagnostikos žurnalas
+            <label class="switch" style="float: right;">
+                <input type="checkbox" id="chk_obd_debug_log" onchange="ObdBLE.toggleDebugLog(this.checked)" checked>
+                <span class="slider round"></span>
+            </label>
+        </div>
         <div class="grid">
             <div class="card" style="grid-column: 1 / -1;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
