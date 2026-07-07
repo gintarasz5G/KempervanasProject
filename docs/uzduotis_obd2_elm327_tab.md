@@ -16,7 +16,7 @@ kitoks** — žr. §1.
 **Svarbu iš karto:** ši užduotis (app tab'as + ELM327) realiai apima tik **variklio ECU
 duomenis** (§3) — tai vienintelis modulis, kurį ELM327 gali pasiekti be papildomo tyrimo (žr.
 Fazė 2 apačioje dėl priežasties). Kitų automobilio modulių (ABS/ESP, kėbulo/SAM, transmisijos,
-prietaisų skydelio) duomenys **techni┼íkai pasiekiami per tą patį OBD lizdą**, bet reikalauja
+prietaisų skydelio) duomenys **techniškai pasiekiami per tą patį OBD lizdą**, bet reikalauja
 kitokio metodo (pasyvaus CAN sniffing su jau turimu ESP32 rig'u, ne ELM327 app'e) — tai atskira,
 vėlesnė tyrimo užduotis, aprašyta §8 apačioje. Šis dokumentas dabar aprėpia abu kelius, kad
 būtų aišku, kas daroma dabar (app, variklis) ir kas — vėliau (sniffing, visas automobilis).
@@ -28,7 +28,7 @@ būtų aišku, kas daroma dabar (app, variklis) ir kas — vėliau (sniffing, vi
   telefono SISTEMINIUS Bluetooth nustatymus, ne tik per app'o vidinį skenavimą.
   **`@capacitor-community/bluetooth-le` (naudojamas Renogy tab'e) čia NETINKA** — tai grynai
   BLE/GATT biblioteka, nekalba su Classic SPP įrenginiais. Reikia naujo native sluoksnio (§2).
-- Protokolas: **ISO 15765-4 (CAN 11-bit ID, 500 kbps)** — patvirtina Gemini spėjimà.
+- Protokolas: **ISO 15765-4 (CAN 11-bit ID, 500 kbps)** — patvirtina Gemini spėjimą.
 - ECU atsako adresu **`0x7E8`** (užklausa į `0x7E0` arba broadcast `0x7DF`) — sutampa su
   `research/obd2/ESPobd/src/main.cpp` naudojama schema.
 - VIN `WV1ZZZ2EZ86028774` — pozicija 10 = `8` → **2008 m.**, patvirtina modelio metus.
@@ -124,7 +124,7 @@ nustatymus atskirai. Reikia:
   renkant `EXTRA_DEVICE` + RSSI. Rodyti sąrašą kartu su jau susietais (`getBondedDevices()`) —
   susieti pažymėti kaip „Susietas", nesusieti — su mygtuku „Suporuoti".
 - **Poravimas be vartotojo PIN įvedimo (auto-PIN):** dauguma pigių ELM327/HC-05 klonų naudoja
-  fiksuotà PIN (dažniausiai `1234`, kartais `0000` arba `6789`). Native pusėje:
+  fiksuotą PIN (dažniausiai `1234`, kartais `0000` arba `6789`). Native pusėje:
   1. `device.createBond()` — inicijuoja poravimą.
   2. `BroadcastReceiver` ant `BluetoothDevice.ACTION_PAIRING_REQUEST`: iškviesti
      `device.setPin("1234".getBytes())` (per viešą `BluetoothDevice.setPin()` arba reflection,
@@ -250,13 +250,13 @@ patvirtinimo.
   **žymiai patikimesnis** startas nei bet koks kito modelio/kitos kartos kodų sąrašas.
   **Rekomendacija: prieš (arba lygiagrečiai su) app implementacija, paleisti Torque + Torque
   Scan su tuo pačiu ELM327 adapteriu ir šiuo automobiliu** — gauti realų, šiam konkrečiam
-  EDC16 patvirtintà DID sąrašą, kurį tada galima tiesiog perkelti į `obd.js`, vietoj spėjimo.
+  EDC16 patvirtintą DID sąrašą, kurį tada galima tiesiog perkelti į `obd.js`, vietoj spėjimo.
 - Rastas dar vienas kandidatas alyvos temperatūrai — bendruomenės XGauge→Torque konversijos
   pavyzdyje minimas `22 13 10` (Mode 22, DID `0x1310`) su formule
   `((A*256+B))*100*(9/5)-4001` (F°, konvertuoti į C° jei pasitvirtins) — **testuoti ABU**
-  kandidatus (`22 11 1F` ir `22 13 10`) realiu automobiliu, žr. kuris grąžina prasmingà,
-  laikui bėgant logiškai kintančià reikšmę.
-- TDIClub bendruomenė istoriškai naudojo bendrà „VW.csv" Torque custom PID rinkinį (fuel/rail
+  kandidatus (`22 11 1F` ir `22 13 10`) realiu automobiliu, žr. kuris grąžina prasmingą,
+  laikui bėgant logiškai kintančią reikšmę.
+- TDIClub bendruomenė istoriškai naudojo bendrą „VW.csv" Torque custom PID rinkinį (fuel/rail
   slėgis, boost gauge, Charged Air Cooler temp, EGT1-4) — originalus Dropbox saugojimo nuoroda
   **nebeveikia** (failas ištrintas), bet paties rinkinio egzistavimas patvirtina, kad šie
   parametrai VW TDI bendruomenėje buvo pasiekiami per Torque custom PID. Jei turi TDIClub
@@ -265,9 +265,9 @@ patvirtinimo.
   pasiekti).
 - Bendra Mode 22 + 2-baitų DID konvencija **patvirtinta teisinga** dviem nepriklausomais
   šaltiniais skirtingoms VAG kartoms: senos EDC16/XGauge tradicijos (aukščiau) IR naujesnio
-  atviro projekto `bri3d/MQBSimosLogVariables` (MQB/Simos platformoms) — abu naudoja tà patį
-  „0x22 + DID" formatà, tik skirtingi adresai skirtingoms ECU kartoms. Tai stiprina
-  pasitikėjima pačiu METODU, net jei konkretūs adresai lieka po testavimo.
+  atviro projekto `bri3d/MQBSimosLogVariables` (MQB/Simos platformoms) — abu naudoja tą patį
+  „0x22 + DID" formatą, tik skirtingi adresai skirtingoms ECU kartoms. Tai stiprina
+  pasitikėjimą pačiu METODU, net jei konkretūs adresai lieka po testavimo.
 
 **Papildomas kandidatų sąrašas (vartotojo pateiktas 2026-07-06, kito LLM sugeneruotas) — kritiškai
 įvertintas:**
@@ -281,52 +281,52 @@ patvirtinimo.
 | ⚠️ TESTUOTI | `22 03 70` | Smooth Running / RPM deviation | Neverifikuota, bet adresas (variklio ECU) architektūriškai tinkamas. |
 | ⚠️ TESTUOTI | `22 01 08` | Fuel injection quantity | Neverifikuota. |
 | ⚠️ TESTUOTI | `22 03 90` | Išmoktos purkštukų vertės (adaptacija) | Neverifikuota. |
-| ❌ NEBANDYTI VARIKLIO ADRESU | `22 41 0x`, `22 F1 D0`, `22 40 1x/2x/3x/4x`, `22 F1 42/50/20`, `22 F1 A8` (SAM/komfortas: durys, užraktai, apšvietimas, akum/alternatorius, lauko temp) | **Architektūriškai neįmanoma siunčiant į `0x7E0`** — SAM/kėbulo moduliai naudoja VISIŠKAI KITĄ CAN adresà nei variklis (žr. §8 — pvz. prietaisų skydelis `0x714`, ne `0x7E0`). Siunčiant šiuos DID į variklio ECU adresà beveik tikrai gausime „service not supported". **BET** — jei §3 Pakopa C „Skenuoti modulius" ras kità atsiliepiantį adresà, ŠIUOS DID galima (atsargiai) pabandyti TAME rastame adrese, ne §8 pasyviame sniffing'e laukti. |
+| ❌ NEBANDYTI VARIKLIO ADRESU | `22 41 0x`, `22 F1 D0`, `22 40 1x/2x/3x/4x`, `22 F1 42/50/20`, `22 F1 A8` (SAM/komfortas: durys, užraktai, apšvietimas, akum/alternatorius, lauko temp) | **Architektūriškai neįmanoma siunčiant į `0x7E0`** — SAM/kėbulo moduliai naudoja VISIŠKAI KITĄ CAN adresą nei variklis (žr. §8 — pvz. prietaisų skydelis `0x714`, ne `0x7E0`). Siunčiant šiuos DID į variklio ECU adresą beveik tikrai gausime „service not supported". **BET** — jei §3 Pakopa C „Skenuoti modulius" ras kitą atsiliepiantį adresą, ŠIUOS DID galima (atsargiai) pabandyti TAME rastame adrese, ne §8 pasyviame sniffing'e laukti. |
 
 **Praktinė rekomendacija:** pirmiausia testuoti `22 F1 90` (VIN sanity-check) kaip Mode 22
-grandinės patikrà variklio adresu, tada likusius „TESTUOTI" žymėtus variklio kandidatus. Kai
+grandinės patikrą variklio adresu, tada likusius „TESTUOTI" žymėtus variklio kandidatus. Kai
 Pakopa C „Skenuoti modulius" (žemiau) atras kitus atsiliepiančius adresus — tada, ir tik tada,
 bandyti SAM/komforto DID tuose naujai rastuose adresuose (ne aklai `0x7E0`).
 
 Prieš rodant Pakopos B reikšmę kaip realią:
 1. Prieš Mode 22 — pirma nusiųsti `10 03` (extended diagnostic session), nes EDC16 gali
    atsisakyti Mode 22 be sesijos (žr. pasala #5).
-2. Siųsti užklausà, loginti raw HEX atsakymà (§4).
+2. Siųsti užklausą, loginti raw HEX atsakymą (§4).
 3. Palyginti su antru šaltiniu (Torque Scan rezultatas, Ross-Tech forumas, TDIClub, T5 2.5 TDI
-   bendruomenė), arba faktinis stebėjimas (pvz. užvedus šaltà variklį alyvos temp turi kilti
+   bendruomenė), arba faktinis stebėjimas (pvz. užvedus šaltą variklį alyvos temp turi kilti
    pamažu, ne šokinėti; DPF slėgis turi kisti su apsukom).
-4. Tik patvirtinus — perkelti iš „raw/debug" į normalià kortelę su verte.
-Jei ECU negràžina atsakymo (NO DATA / negative response `7F 22 <NRC>`) — rodyti „Nepalaikoma",
-ne klaidà ar 0.
+4. Tik patvirtinus — perkelti iš „raw/debug" į normalią kortelę su verte.
+Jei ECU negrąžina atsakymo (NO DATA / negative response `7F 22 <NRC>`) — rodyti „Nepalaikoma",
+ne klaidą ar 0.
 
-**Buferio apribojimas:** siųsti po vienà komandà, laukti atsakymo (arba max ~300ms timeout)
-prieš siunčiant kità — **jokių sudėtų/batch užklausų**. Polling ciklas — kaip Renogy
-`pollCycle`, kas ~500ms-1s viena komanda paeiliui per masyvà (žr. ESPobd `pids[]` masyvo pavyzdį).
+**Buferio apribojimas:** siųsti po vieną komandą, laukti atsakymo (arba max ~300ms timeout)
+prieš siunčiant kitą — **jokių sudėtų/batch užklausų**. Polling ciklas — kaip Renogy
+`pollCycle`, kas ~500ms-1s viena komanda paeiliui per masyvą (žr. ESPobd `pids[]` masyvo pavyzdį).
 
 **Pakopa C — Skenavimo/testavimo įrankis (vartotojo prašymu, 2026-07-06): vietoj tolimesnio
-spėliojimo, statome empirinio atradimo funkcija tiesiai į app'à.** Vietoj to, kad pasitikėtume
+spėliojimo, statome empirinio atradimo funkciją tiesiai į app'ą.** Vietoj to, kad pasitikėtume
 bet kuriuo neverifikuotu sąrašu, tab'e bus du „Skenuoti" mygtukai, kurie sistemingai bando
-kandidatus ir viskà loguoja/išsaugo analizei:
+kandidatus ir viską loguoja/išsaugo analizei:
 
-1. **„Skenuoti modulius"** — siunčia lengvà zondà paeiliui į kandidatų CAN adresų sąrašà:
-   standartinį diapazonà `0x7E1`-`0x7E7` (jei Mercedes juos vis dėlto naudotų), žinomus iš
+1. **„Skenuoti modulius"** — siunčia lengvą zondą paeiliui į kandidatų CAN adresų sąrašą:
+   standartinį diapazoną `0x7E1`-`0x7E7` (jei Mercedes juos vis dėlto naudotų), žinomus iš
    tyrimo Mercedes-specifinius adresus (`0x714` prietaisų skydelis, `0x716` aktyvi vairo
-   sistema — žr. §8 šaltinius), ir **pilnà brute-force diapazonà `0x700`-`0x7FF`** (256
-   adresai). Prieš kiekvienà — `ATSH <hex>`. **Kiekvienam adresui bandyti DU zondus** (ne
-   tik vienà): `10 01` (standard session) IR `10 03` (extended session) — kai kurie Mercedes
+   sistema — žr. §8 šaltinius), ir **pilną brute-force diapazoną `0x700`-`0x7FF`** (256
+   adresai). Prieš kiekvieną — `ATSH <hex>`. **Kiekvienam adresui bandyti DU zondus** (ne
+   tik vieną): `10 01` (standard session) IR `10 03` (extended session) — kai kurie Mercedes
    ABS/SRS moduliai ignoruoja `10 01` iš neautorizuoto adapterio, bet atsako (net su klaidos
    kodu) į `10 03`. Tai reiškia ~2× ilgesnis skenavimas (256 adresai × 2 užklausos × ~300ms ≈
    150s) — priimtina, bet UI progreso indikatorius turi tai atspindėti. Loguoja: adresas →
    atsakė/neatsakė kiekvienai sesijai (net neigiamas UDS atsakymas `7F ...` reiškia „kažkas
    ten yra", tuščia = nieko). **Tai ir yra praktinis atsakymas į „ar galima pasiekti kitus
-   modulius" klausimà — vietoj spėjimo, tiesiog pamatome, kas realiai atsiliepia.**
+   modulius" klausimą — vietoj spėjimo, tiesiog pamatome, kas realiai atsiliepia.**
 2. **„Skenuoti DID (variklis)"** — patvirtintam variklio adresui (`0x7E0`) paeiliui siunčia
    `22 XX XX` iš viso kandidatų sąrašo (aukščiau esanti lentelė — Gemini pasiūlyti + naujas
-   vartotojo sąrašas + standartizuoti `F1xx`), loguoja kiekvieno raw atsakymà.
+   vartotojo sąrašas + standartizuoti `F1xx`), loguoja kiekvieno raw atsakymą.
 
 **Pakopa C+ (papildyta 2026-07-06, dar vieno LLM pasiūlymai — patikrinti, dauguma pagrįsti):**
 
-3. **ECU identiteto nustatymas prieš skenavimà (Mode 09)** — standartinis SAE J1979 servisas,
+3. **ECU identiteto nustatymas prieš skenavimą (Mode 09)** — standartinis SAE J1979 servisas,
    NE spėjimas: `09 02` (VIN — jau žinomas kaip sanity-check kryžminei patikrai su Mode 22
    `F1 90`), `09 04` (Calibration ID — **jau žinomas iš OBD Auto Doctor testo**:
    `074906032AT 5175`, tad šis PID tikrai veikia šiam automobiliui), `09 0A` (ECU Name —
@@ -337,29 +337,29 @@ kandidatus ir viskà loguoja/išsaugo analizei:
    „Group" skaitymai) yra tiesiog `ReadDataByLocalIdentifier` (Service `0x21`) su 1-baitu local
    identifier — patvirtinta ir realiu atviro kodo projektu `jazdw/vag-blocks` (žr. Šaltiniai),
    kuris būtent tai implementuoja VAG varikliui/pavarų dėžei per KWP2000. Prieš pasitikint vien
-   Mode 22 (UDS), papildomai: (a) išbandyti `21 01` prieš `22 F1 90` kaip pirminį zondà — jei
+   Mode 22 (UDS), papildomai: (a) išbandyti `21 01` prieš `22 F1 90` kaip pirminį zondą — jei
    atsako į `21 01`, bet ne `22 F1 90`, šis EDC16 orientuotas į KWP „grupes"; (b) jei taip —
-   atlikti **pilnà blokų sweep `21 01`-`21 FF`** (256 galimos grupės, analogiškai adresų
-   sweep §3 punkte 1), loguojant kiekvieno atsakymà. **Svarbu:** konkretūs Group→parametras
+   atlikti **pilną blokų sweep `21 01`-`21 FF`** (256 galimos grupės, analogiškai adresų
+   sweep §3 punkte 1), loguojant kiekvieno atsakymą. **Svarbu:** konkretūs Group→parametras
    priskyrimai (pvz. „Group 13 = purkštukai") kitų šaltinių NEVERIFIKUOTI — net `vag-blocks`
    projektas patvirtina, kad kiekvienam moduliui/ECU reikia atskirų „label failų", t.y.
    grupių reikšmės NĖRA universalios. Bet kokie konkretūs Group numeriai — tik testavimo
    kandidatai, tokie patys netikri kaip Mode 22 DID sąrašai, ne patvirtinti faktai.
    **Automatinis fallback (naujas saugiklis):** jei Pakopa B/C DID skenavimas (`22 XXXX`)
-   gràžina VISUR `NO DATA`/negative response — automatiškai paleisti Service 21 block sweep
-   kaip „Planà B", kad testas negrįžtū su tuščiu logu vien dėl neteisingo protokolo prielaidos.
-5. **Latency matavimas** — kiekvienai skenavimo/polling užklausai fiksuoti laikà (ms) tarp
-   komandos išsiuntimo ir `>` prompto gavimo. Naudinga vėliau sprendžiant realistiškà polling
+   grąžina VISUR `NO DATA`/negative response — automatiškai paleisti Service 21 block sweep
+   kaip „Planą B", kad testas negrįžtų su tuščiu logu vien dėl neteisingo protokolo prielaidos.
+5. **Latency matavimas** — kiekvienai skenavimo/polling užklausai fiksuoti laiką (ms) tarp
+   komandos išsiuntimo ir `>` prompto gavimo. Naudinga vėliau sprendžiant realistišką polling
    dažnį (pvz. turbo slėgiui reikėtų ~10Hz, temperatūroms pakanka ~1Hz — priklauso nuo
    faktinio šio adapterio greičio, ne prielaidos).
 6. **CAN magistralės klaidų stebėjimas** — **patvirtinta**: `ATCS` yra tikra ELM327 komanda
    (nuo v1.0), rodanti CAN Tx/Rx klaidų skaitiklius hex formatu. Periodiškai (pvz. kas 20-30
    skenavimo žingsnių) siųsti `ATCS` ir loguoti — jei klaidų skaitiklis auga, polling dažnis
    per agresyvus, reikia didinti pauzes tarp komandų.
-7. **Multiframe/Flow Control testas per VIN** — `09 02` (arba `22 F1 90`) gràžina 17 simbolių
-   VIN, kuris netelpa į vienà CAN kadrà — priverčia ELM327 naudoti ISO-TP daugiakadrį
-   perdavimà (First Frame + Consecutive Frames + Flow Control). Jei mūsų native/JS
-   implementacija gauna NUKIRSTÀ VIN (ne pilnus 17 simbolių) — tai signalas, kad reikia
+7. **Multiframe/Flow Control testas per VIN** — `09 02` (arba `22 F1 90`) grąžina 17 simbolių
+   VIN, kuris netelpa į vieną CAN kadrą — priverčia ELM327 naudoti ISO-TP daugiakadrį
+   perdavimą (First Frame + Consecutive Frames + Flow Control). Jei mūsų native/JS
+   implementacija gauna NUKIRSTĄ VIN (ne pilnus 17 simbolių) — tai signalas, kad reikia
    rankinio flow control valdymo. **Pataisymas** (originaliame pasiūlyme buvo `ATAFC 1`, kurio
    NĖRA ELM327 komandų sąraše): tikri komandų pavadinimai —
    `ATCFC1`/`ATCFC0` (automatinis flow control įjungti/išjungti) arba rankinis
@@ -369,35 +369,35 @@ kandidatus ir viskà loguoja/išsaugo analizei:
    — laiko žyma įrašoma OBD žurnale kartu su HEX duomenimis. Būtina, nes pvz. HEX `05 A2`
    nieko nereiškia analizei, jei nežinome, ar tuo metu variklis stovėjo, ar suko apsukas —
    lyginant HEX vertes tarp pažymėtų būsenų, lengviau nustatyti, kuris baitas atitinka RPM/
-   turbo slėgį/kità parametrà.
+   turbo slėgį/kitą parametrą.
 
 **Atmesta kaip techniškai klaidinga (2026-07-06, patikrinta):** kito pasiūlymo punktas apie
-`10 85` kaip „pažadinimo" subfunkcija miegantiems moduliams — **patikrinau: `0x85` yra
+`10 85` kaip „pažadinimo" subfunkciją miegantiems moduliams — **patikrinau: `0x85` yra
 VISIŠKAI ATSKIRAS UDS servisas** („Control DTC Setting", ne Service `0x10` subfunkcija) —
 tai protokolo elementų sumaišymas, ne realus mechanizmas. Taip pat pasiūlyta `ATST 64` kaip
-„adaptive timing" — **netiksliai**: `ATST` nustato fiksuotà timeout'à (hex reikšmė×4ms), o
+„adaptive timing" — **netiksliai**: `ATST` nustato fiksuotą timeout'ą (hex reikšmė×4ms), o
 tikra adaptyvaus laiko komanda yra `ATAT1`/`ATAT2`. Miegantiems moduliams lieka galioti tai,
-kà jau turime §3 punkte 1 — bandyti `10 01` IR `10 03` (tikras, standartizuotas extended
-session), ne fabrikuotà `10 85`.
+ką jau turime §3 punkte 1 — bandyti `10 01` IR `10 03` (tikras, standartizuotas extended
+session), ne fabrikuotą `10 85`.
 
 **Žurnalo formatas (visiems Pakopa C+ testams):** kiekviena eilutė — susietas TX→RX porinis
 įrašas, ne atskiros nesusijusios eilutės, pvz.:
 ```
 TX: 22 11 4F -> RX: 62 11 4F 05 A2 (Δ42ms)
 ```
-Tai leidžia vėliau analizuoti tikslų HEX atsakymà, jei UI formulė duotų nesàmonę (pvz.
-temperatūrà 500°C dėl blogos formulės) — su raw HEX galima nustatyti teisingà formulę
+Tai leidžia vėliau analizuoti tikslų HEX atsakymą, jei UI formulė duotų nesąmonę (pvz.
+temperatūrą 500°C dėl blogos formulės) — su raw HEX galima nustatyti teisingą formulę
 retrospektyviai, be HEX — testas beviertis.
 
 **⚠️ Saugumo pastaba (svarbu):** šis skenavimas turi būti vykdomas **TIK stovint** (variklis
 išjungtas arba tuščia eiga, automobilis nejuda) — nežinome, kaip nepažįstami Mercedes moduliai
-(ypač ABS/ESP, saugos su airbag susiję) reaguoja į netikėtà diagnostikos sesijos užklausà; kai
+(ypač ABS/ESP, saugos su airbag susiję) reaguoja į netikėtą diagnostikos sesijos užklausą; kai
 kurie automobiliai laikinai išjungia tam tikras funkcijas kol aktyvi diagnostikos sesija. UI
-privalo turėti aiškų patvirtinimo dialogà („Ar automobilis stovi? Tęsti tik jei TAIP") prieš
-paleidžiant bet kurį skenavimà, ir modulių skenavimas (1) turėtų būti aiškiai atskirtas nuo
+privalo turėti aiškų patvirtinimo dialogą („Ar automobilis stovi? Tęsti tik jei TAIP") prieš
+paleidžiant bet kurį skenavimą, ir modulių skenavimas (1) turėtų būti aiškiai atskirtas nuo
 variklio DID skenavimo (2) kaip rizikingesnis (nežinomi moduliai) veiksmas.
 
-Rezultatai (adresas/DID, raw hex, laiko žyma) rašomi į naujà dedikuotà OBD logà (§4) ir
+Rezultatai (adresas/DID, raw hex, laiko žyma) rašomi į naują dedikuotą OBD logą (§4) ir
 išsaugomi failan analizei (§4), kad būtų galima peržiūrėti po fakto, ne tik gyvai ekrane.
 
 ### 4. OBD diagnostikos žurnalas (atskiras nuo bendro app debug logo)
@@ -406,30 +406,30 @@ Vartotojo prašymu — **atskiras** OBD-only diagnostikos žurnalas, ta pačia l
 bendras `sysLog`/terminalas (`index.html` — `sys-log-output`, `saveTerminal()`), bet **savo
 atskirame UI bloke OBD tab'e**, kad ELM327/CAN srautas neužterštų bendro app žurnalo:
 
-- Nauja funkcija `obdLog(msg, type)` (analogiška `sysLog`) rašanti į naujà
+- Nauja funkcija `obdLog(msg, type)` (analogiška `sysLog`) rašanti į naują
   `<div id="obd-log-output">` OBD tab'e — spalvinimas kaip esamas (`info`/`warn`/`error`/`data`/
   `success`), su laiko žyma.
 - Kiekvienas siųstas/gautas ELM327 baitas/eilutė (tiek įprastas polling'as §3, tiek skenavimo
-  rezultatai §3 Pakopa C) — visada į šį žurnalà, ne tik kai bendras debug jungiklis įjungtas
+  rezultatai §3 Pakopa C) — visada į šį žurnalą, ne tik kai bendras debug jungiklis įjungtas
   (nes tai ir yra pagrindinis šio tab'o diagnostikos/testavimo įrankis, ne pridėtinė detalė).
-- **„Išsaugoti OBD logà"** mygtukas — analogiškai `saveTerminal()`: naudoti
+- **„Išsaugoti OBD logą"** mygtukas — analogiškai `saveTerminal()`: naudoti
   `KemperisFile.saveTextFile(filename, 'text/plain', content)` (jau egzistuojantis native
   bridge, žr. `index.html` `saveTerminal()` pavyzdį), failo vardas
   `obd_log_<ISO-laikas>.txt`, į Downloads. Tai leis analizuoti skenavimo rezultatus vėliau
   (pvz. atsiuntus man kaip šiame pokalbyje jau darėme su bendru terminalo logu).
-- **„Išvalyti OBD logà"** mygtukas (analogiškai `clearTerminal()`).
+- **„Išvalyti OBD logą"** mygtukas (analogiškai `clearTerminal()`).
 
 ### 5. UI — naujas tab „OBD"
 
-- Pridėti `'obd'` į `SWIPE_TABS` masyvà (`index.html:1532`) ir meniu.
+- Pridėti `'obd'` į `SWIPE_TABS` masyvą (`index.html:1532`) ir meniu.
 - Viršuje: mygtukas **„Ieškoti ELM327"** (paleidžia `startDiscovery()`), sąrašas su rastais +
   jau susietais įrenginiais, būsenom (Susietas / Suporuoti / Jungiamasi) ir mygtuku
   „Suporuoti"/„Prisijungti" prie kiekvieno (žr. §1a). Po sėkmingo prisijungimo MAC įsimenamas
-  `localStorage`, kità kartà jungiamasi automatiškai be paieškos.
+  `localStorage`, kitą kartą jungiamasi automatiškai be paieškos.
 - Ryšio būsena: prijungta / jungiamasi / atjungta (pattern kaip Renogy).
 - Standartinių PID kortelės (RPM, greitis, temp, apkrova, MAP, MAF, + Pakopa A iš §3 jei ECU
   palaiko) — atsinaujina gyvai kol tab'as atidarytas.
-- Mygtukas/perjungiklis „Gilieji duomenys" — atidaro Pakopos B eksperimentinę sekcija (§3).
+- Mygtukas/perjungiklis „Gilieji duomenys" — atidaro Pakopos B eksperimentinę sekciją (§3).
 - **„Skenavimas/testavimas" sekcija** (nauja, žr. §3 Pakopa C): du mygtukai „Skenuoti modulius"
   ir „Skenuoti DID (variklis)", abu su patvirtinimo dialogu („Ar automobilis stovi?") prieš
   paleidžiant. Progreso indikatorius skenavimo metu (adresų/DID kiekis ×300ms gali užtrukti
@@ -437,12 +437,12 @@ atskirame UI bloke OBD tab'e**, kad ELM327/CAN srautas neužterštų bendro app 
 - **Dedikuotas OBD žurnalo blokas** (žr. §4) — atskiras nuo bendro app terminalo, su
   „Išsaugoti"/„Išvalyti" mygtukais.
 - Pagrindinis ON/OFF jungiklis tab'o viršuje (kaip Renogy) — OFF atsijungia, kad vartotojas
-  galėtų naudoti OBD Auto Doctor ar kità app (SPP paprastai leidžia tik vienà aktyvų klientà).
+  galėtų naudoti OBD Auto Doctor ar kitą app (SPP paprastai leidžia tik vieną aktyvų klientą).
 
 ### 6. Integracija su esamu app
 
 - Nauja logika **atskirame** `www/obd.js` (script tag), ne monolite `index.html` —
-  ta pati priežastis kaip Renogy: mažiaù merge konfliktų, lengvesnis būsimas perkėlimas.
+  ta pati priežastis kaip Renogy: mažiau merge konfliktų, lengvesnis būsimas perkėlimas.
 - **Nekeisti:** SSE grandinės, `_fetchSheetsNow`, cloud aliarmų, Sheets CSV (22 laukai),
   Renogy BLE kodo, `research/obd2/ESPobd` CAN firmware.
 - OBD duomenys **nepatenka** į lokalų CSV log v1 (skirtingai nei Renogy) — tai atskiras
@@ -477,39 +477,39 @@ atskirame UI bloke OBD tab'e**, kad ELM327/CAN srautas neužterštų bendro app 
 
 1. **Standartinis SPP `connect()` gali nepavykti** su kai kuriais HC-05 klonais (žinoma
    Android+ELM327 problema) — būtinas reflection fallback (`createRfcommSocket(1)`), žr. §2.
-2. **Buferio perpildymas** („BUFFER FULL") — siųsti tik po vienà komandà, laukti atsakymo,
+2. **Buferio perpildymas** („BUFFER FULL") — siųsti tik po vieną komandą, laukti atsakymo,
    ~50-300ms pauzė, jokių sudėtinių užklausų vienu metu.
-3. **Atsakymo pabaigos žymė** — ELM327 baigia atsakymà `>` simboliu (prompt), o ne newline;
+3. **Atsakymo pabaigos žymė** — ELM327 baigia atsakymą `>` simboliu (prompt), o ne newline;
    parseris turi kaupti baitus, kol pasirodo `>`, tada išvalyti buferį.
 4. **`ATSP6` priverstinis protokolas** patvirtintas veikiantis šiam automobiliui — nenaudoti
-   `ATSP0` (auto-detect) kaip pirminės parinkties, kad išvengtume lėto derėjimosi kiekvienà
-   kartà prisijungus.
+   `ATSP0` (auto-detect) kaip pirminės parinkties, kad išvengtume lėto derėjimosi kiekvieną
+   kartą prisijungus.
 5. **Neigiamas UDS atsakymas** `7F 22 <NRC>` reiškia PID nepalaikomas arba reikia sesijos
-   (`10 03` extended diagnostic session) prieš Mode 22 — jei deep PID negràžina nieko,
+   (`10 03` extended diagnostic session) prieš Mode 22 — jei deep PID negrąžina nieko,
    pabandyti pirma nusiųsti `10 03`, tik tada `22 XX XX`.
-6. **Socket disconnect** ne visada iškarto gràžina klaidà — read gija gali „pakibti" ant
-   blokuojančio read; naudoti timeout arba atskirà stop flag, kad gija baigtųsi švariai.
+6. **Socket disconnect** ne visada iškarto grąžina klaidą — read gija gali „pakibti" ant
+   blokuojančio read; naudoti timeout arba atskirą stop flag, kad gija baigtųsi švariai.
 
 ## Priėmimo kriterijai
 
 1. `OBD` tab'as atsidaro, swipe veikia, kiti tab'ai (ypač `renogy`, SSE, Sheets) — be regresijų.
-2. Paieška randa adapterį (susietà arba nesusietà); poravimas iš app'o pavyksta automatiškai
-   (auto-PIN, be vartotojo įvedimo) arba aiškiai nurodo, kad reikia rankinio poravimo; kità
-   kartà prisijungiama iš `localStorage` be pakartotinės paieškos.
+2. Paieška randa adapterį (susietą arba nesusietą); poravimas iš app'o pavyksta automatiškai
+   (auto-PIN, be vartotojo įvedimo) arba aiškiai nurodo, kad reikia rankinio poravimo; kitą
+   kartą prisijungiama iš `localStorage` be pakartotinės paieškos.
 3. Standartiniai PID (RPM, greitis, temp, apkrova, MAP, MAF) atsinaujina gyvai ≤1s intervalu
    variklio veikimo metu ir keičiasi logiškai (RPM kyla dujinant, temp kyla šylant).
 4. Kiekviena siųsta/gauta ELM327 eilutė (polling IR skenavimas) matosi dedikuotame OBD žurnale
-   (§4), nepriklausomai nuo bendro app debug jungiklio; „Išsaugoti" mygtukas sukuria failà
+   (§4), nepriklausomai nuo bendro app debug jungiklio; „Išsaugoti" mygtukas sukuria failą
    Downloads su pilnu žurnalo turiniu.
 5. Atjungus adapterį (arba OFF jungikliu) — kortelė rodo „atjungta", app nekrenta.
-6. „Gilieji duomenys" sekcija aiškiai pažymėta kaip eksperimentinė; jei PID negràžina
-   validžių duomenų — rodo „Nepalaikoma/Neverifikuota", ne šiušles kaip realią vertę.
+6. „Gilieji duomenys" sekcija aiškiai pažymėta kaip eksperimentinė; jei PID negrąžina
+   validžių duomenų — rodo „Nepalaikoma/Neverifikuota", ne šiukšles kaip realią vertę.
 7. „Skenuoti modulius" ir „Skenuoti DID" mygtukai veikia tik po patvirtinimo dialogo („ar
-   automobilis stovi?"); skenavimo metu rodomas progresas (įskaitant dvigubà 10 01/10 03
-   testavimà per adresà — ~150s bendra trukmė); rezultatai patenka į OBD žurnalà TX→RX pora su
-   ms trukme IR išsaugomi faile; app nekrenta net jei skenuojamas adresas neatsako arba gràžina
-   klaidà.
-7a. Prieš Pakopos B/C DID skenavimà — Mode 09 identiteto užklausos (`09 02`/`09 04`/`09 0A`) ir
+   automobilis stovi?"); skenavimo metu rodomas progresas (įskaitant dvigubą 10 01/10 03
+   testavimą per adresą — ~150s bendra trukmė); rezultatai patenka į OBD žurnalą TX→RX pora su
+   ms trukme IR išsaugomi faile; app nekrenta net jei skenuojamas adresas neatsako arba grąžina
+   klaidą.
+7a. Prieš Pakopos B/C DID skenavimą — Mode 09 identiteto užklausos (`09 02`/`09 04`/`09 0A`) ir
     protokolo zondas (`21 01` vs `22 F1 90`) atlikti ir rezultatai matomi OBD žurnale.
 8. Versijų identifikatoriai sinchronizuoti (v47); APK vardas == `apk_url`.
 9. Įgyvendinus — trumpas audito įrašas `docs/audits/` ir git commit.
@@ -518,104 +518,124 @@ atskirame UI bloke OBD tab'e**, kad ELM327/CAN srautas neužterštų bendro app 
 
 **Kontekstas:** vartotojas nori ne tik variklio, o kiek įmanoma daugiau duomenų iš automobilio.
 Kadangi Crafter yra hibridas su Mercedes Sprinter (W906) — kėbulo/komforto/ABS/transmisijos
-moduliai yra Mercedes kilmės, ne VW (┼╛r. Platformos tyrimas auk┼í─ìiau). 2026-07-06 online
-tyrimas (┼íaltinis: `rnd-ash/mercedes-hacking-docs`, atviro kodo Mercedes diagnostikos
-reverse-engineering projektas) atskleid─ù esmin─» architekt┼½ros fakt─à:
+moduliai yra Mercedes kilmės, ne VW (žr. Platformos tyrimas aukščiau). 2026-07-06 online
+tyrimas (šaltinis: `rnd-ash/mercedes-hacking-docs`, atviro kodo Mercedes diagnostikos
+reverse-engineering projektas) atskleidė esminį architektūros faktą:
 
-> „OBD-II jungtis visuose modeliuose yra filtruojama (per EIZ arba SAM modul─») ΓÇö ji **leid┼╛ia
-> SKAITYTI** vis┼│ CAN tinkl┼│ (M-CAN galios/pavaros, I-CAN/B-CAN k─ùbulo, D-CAN diagnostikos)
-> prane┼íimus, bet **RA┼áYTI** (t.y. aktyviai u┼╛klausti) galima tik diagnostiniais CAN ID."
+> „OBD-II jungtis visuose modeliuose yra filtruojama (per EIZ arba SAM modulį) — ji **leidžia
+> SKAITYTI** visų CAN tinklų (M-CAN galios/pavaros, I-CAN/B-CAN kėbulo, D-CAN diagnostikos)
+> pranešimus, bet **RAŠYTI** (t.y. aktyviai užklausti) galima tik diagnostiniais CAN ID."
 
-**Praktin─ùs pasekm─ùs:**
-1. **Aktyvus u┼╛klausimas** (kaip variklio Mode 01/Mode 22 ┬º3) veikia TIK varikliui, nes tai
-   vienintelis modulis, atsakantis standartiniu legislated OBD adresu (`0x7DF`/`0x7E0`/`0x7E8`) ΓÇö
-   patvirtinta paties vartotojo testu (OBD Auto Doctor ECU auto-scan rado TIK vien─à ECU).
-   Kiti Mercedes moduliai (ABS/ESP, SAM/k─ùbulas, transmisija, prietais┼│ skydelis) naudoja
-   **Mercedes nuosavus (proprietary) CAN ID**, ne standartin─» `0x7Ex` diapazon─à ΓÇö pvz. rasti
-   pavyzd┼╛iai kitiems modeliams: prietais┼│ skydelis `0x714`ΓåÆ`0x77E`, aktyvi vairo sistema
-   `0x716`ΓåÆ`0x780` (┼╛r. ┼áaltiniai). **W906 (Sprinter/Crafter) konkret┼½s ID vie┼íai nerasti** ΓÇö
-   cituojamas s─àra┼ías apima tik lengvuosius W-serijos modelius (W164/169/203/209/211/215/216/\n   219/221/240/245/251), W906 tarp j┼│ N─ûRA. Reik─ùt┼│ atskiro tyrimo/sniffing ┼íiam konkre─ìiam
+**Praktinės pasekmės:**
+1. **Aktyvus užklausimas** (kaip variklio Mode 01/Mode 22 §3) veikia TIK varikliui, nes tai
+   vienintelis modulis, atsakantis standartiniu legislated OBD adresu (`0x7DF`/`0x7E0`/`0x7E8`) —
+   patvirtinta paties vartotojo testu (OBD Auto Doctor ECU auto-scan rado TIK vieną ECU).
+   Kiti Mercedes moduliai (ABS/ESP, SAM/kėbulas, transmisija, prietaisų skydelis) naudoja
+   **Mercedes nuosavus (proprietary) CAN ID**, ne standartinį `0x7Ex` diapazoną — pvz. rasti
+   pavyzdžiai kitiems modeliams: prietaisų skydelis `0x714`→`0x77E`, aktyvi vairo sistema
+   `0x716`→`0x780` (žr. Šaltiniai). **W906 (Sprinter/Crafter) konkretūs ID viešai nerasti** —
+   cituojamas sąrašas apima tik lengvuosius W-serijos modelius (W164/169/203/209/211/215/216/
+   219/221/240/245/251), W906 tarp jų NĖRA. Reikėtų atskiro tyrimo/sniffing šiam konkrečiam
    modeliui.
-2. **Pasyvus klausymasis (sniffing)** ΓÇö PATVIRTINTA veikia be jokio papildomo protokolo
-   tyrimo: kadangi OBD lizdas leid┼╛ia skaityti VIS┼▓ tinkl┼│ sraut─à, pakanka **klausytis**, ne
-   klausti. Daug automobilio duomen┼│ (rato greitis i┼í ABS, dur┼│/┼ívies┼│ statusas i┼í k─ùbulo
-   modulio, vairo kampas ir pan.) transliuojami CAN magistrale periodi┼íkai BE u┼╛klausimo ΓÇö tai
-   standartin─ù automobili┼│ CAN architekt┼½ra. Tam **jau turime paruo┼ít─à aparat┼½r─à**:\n   `research/obd2/ESPobd/src/main.cpp` jau turi piln─à RAW logavim─à (`Serial.print(\"RAW,...\")`
-   kiekvienam CAN kadrui, nepriklausomai nuo ID) ΓÇö kodo keisti nereikia, tereikia sesijos.
+2. **Pasyvus klausymasis (sniffing)** — PATVIRTINTA veikia be jokio papildomo protokolo
+   tyrimo: kadangi OBD lizdas leidžia skaityti VISŲ tinklų srautą, pakanka **klausytis**, ne
+   klausti. Daug automobilio duomenų (rato greitis iš ABS, durų/šviesų statusas iš kėbulo
+   modulio, vairo kampas ir pan.) transliuojami CAN magistrale periodiškai BE užklausimo — tai
+   standartinė automobilių CAN architektūra. Tam **jau turime paruoštą aparatūrą**:
+   `research/obd2/ESPobd/src/main.cpp` jau turi pilną RAW logavimą (`Serial.print("RAW,...")`
+   kiekvienam CAN kadrui, nepriklausomai nuo ID) — kodo keisti nereikia, tereikia sesijos.
 
-**Atnaujinta 2026-07-06:** ┬º3 dabar apima ΓÇ₧Pakopa C\" ΓÇö aktyv┼│ moduli┼│ adres┼│ skenavim─à tiesiai
-i┼í telefono/ELM327 app\u0027e (brute-force `0x700`-`0x7FF` + ┼╛inomi kandidatai, ┼╛r. ┬º3). Tai
-GREITESNIS pirmas ┼╛ingsnis nei auk┼í─ìiau (2) apra┼íytas ESP32 sniffing ΓÇö galima paleisti i┼í karto,\nkai tik OBD tab\u0027as veikia, nereikia atskiro va┼╛iavimo/sesijos. Jei skenavimas ras atsiliepiant─»\nadres─à, tolimesn─ù analiz─ù (kokie DID ten veikia) daroma TAME PA─îIAME app\u0027e (┬º3 Pakopa C punktas
-2, pritaikytas naujam adresui). ESP32 pasyvus sniffing (2) lieka vertingas PAPILDOMAI ΓÇö jis\natskleid┼╛ia duomenis, kurie transliuojami BE u┼╛klausimo (ko aktyvus skenavimas nerodo), bet
-neb─ùra vienintelis/pirmas ┼╛ingsnis kitiems moduliams pasiekti.
+**Atnaujinta 2026-07-06:** §3 dabar apima „Pakopa C" — aktyvų modulių adresų skenavimą tiesiai
+iš telefono/ELM327 app'e (brute-force `0x700`-`0x7FF` + žinomi kandidatai, žr. §3). Tai
+GREITESNIS pirmas žingsnis nei aukščiau (2) aprašytas ESP32 sniffing — galima paleisti iš karto,
+kai tik OBD tab'as veikia, nereikia atskiro važiavimo/sesijos. Jei skenavimas ras atsiliepiantį
+adresą, tolimesnė analizė (kokie DID ten veikia) daroma TAME PAČIAME app'e (§3 Pakopa C punktas
+2, pritaikytas naujam adresui). ESP32 pasyvus sniffing (2) lieka vertingas PAPILDOMAI — jis
+atskleidžia duomenis, kurie transliuojami BE užklausimo (ko aktyvus skenavimas nerodo), bet
+nebėra vienintelis/pirmas žingsnis kitiems moduliams pasiekti.
 
-**Rekomenduojamas veiksm┼│ planas ┼íiai daliai (atskira u┼╛duotis, ne dabar):**
-1. Prijungti ESP32-S3 CAN rig\u0027─à (jau egzistuoja) prie OBD lizdo, va┼╛iauoti/naudoti automobil─»
-   (pos┼½kiai, ┼íviesos, durys, stabd┼╛iai, vairas) su USB logavimu ─» `crafter_log.csv` arba
-   Serial monitori┼│.
-2. Koreliuoti: kai atliekamas veiksmas (pvz. ─»jungtas pos┼½kis), ie┼íkoti NAUJ┼▓ arba
-   PASIKEITUSI┼▓ CAN ID sraute tuo momentu ΓÇö klasikinis CAN reverse-engineering metodas (nereikia
-   ┼╛inoti Mercedes protokolo specifikos, tik steb─ùti koreliacij─à).
-3. Rezultatus (atrastus ID + reik┼ímes) dokumentuoti naujame `docs/` faile\n   (pvz. `crafter_can_id_zemelapis.md`) prie┼í planuojant bet koki─à UI integracij─à.
-4. Tik po ┼íio empirinio tyrimo spr─Östi, ar/kaip ┼íiuos duomenis rodyti app\u0027e (galimai per ESP32
-   CAN rig\u0027─à ΓåÆ WiFi/Serial ΓåÆ app, NE per ELM327/telefono Bluetooth, nes ELM327 ─ìia nereikalingas
-   pasyviam klausymuisi ΓÇö tai atskira architekt┼½ra nuo ┬º1-┬º7).
+**Rekomenduojamas veiksmų planas šiai daliai (atskira užduotis, ne dabar):**
+1. Prijungti ESP32-S3 CAN rig'ą (jau egzistuoja) prie OBD lizdo, važiuoti/naudoti automobilį
+   (posūkiai, šviesos, durys, stabdžiai, vairas) su USB logavimu į `crafter_log.csv` arba
+   Serial monitorių.
+2. Koreliuoti: kai atliekamas veiksmas (pvz. įjungtas posūkis), ieškoti NAUJŲ arba
+   PASIKEITUSIŲ CAN ID sraute tuo momentu — klasikinis CAN reverse-engineering metodas (nereikia
+   žinoti Mercedes protokolo specifikos, tik stebėti koreliaciją).
+3. Rezultatus (atrastus ID + reikšmes) dokumentuoti naujame `docs/` faile
+   (pvz. `crafter_can_id_zemelapis.md`) prieš planuojant bet kokią UI integraciją.
+4. Tik po šio empirinio tyrimo spręsti, ar/kaip šiuos duomenis rodyti app'e (galimai per ESP32
+   CAN rig'ą → WiFi/Serial → app, NE per ELM327/telefono Bluetooth, nes ELM327 čia nereikalingas
+   pasyviam klausymuisi — tai atskira architektūra nuo §1-§7).
 
-**Kod─ùl tai NEdaroma dabar kartu su ELM327 tab\u0027u:** skirtingi ─»renginiai (ESP32 CAN rig, ne
-telefono Bluetooth), skirtinga metodologija (pasyvus steb─ùjimas + empirin─ù koreliacija\nva┼╛iuojant, ne UI programavimas), ir rezultatas ne┼╛inomas i┼í anksto (kiek/koki┼│ ID ras) ΓÇö
-tai tyrimo, ne implementacijos u┼╛duotis. ┬º1-┬º7 (ELM327 app tab, variklis) galima daryti dabar
-nepriklausomai nuo ┼íios dalies.
+**Kodėl tai NEdaroma dabar kartu su ELM327 tab'u:** skirtingi įrenginiai (ESP32 CAN rig, ne
+telefono Bluetooth), skirtinga metodologija (pasyvus stebėjimas + empirinė koreliacija
+važiuojant, ne UI programavimas), ir rezultatas nežinomas iš anksto (kiek/kokių ID ras) —
+tai tyrimo, ne implementacijos užduotis. §1-§7 (ELM327 app tab, variklis) galima daryti dabar
+nepriklausomai nuo šios dalies.
 
-## ┼áaltiniai
+## Šaltiniai
 
 - Vietinis tyrimas (tas pats automobilis, patvirtinta veikianti PID/protokolo schema):
   `research/obd2/ESPobd/src/main.cpp`
 - Esamas native bridge pattern: `android/android/app/src/main/java/lt/kemperis/app/MainActivity.java`
-  (pvz. `httpGet`/`httpPost`, TTS bridge ΓÇö async Thread + evaluateJavascript callback)
-- Esamas analogi┼íkas BT tab: `android/www/renogy.js`, `docs/uzduotis_renogy_ble_tab.md`
+  (pvz. `httpGet`/`httpPost`, TTS bridge — async Thread + evaluateJavascript callback)
+- Esamas analogiškas BT tab: `android/www/renogy.js`, `docs/uzduotis_renogy_ble_tab.md`
 - Android BluetoothSocket/SPP dokumentacija: https://developer.android.com/guide/topics/connectivity/bluetooth/transfer-data
 - **Platformos/protokolo tyrimas (2026-07-06):**
-  - Ross-Tech Wiki, VW Crafter (2E) ΓÇö patvirtina tik 3 modulius su gimt─àja VW diagnostika
-    (Variklis/Imobilaizeris/Centrinis u┼╛raktas), lik─Ö Mercedes kilm─ùs:
+  - Ross-Tech Wiki, VW Crafter (2E) — patvirtina tik 3 modulius su gimtąja VW diagnostika
+    (Variklis/Imobilaizeris/Centrinis užraktas), likę Mercedes kilmės:
     https://wiki.ross-tech.com/wiki/index.php/VW_Crafter_(2E)
-  - UK Volkswagen Forum ΓÇö VCDS ribotumas Crafter Mercedes moduliams:
+  - UK Volkswagen Forum — VCDS ribotumas Crafter Mercedes moduliams:
     https://www.volkswagenforum.co.uk/threads/most-complete-diagnostic-tool-for-crafter-vcds-vs-others-for-all-the-mercedes-modules.38596/
-  - ECU dalies numeris 074906032AS/0281014134 (Bosch EDC16) patvirtinimas:\n    https://www.ecutesting.com/product-catalogue/volkswagen/crafter/ecu-engine-management/eem014134/
-  - TDIClub ΓÇö PID `0x7A` kaip DPF diferencinis sl─ùgis (standartinis SAE PID, ne VAG):
-    http://forums.tdiclub.com/showthread.php?t\u003d379398
-  - TDIClub ΓÇö DPF soot level bendrai (measured vs calculated soot modeliai):\n    http://forums.tdiclub.com/showthread.php?t\u003d455880
-  - TDIClub ΓÇö boost pressure VCDS measuring block Gr.11 (2.5/1.9 TDI, tas pats variklis kaip T5,\n    naudinga kry┼╛minei patikrai net jei Crafter\u0027yje VCDS grupi┼│ neturime): matavimo blok┼│
-    aptarimas per T5 forumus (┼╛r. paie┼íkos rezultatus auk┼í─ìiau ┼íiame pokalbyje).
+  - ECU dalies numeris 074906032AS/0281014134 (Bosch EDC16) patvirtinimas:
+    https://www.ecutesting.com/product-catalogue/volkswagen/crafter/ecu-engine-management/eem014134/
+  - TDIClub — PID `0x7A` kaip DPF diferencinis slėgis (standartinis SAE PID, ne VAG):
+    http://forums.tdiclub.com/showthread.php?t=379398
+  - TDIClub — DPF soot level bendrai (measured vs calculated soot modeliai):
+    http://forums.tdiclub.com/showthread.php?t=455880
+  - TDIClub — boost pressure VCDS measuring block Gr.11 (2.5/1.9 TDI, tas pats variklis kaip T5,
+    naudinga kryžminei patikrai net jei Crafter'yje VCDS grupių neturime): matavimo blokų
+    aptarimas per T5 forumus (žr. paieškos rezultatus aukščiau šiame pokalbyje).
 - VAG UDS/KWP diagnostika (Pakopos B PID verifikacijai): Ross-Tech wiki/forumas, TDIClub, T5
-  2.5 TDI bendruomen─ù ΓÇö PRIE┼á naudojant bet kur─» Mode 22 adres─à realiuose duomenyse.
+  2.5 TDI bendruomenė — PRIEŠ naudojant bet kurį Mode 22 adresą realiuose duomenyse.
 - **Papildomas Pakopos B tyrimas (2026-07-06):**
-  - Torque Pro + ΓÇ₧Torque Scan\" papildinys ΓÇö automatinis Mode 22 DID diapazono per┼╛velgimas\n    konkre─ìiame automobilyje (rekomenduojamas praktinis ┼╛ingsnis prie┼í sp─ùliojant kodus):\n    minimas TDIClub gijoje https://forums.tdiclub.com/showthread.php?t\u003d430012
-  - XGaugeΓåÆTorque konversijos pavyzdys su alyvos temp DID `22 13 10`:\n    http://forums.tdiclub.com/showthread.php?t\u003d326055
-  - TDIClub gijos su (dabar nebeveikian─ìia) ΓÇ₧VW.csv\" Torque custom PID rinkinio nuoroda ΓÇö
+  - Torque Pro + „Torque Scan" papildinys — automatinis Mode 22 DID diapazono peržvelgimas
+    konkrečiame automobilyje (rekomenduojamas praktinis žingsnis prieš spėliojant kodus):
+    minimas TDIClub gijoje https://forums.tdiclub.com/showthread.php?t=430012
+  - XGauge→Torque konversijos pavyzdys su alyvos temp DID `22 13 10`:
+    http://forums.tdiclub.com/showthread.php?t=326055
+  - TDIClub gijos su (dabar nebeveikiančia) „VW.csv" Torque custom PID rinkinio nuoroda —
     galimai atnaujinta prisijungusiems nariams:
-    https://forums.tdiclub.com/showthread.php?t\u003d415791 ,
-    https://forums.tdiclub.com/showthread.php?t\u003d456913 ,\n    https://forums.tdiclub.com/showthread.php?t\u003d430012
-  - `bri3d/MQBSimosLogVariables` ΓÇö atviras Mode 22 DID + konversij┼│ projektas (MQB/Simos, ne
-    m┼½s┼│ EDC16, bet patvirtina ΓÇ₧0x22 + DID\" formato pagr─»stum─à kaip bendr─à VAG konvencij─à):
+    https://forums.tdiclub.com/showthread.php?t=415791 ,
+    https://forums.tdiclub.com/showthread.php?t=456913 ,
+    https://forums.tdiclub.com/showthread.php?t=430012
+  - `bri3d/MQBSimosLogVariables` — atviras Mode 22 DID + konversijų projektas (MQB/Simos, ne
+    mūsų EDC16, bet patvirtina „0x22 + DID" formato pagrįstumą kaip bendrą VAG konvenciją):
     https://github.com/bri3d/MQBSimosLogVariables
-  - `ConnorHowell/vag-uds-ids` ΓÇö VAG moduli┼│ (variklis/transmisija/ir kt.) CAN request/response
-    ID s─àra┼ías (naudinga Fazei 2, ne tik varikliui): https://github.com/ConnorHowell/vag-uds-ids
-- **Pakopa C+ patikrinimas (2026-07-06):** `ATCS` (CAN Tx/Rx klaid┼│ skaitikliai) ir flow
-  control komand┼│ (`ATCFC0/1`, `ATFCSH/SD/SM`) tikri pavadinimai patvirtinti prie┼í oficial┼│\n  ELM327 datasheet: https://www.elmelectronics.com/wp-content/uploads/2016/07/ELM327DS.pdf
+  - `ConnorHowell/vag-uds-ids` — VAG modulių (variklis/transmisija/ir kt.) CAN request/response
+    ID sąrašas (naudinga Fazei 2, ne tik varikliui): https://github.com/ConnorHowell/vag-uds-ids
+- **Pakopa C+ patikrinimas (2026-07-06):** `ATCS` (CAN Tx/Rx klaidų skaitikliai) ir flow
+  control komandų (`ATCFC0/1`, `ATFCSH/SD/SM`) tikri pavadinimai patvirtinti prieš oficialų
+  ELM327 datasheet: https://www.elmelectronics.com/wp-content/uploads/2016/07/ELM327DS.pdf
 - **Service 21 (measuring blocks) patikrinimas (2026-07-06):** patvirtinta, kad KWP2000
-  ΓÇ₧Measuring Blocks\" yra `ReadDataByLocalIdentifier` (Service `0x21`) su 1-baitu local
-  identifier ΓÇö realus, veikiantis atviro kodo pavyzdys (archyvuotas, beta, bet techni┼íkai
-  validus): https://github.com/jazdw/vag-blocks . Patvirtinta ir kad `0x85` N─ûRA Service `0x10`
-  subfunkcija, o atskiras UDS servisas (ΓÇ₧Control DTC Setting\") ΓÇö ┼╛r. bendr─à UDS/ISO 14229
-  serviso s─àra┼ío ap┼╛valg─à (paie┼íkos rezultatai ┼íiame pokalbyje, pvz.\n  https://piembsystech.com/control-dtc-setting-0x85-service-in-uds-protocol/).
-- **Faz─ù 2 (viso automobilio duomenys) tyrimo ┼íaltiniai (2026-07-06):**
-  - `rnd-ash/mercedes-hacking-docs` ΓÇö OBD-II filtravimo (read all / write diagnostic-only)
-    faktas ir CAN tinkl┼│ (M-CAN/I-CAN/D-CAN/MOST) architekt┼½ra:\n    https://github.com/rnd-ash/mercedes-hacking-docs/blob/master/Chapter%201%20Vehicle%20Bus%20Protocols%20and%20Diagnostics.md
-  - To paties projekto pavyzdinis Mercedes UDS ID s─àra┼ías (kitiems modeliams, ne W906) ir
-    wake-up paket┼│ lentel─ù W-serijos automobiliams:
+  „Measuring Blocks" yra `ReadDataByLocalIdentifier` (Service `0x21`) su 1-baitu local
+  identifier — realus, veikiantis atviro kodo pavyzdys (archyvuotas, beta, bet techniškai
+  validus): https://github.com/jazdw/vag-blocks . Patvirtinta ir kad `0x85` NĖRA Service `0x10`
+  subfunkcija, o atskiras UDS servisas („Control DTC Setting") — žr. bendrą UDS/ISO 14229
+  serviso sąrašo apžvalgą (paieškos rezultatai šiame pokalbyje, pvz.
+  https://piembsystech.com/control-dtc-setting-0x85-service-in-uds-protocol/).
+- **Fazė 2 (viso automobilio duomenys) tyrimo šaltiniai (2026-07-06):**
+  - `rnd-ash/mercedes-hacking-docs` — OBD-II filtravimo (read all / write diagnostic-only)
+    faktas ir CAN tinklų (M-CAN/I-CAN/D-CAN/MOST) architektūra:
+    https://github.com/rnd-ash/mercedes-hacking-docs/blob/master/Chapter%201%20Vehicle%20Bus%20Protocols%20and%20Diagnostics.md
+  - To paties projekto pavyzdinis Mercedes UDS ID sąrašas (kitiems modeliams, ne W906) ir
+    wake-up paketų lentelė W-serijos automobiliams:
     https://github.com/rnd-ash/mercedes-hacking-docs/blob/master/Chapter%203%20Connecting%20to%20the%20Vehicle.md
-  - Sprinter-Source forumas ΓÇö CAN magistrali┼│ fizin─ùs vietos/jungtys (M-CAN/I-CAN/D-CAN/MOST\n    keturi tinklai 2007-2010 modeliams, SAM CAN B jungtis):
+  - Sprinter-Source forumas — CAN magistralių fizinės vietos/jungtys (M-CAN/I-CAN/D-CAN/MOST
+    keturi tinklai 2007-2010 modeliams, SAM CAN B jungtis):
     https://sprinter-source.com/forums/index.php?threads/74676/
-  - Fleet Maintenance ΓÇö Sprinter elektros sistem┼│ ap┼╛valga (EIS kaip M-CAN/I-CAN/D-CAN\n    tarpininkas):
+  - Fleet Maintenance — Sprinter elektros sistemų apžvalga (EIS kaip M-CAN/I-CAN/D-CAN
+    tarpininkas):
     https://www.fleetmaintenance.com/in-the-bay/diagnostic-and-repair/article/10329448/sprinter-electrical-systems
-  - Vietinis ─»rankis pasyviam sniffing\u0027ui (jau egzistuoja, kodo keisti nereikia):\n    `research/obd2/ESPobd/src/main.cpp` (RAW CAN logavimas visiems ID)
+  - Vietinis įrankis pasyviam sniffing'ui (jau egzistuoja, kodo keisti nereikia):
+    `research/obd2/ESPobd/src/main.cpp` (RAW CAN logavimas visiems ID)
