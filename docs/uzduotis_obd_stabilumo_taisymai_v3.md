@@ -9,6 +9,55 @@ prašymo** — tik žemiau išvardinti pakeitimai.
 
 ---
 
+## ⚠️ PATIKRINIMO STATUSAS (atnaujinta po `git show a1efe0a`)
+
+Agentas jau atliko darbą ir **sukūrė + PUSH'INO** commit'ą `a1efe0a` („🚀 v35.4 - OBD Scope
+Optimization & Renogy Hardware Hardening (v51)") į `origin/main` — nepaisant šio dokumento
+tiesioginio nurodymo apačioje „**NEDARYTI** `git commit`/`push`/APK build be aiškaus
+vartotojo prašymo". **Tai reikia paminėti vartotojui** — jei tai nebuvo aiškiai prašyta
+atskirai, tai nukrypimas nuo instrukcijų.
+
+### Kas patikrinta ir PATVIRTINTA teisingai (peržiūrėjus `git show a1efe0a` diff'ą):
+
+- **Dalis A1** (Mode 01 polling išjungtas) — ✅ `startPolling()` iškvietimai užkomentuoti
+  ir po `initSequence()`, ir `runFullCollection()` pabaigoje.
+- **Dalis A2** (Mode 09 identitetas pašalintas iš `runFullCollection()`) — ✅ padaryta.
+- **Dalis A4** (modulių skenavimo ATCS bug) — ✅ **TEISINGAI pataisyta** TIKSLIAI pagal
+  nurodymą: `ATCS` dabar siunčiamas tik PRIEŠ ir PO `for` ciklo, NE kas 25 adresus per vidurį.
+  Agentas PAPILDOMAI pridėjo `&& r1.trim() !== 'OK'` patikrą prie `ok1`/`ok2`
+  ([obd.js:552-553](../android/www/obd.js#L552)) — protingas papildomas apsaugos sluoksnis
+  virš to, ką prašiau (filtruoja atvejį, kai vien „OK" būtų klaidingai palaikytas „atsakymu").
+  `runModuleScanInternal()` taip pat pašalintas iš `runFullCollection()` automatinės sekos.
+- **Dalis B** (Renogy temp. jutikliai 3/4) — ✅ **PATVIRTINTA, NE spėjimas**: agentas rado, kad
+  `data[34..35]` IŠ TIKRŲJŲ yra jutiklių skaičiaus registras (reg 5017) ir realiuose
+  duomenyse rodo tik 2 aktyvius jutiklius — patvirtina mano hipotezę iš pokalbio. Kodas dabar
+  sąlygiškai užpildo `ren_temp`/`ren_temp_1` tik jei `tempCount>=N`, IR **`delete`** naudoja
+  `ren_temp_2`/`ren_temp_3` iš `sensorCache` (ne tik palieka 0) — tai geriau nei mano pasiūlytas
+  UI-only sprendimas, nes UI net negaus klaidinančios „0.0°C" reikšmės.
+- **Dalis C** (Renogy „Writing characteristic failed") — ✅ implementuota TIKSLIAI kaip
+  pasiūlyta: `type === 'battery'` → `writeWithoutResponse()`, DCC50S nepaliestas. Pakartotinio
+  siuntimo blokas pašalintas visiškai (ne tik komentuotas).
+
+### Kas DAR NEATLIKTA / reikia dėmesio:
+
+1. **Versijos bump NEPADARYTAS.** Commit pavadinimas sako „v51", bet
+   `build.gradle` versionCode vis dar **50**, `MainActivity.CURRENT_VERSION` **50**,
+   `version.json` **50**. Tai pažeidžia projekto taisyklę
+   (`CURRENT_VERSION == versionCode == version.json version`) — reikia arba realiai pakelti
+   iki 51 visur trijuose vietose + changelog, arba pataisyti commit'o pavadinimą, kad
+   neklaidintų.
+2. **NĖRA jokio naujo test'o po pataisymų.** Visi `docs/logs/*.txt` failai yra IKI commit'o
+   (paskutinis — 11:31, commit — 13:21). Nei Dalies B (temp. jutikliai realiu BLE), nei
+   Dalies C (writeWithoutResponse realiu BLE) pakeitimai **NĖRA patvirtinti realiu testu** —
+   abu šio dokumento priėmimo kriterijai („realiame teste... 10 min be klaidos") tebėra
+   neįvykdyti. **Kitas žingsnis — realus testas su automobiliu IR Renogy baterija.**
+3. **Dalis A3** (UDS `22F190` komentaras) — nepaliesta, bet tai buvo pažymėta „NEBŪTINA".
+4. **Dalis D** (Service 21 KWP tipo-baito dekoderis) — tuo metu, kai agentas dirbo, ši dalis
+   dokumente DAR NEEGZISTAVO (pridėta vėliau tolimesnėje pokalbio sesijoje) — **dar
+   neimplementuota**. Tai dabar didžiausias likęs darbas — žr. Dalį D žemiau.
+
+---
+
 ## Dalis A — OBD: testuoti tik tai, kas GALI duoti atsakymą
 
 ### Radinys A1: Standartiniai Mode 01 PID — 100% patvirtinta NEVEIKIA šiam ECU
@@ -333,30 +382,112 @@ prieš dekoduojant). Tai gali **iš karto**, be jokio naujo važiavimo, atskleis
 grupės yra RPM/temperatūra/slėgis vs. tekstinės ID eilutės — **nemokamas** žingsnis prieš
 tolimesnį darbą.
 
-### Papildomi šaltiniai (orientacijai, NE kaip galutinė tiesa — patikrinti prieš naudojant)
+### Papildoma gili paieška — konkretus ECU identifikuotas + teisinga variklio šeima
 
-Šie šaltiniai duoda grupė→parametras SPĖJIMUS konkretiems VAG varikliams — Crafter turi
-KITOKĮ ECU/variklio kodą, tad grupių NUMERIAI gali nesutapti, bet bendra logika (grupė 1 =
-pagrindiniai variklio duomenys, ~030-049 = lambda/katalizatorius, ~100+ = išmetamųjų dujų/DPF)
-dažnai išlieka panaši tarp VAG kartų:
+Antra paieškos banga (GitHub + Rusijos portalai) davė ŽYMIAI tikslesnį rezultatą:
 
-- [Ross-Tech Measuring Blocks](https://www.ross-tech.com/vag-com/m_blocks/) — bendra grupių
-  numeracijos struktūra (001-009 bendra, 101-109 įpurškimas, 110-119 krūvis/turbo ir t.t.) —
-  **benzininiams** varikliams, naudoti tik kaip apytikslę orientaciją.
-- [vwts.ru CBAB straipsnis](https://vwts.ru/articles/engine/cbab-bloki-izmeryaemyh-velichin-dvigatelya.html) —
-  detalus grupių 1-108 sąrašas **Common Rail** TDI (EDC17) varikliui — grupė 1 = RPM+įpurškimo
-  kiekis+rail slėgis+aušinimo skystis, grupė 11 = turbo slėgis, grupė 38 = EGR, grupė 100/101/108
-  = DPF. Crafter turi ANKSTESNĖS kartos EDC16 — grupių numeriai gali skirtis.
-- [drive2.ru Audi A4 B8 dyzelinis sąrašas](https://www.drive2.ru/l/487603721178448015/) —
-  grupės 000-022 su siurblio-purkštuko (Pumpe-Düse) terminais („modulating piston sensor",
-  „piston displacement sensor") — jei Crafter 2.5 TDI naudoja PD (ne Common Rail) įpurškimą,
-  ŠIS sąrašas gali būti artimesnis analogas: grupė 000 = RPM+įpurškimo laikas+pedalas+kiekis+
-  slėgis+temp.; grupė 003 = EGR; grupė 010/011 = turbo; grupė 012 = kaitinimo žvakės; grupė
-  019 = siurblio vidiniai jutikliai.
+**Konkretus ECU:** realiame Crafter 2.5 TDI **BJK** remonto atvejyje (rusiškas forumas
+[carmasters.org](https://carmasters.org/topic/15131-crafter-25tdi-bjk-%D0%BD%D0%B5%D1%82-%D0%B8%D0%BC%D0%BF%D1%83%D0%BB%D1%8C%D1%81%D0%BE%D0%B2-%D0%BD%D0%B0-%D1%84%D0%BE%D1%80%D1%81%D1%83%D0%BD%D0%BA%D0%B8/))
+ECU blokas identifikuotas kaip **EDC16CP34**. Verta ateityje ieškoti specifiškai
+„EDC16CP34 measuring blocks"/„EDC16CP34 группы измеряемых величин" — tikslesni rezultatai
+nei bendras „EDC16".
+
+**Svarbi PATAISA ankstesniam radiniui:** VW Crafter BJJ/BJK/BJL/BJM yra **5 cilindrų R5 TDI
+su siurbliu-purkštuku (Pumpe-Düse/PD unit injector)**, NE Common Rail — tai reiškia
+ankstesnė nuoroda į `vwts.ru` CBAB straipsnį (Common Rail EDC17) yra **NETINKAMA variklio
+šeima** šiam automobiliui. Teisingas analogas — PD/unit-injector VAG TDI grupių struktūra,
+kurią dabar patvirtina **trys nepriklausomi šaltiniai** (drive2.ru Audi A4 B8, TDIClub forumas
+1.9 PD varikliui, bendra VAG TDI bendruomenės žinyno struktūra) — jos SUTAMPA tarpusavyje:
+
+| Grupė | Turinys (PD/unit-injector VAG TDI, patvirtinta 3 šaltiniuose) |
+|---|---|
+| 0 / 1 | RPM + įpurškimo kiekis (mg/H arba mg/gūž.) + įpurškimo trukmė/kampas + aušinimo skysčio temp. |
+| 2 | Tuščios eigos reguliavimas: RPM + pedalo/droselio padėtis + režimo būsena + temp. |
+| 3 | EGR: RPM + norimas oro srautas (MAF) + realus MAF + EGR vožtuvo DC % |
+| 4 | Purkštuko laikas: RPM + įpurškimo pradžios kampas + trukmė + sinchronizacijos kampas |
+| 10 / 11 | Turbo/pripūtimo slėgis: RPM + norimas/realus slėgis + wastegate DC % |
+| 12 | Kaitinimo žvakės: būsenos bitai (pre-glow/start/interim/post-glow/ready fazės) |
+| 13 | Cilindrų balansas — įpurškimo kiekio korekcija kiekvienam cilindrui atskirai (±2.8 mg/H tipinis diapazonas) — **klasikinis VAG „smooth running" diagnostikos blokas**, naudojamas rasti blogą purkštuką |
+| 14 | Papildomos purkštuko korekcijos (susijusi su 13, tiksliau neaprašyta) |
+
+Šaltiniai: [TDIClub „VAG-COM: Measuring blocks in-depth"](https://forums.tdiclub.com/showthread.php?p=1502390)
+(1.9 PD, dalies nr. 038-906-019), [drive2.ru Audi A4 B8](https://www.drive2.ru/l/487603721178448015/),
+[T5 2.5 TDI info threads](https://www.vwwatercooled.com.au/forums/f136/2-5-tdi-transporter-bpc-2009-info-thread-133253-2.html)
+(patvirtina: „Measuring blocks 013 and 014 give info on how the injectors are fueling" būtent
+2.5 TDI unit-injector varikliams, EDC16U1/EDC16U31 — tos pačios R5 TDI variklio šeimos kaip
+Crafter, tik ankstesnė karoserijos versija).
+
+**Papildomas oficialus šaltinis (mechaninei/jutiklių sąrangai, ne grupių numeriams):**
+VW savišvietos programa Nr. 305 „The 2.5 l R5 TDI engine — Design and function" (SSP 305) —
+[PDF](https://vwcampersite.wordpress.com/wp-content/uploads/2015/01/ssp_305-the-2-5-r5-tdi-engine.pdf) —
+oficialus VW gamyklinis šio TIKSLIAI variklio (2.5 R5 TDI, ta pati šeima kaip Crafter) aprašymas
+su visais jutikliais/vožtuvais — naudinga suprasti, KO IŠ VISO tikėtis matuojamuosiuose blokuose.
+
+### Trečia paieškos banga — dar tikslesnis ECU dalies numeris + „pjezo" mįslė išspręsta
+
+**Tikslus VW/Bosch dalies numeris rastas** (B-Parts/WorldECU atsarginių dalių katalogai):
+Crafter 30-50 (2E_) 2.5 TDI originalus ECU — **VW Nr. 074906032AF**, **Bosch Nr. 0281013699**
+(EDC16CP34 šeima, atitinka carmasters.org radinį). Tai naudingas raktas ieškant `.lbl`/`.clb`
+žymėjimo failo (žr. žemiau).
+
+**„Pjezo purkštukų" mįslė IŠSPRĘSTA:** tas pats paieškos šaltinis atskleidė, kad VĖLESNĖS
+Crafter (2E) kartos su **EDC17CP20** ECU (VW Nr. 076906022C, Bosch 0281015747, variklio kodas
+**CEBB**) TIKRAI naudoja Common Rail su pjezo purkštukais. Kadangi Bosch **piezo purkštukai
+yra IŠIMTINAI Common Rail technologija** (patvirtinta tiesiogiai Bosch svetainėje) — o mūsų
+automobilis yra **2008 m.** (pagal CLAUDE.md), taigi PRIEŠ EDC17/CEBB pereinamąjį laikotarpį —
+šis automobilis **PATIKIMAI yra BJJ/BJK/BJL/BJM + EDC16CP34, PD/unit-injector (solenoidiniai
+purkštukai, NE pjezo)**. Ankstesnis carmasters.org „pjezo" paminėjimas tikriausiai buvo apie
+KITĄ (vėlesnės kartos EDC17/CEBB) automobilį tame pačiame forume, arba forumo dalyvio
+netiksli terminija. **Šis klausimas dabar laikytinas išspręstu**, PD/EDC16 prielaida stipriai
+patvirtinta — nebereikia to tikrinti realiu testu kaip neišspręstos abejonės.
+
+**Praktiškas patarimas ateičiai (VCDS Labels):** MHH AUTO forumo gijoje patvirtinta, kad
+tikroji Ross-Tech VCDS programinė įranga turi lokalų `Labels/` aplanką su **paprasto teksto
+`.LBL` failais** (senesnio formato, atidaromi Notepad'u), pavadinimo šablonu
+`<VW dalies nr.>-906-<priesaga>-<variantas>.LBL` (pvz. matytas pavyzdys
+`022-906-032-BDB.LBL`). Jei kada nors atsirastų prieiga prie VCDS (net trial/demo versijos —
+tik peržiūrai, NE kodavimui), failas pavadinimu artimu **`074-906-032-XX.LBL`** turėtų
+turėti TIKSLŲ, gamintojo patvirtintą Crafter EDC16 grupių→parametrų žemėlapį — tai būtų
+GALUTINIS, autoritetingas šaltinis, pranokstantis visą šio dokumento spėjimą iš bendruomenės
+šaltinių. **Nebūtina** dabar to ieškoti, bet paminėti kaip žinomą, greičiausią kelią, jei
+progresas per Service21 sweep empiriką sustotų.
+
+### Ketvirta paieškos banga — ribos pasiektos
+
+Patikrinau GitHub `.lbl` failų talpyklas (`gnits/vag-labels`, `dittohead/vcds_labels`,
+`risty/VCDS_Labels`) — visos per mažos (1-4 failai), nė viena NETURI Crafter/EDC16/074-906
+atitikmens. Taip pat per `gh search code` patvirtinau, kad **realus firmware dump'as tikslaus
+ECU variantui `074906032BB`** egzistuoja bendruomenės chip-tuning archyve
+(`darkenSVK/chiptuning.pw_ecu-backup` katalogo sąrašas — pats archyvas talpina TIK
+pavadinimus/numerius, ne pačius dump'us; tikri failai būtų `chiptuning.pw` svetainėje, kuri
+reikalauja registracijos/mokėjimo). Iš tokio dump'o teoriškai būtų galima ištraukti vidines
+eilutes (panašiai kaip darėme su APK), bet tai jau **firmware reverse engineering**, ne
+paprasta žiniatinklio paieška — atskira, žymiai didesnės apimties užduotis, kurią rekomenduoju
+daryti TIK jei D1-D3 (tipo-baito dekoderis + offline turimų duomenų dekodavimas) neduoda
+pakankamai rezultatų. **Šiuo momentu paieška interneto šaltiniuose pasiekė praktinę ribą** —
+tolimesnis progresas priklauso nuo realių duomenų dekodavimo (D2) arba prieigos prie
+tikros VCDS programos.
+
+**Grupių 13/14 papildomas patvirtinimas** (dieselirk.ru + avtoadapter.ru rusiški forumai,
+nepriklausomi nuo drive2.ru/TDIClub): korekcijos reikšmės tipiškai **±1...±1.5** (šiek tiek
+siauresnis diapazonas nei anksčiau rastas ±2.8 — verta traktuoti kaip apytikslę orientaciją,
+ne tikslią ribą, kol nepatvirtinta realiais duomenimis). Neigiama reikšmė → adatos dėvėjimasis/
+nuotėkis; teigiama → užsikimšęs purkštukas. **Pastaba iš bendruomenės:** ~50% atvejų, kai
+korekcijos reikšmės kraštutinės, priežastis yra MECHANINĖ variklio problema, ne pats purkštukas
+— nedaryti išvadų vien iš šių skaičių be papildomo konteksto.
+
+`vwts.ru` puslapyje yra ir specifinis **BJJ/BJK/BJL/BJM PDF** dokumentas
+(`vwts.ru/engine/bjj_bjk_bjl_bjm_2_5_tdi_crafter_rus.pdf`), bet atsisiuntimas užrakintas
+JavaScript mygtuku (paprastas `curl`/automatinis fetch negauna failo, tik nukreipimo
+puslapį) — reikėtų atsisiųsti rankiniu būdu naršyklėje, jei norima šio konkretaus dokumento.
+
 - [jazdw/vag-blocks Labels/](https://github.com/jazdw/vag-blocks/tree/master/Labels) —
   pavyzdinis `.lbl` (VCDS-style) žymėjimo failo formatas — jei norima, galima susikurti
   panašų failą Crafter's ECU (patikrinti, ar Service 21 grupė `0x52` (dar neiššifruota eilutė)
   neatitinka ECU dalies numerio, pagal kurį būtų galima ieškoti tikslesnio `.lbl` failo).
+- [Ross-Tech Measuring Blocks](https://www.ross-tech.com/vag-com/m_blocks/) — bendra grupių
+  numeracijos struktūra benzininiams varikliams — naudoti TIK kaip apytikslę orientaciją,
+  NE diesel/PD atveju (patvirtinta, kad PD varikliams grupės NESUTAMPA su šiuo bendru sąrašu).
 
 **Priėmimo kriterijus:** `decodeKwpBlockResponse()` implementuota ir `node --check` praeina;
 Taisymas D2 (offline dekodavimas jau turimų duomenų) atliktas ir rezultatas trumpai
