@@ -460,11 +460,15 @@ async function handleAutoRecovery() {
     async function runProtocolProbeInternal() {
         obdLog('=== PROTOKOLO ZONDAS (KWP vs UDS) ===', 'info');
         const kwp = await sendCmd('2101', 2000);
-        const uds = await sendCmd('22F190', 2000);
         const kwpOk = !!kwp && !isNoData(kwp);
-        const udsOk = !!uds && !isNoData(uds);
+
+        // UDS 22F190 patvirtinta NEVEIKIA (2026-07-06/07 žurnalai) — laikoma tik dokumentacijai/regresijai, NEBŪTINA siųsti kiekvieną kartą
+        // const uds = await sendCmd('22F190', 2000);
+        // const udsOk = !!uds && !isNoData(uds);
+        const udsOk = false;
+
         obdLog('Service 21 (KWP): ' + (kwpOk ? ('ATSAKO - ' + kwp.replace(/[\r\n]+/g, ' ')) : 'NO DATA'), kwpOk ? 'success' : 'warn');
-        obdLog('Service 22 (UDS): ' + (udsOk ? ('ATSAKO - ' + uds.replace(/[\r\n]+/g, ' ')) : 'NO DATA'), udsOk ? 'success' : 'warn');
+        obdLog('Service 22 (UDS): ' + (udsOk ? ('ATSAKO - ' + uds.replace(/[\r\n]+/g, ' ')) : 'NEVEIKIA (v51 bypass)'), udsOk ? 'success' : 'warn');
         return { kwpOk: kwpOk, udsOk: udsOk };
     }
 

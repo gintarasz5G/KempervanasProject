@@ -1,5 +1,5 @@
 {
-  "version": 50,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v50.apk",
-  "notes": "🚀 v35.3 - OBD Cleanup & Documentation Fix (v50)\n\n✅ FIXED: 'Collect All' deadlock (Bug #1) — sub-scans now correctly run while scanBusy is true.\n✅ FIXED: Auto-recovery deadlock (Bug #2) — recovery commands now correctly process during flushing state.\n✅ FIXED: Documentation encoding — restored UTF-8 integrity in uzduotis_obd2_elm327_tab.md.\n✅ IMPROVED: Global collection confirm dialog logic — reduced redundant popups."
+  "version": 51,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v51.apk",
+  "notes": "🚀 v35.4 - OBD Scope Optimization & Renogy Hardening (v51)\n\n✅ OBD: Disables non-functional Mode 01/09 auto-polling for EDC16 ECU.\n✅ OBD: Optimized 'Collect All' (removes identity/module scan, saving ~100s).\n✅ OBD: Fixed ATCS probe bug in module scan causing ghost responses.\n✅ RENOGY: Dynamic temp sensor display based on probe count (reg 5017).\n✅ RENOGY: Stabilized battery queries with writeWithoutResponse to fix GATT errors."
 }
