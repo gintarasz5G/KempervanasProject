@@ -18,31 +18,30 @@ const ObdBLE = (function() {
         pollTimer: null,
         scanBusy: false,
         flushing: false,
-        consecutiveTimeouts: 0,
         autoResetCount: 0,
-        safeMode: localStorage.getItem('obd_safe_mode') === 'true',
-        lastEngineRunning: null
+        safeMode: true, // v53: numatyta ON pigiems klonams
+        blockResults: new Map(),
+        supportedPids: new Set() // v53: bitmap
     };
 
-    // Pakopa 0 — bazinis Mode 01 (visada veikia, žr. research/obd2/ESPobd/src/main.cpp)
-    const PID0 = [
+    const ALL_PIDS = [
         { pid: '0C', key: 'obd_rpm',     fmt: (A, B) => (A * 256 + B) / 4 },
         { pid: '0D', key: 'obd_speed',   fmt: (A)    => A },
         { pid: '05', key: 'obd_coolant', fmt: (A)    => A - 40 },
         { pid: '04', key: 'obd_load',    fmt: (A)    => A * 100 / 255 },
         { pid: '0B', key: 'obd_map',     fmt: (A)    => A },
-        { pid: '10', key: 'obd_maf',     fmt: (A, B) => (A * 256 + B) / 100 }
+        // v53: papildomi J1979 PID
+        { pid: '0F', key: 'obd_iat',      fmt: (a)    => a - 40 },
+        { pid: '10', key: 'obd_maf',      fmt: (a, b) => ((a * 256) + b) / 100 },
+        { pid: '1F', key: 'obd_runtime',  fmt: (a, b) => (a * 256) + b },
+        { pid: '33', key: 'obd_baro',     fmt: (a)    => a },
+        { pid: '42', key: 'obd_ecu_v',    fmt: (a, b) => ((a * 256) + b) / 1000 },
+        { pid: '46', key: 'obd_ambient',  fmt: (a)    => a - 40 },
+        { pid: '5C', key: 'obd_oil_t',    fmt: (a)    => a - 40 },
+        { pid: '5E', key: 'obd_fuel_rate',fmt: (a, b) => ((a * 256) + b) / 20 },
+        { pid: '62', key: 'obd_torque',   fmt: (a)    => a - 125 },
+        { pid: '63', key: 'obd_torque_ref',fmt:(a, b) => (a * 256) + b }
     ];
-    // Pakopa A — standartiniai SAE J1979 išplėstiniai (ne gamintojo-specifiniai, bandyti be tyrimo)
-    const PID_A = [
-        { pid: '23', key: 'obd_rail_p',  fmt: (A, B) => (A * 256 + B) * 10 },
-        { pid: '5C', key: 'obd_oil_t',   fmt: (A)    => A - 40 },
-        { pid: '2C', key: 'obd_egr_cmd', fmt: (A)    => A * 100 / 255 },
-        { pid: '2D', key: 'obd_egr_err', fmt: (A)    => (A - 128) * 100 / 128 },
-        { pid: '7A', key: 'obd_dpf_p',   fmt: (A, B) => (A * 256 + B) / 100 },
-        { pid: '7C', key: 'obd_dpf_t',   fmt: (A, B) => (A * 256 + B) / 10 - 40 }
-    ];
-    const ALL_PIDS = PID0.concat(PID_A);
 
     // Pakopa B — Mode 22 (UDS) DID kandidatai variklio adresui (0x7E0). NEVERIFIKUOTI —
     // testavimo kandidatai iš kelių LLM pasiūlymų + standartizuoti F1xx (žr. docs/uzduotis_obd2_elm327_tab.md).
@@ -246,17 +245,47 @@ async function handleAutoRecovery() {
         await sendCmd('ATE0');
         await sendCmd('ATL0');
         await sendCmd('ATH0');
-        await sendCmd('ATSP6');
+        await sendCmd('ATSP0'); // v53: auto-protocol vietoje hardcoded P6
         await sendCmd('ATSTFF'); // Taisymas 6a: padidintas vidinis timeout
         await sendCmd('ATAT1');  // Adaptyvus laikas
         await sendCmd('ATCFC1'); // Auto Flow Control (Taisymas 7)
 
+        const proto = await sendCmd('ATDP');
+        obdLog('Protokolas: ' + (proto || 'nežinomas'), 'info');
+
         if (!isRecovery) {
-            obdLog('Inicijavimas baigtas, laukiama vartotojo veiksmo.', 'success');
+            obdLog('Inicijavimas baigtas, tikrinamas PID žemėlapis...', 'info');
             STATE.autoResetCount = 0;
-            // startPolling() - isjungta v51 (neveikia EDC16)
+            await updatePidBitmap();
             startBatteryVoltagePolling(); // v53: ATRV veikia nepriklausomai
+            startPolling(); // v53: grąžiname poll, bet TIK palaikomiems
         }
+    }
+
+    async function updatePidBitmap() {
+        STATE.supportedPids.clear();
+        for (const base of ['00', '20', '40', '60']) {
+            const resp = await sendCmd('01' + base, 1500);
+            if (resp && !isNoData(resp)) {
+                const bytes = parseHexBytes(resp);
+                // Pvz.: 41 00 BE 1F B8 11
+                if (bytes[0] === 0x41) {
+                    const offset = parseInt(base, 16);
+                    for (let i = 0; i < 4; i++) {
+                        const b = bytes[i + 2];
+                        if (b === undefined) break;
+                        for (let bit = 0; b < 8; bit++) {
+                            if (b & (1 << (7 - bit))) {
+                                const pid = (offset + i * 8 + bit + 1).toString(16).padStart(2, '0').toUpperCase();
+                                STATE.supportedPids.add(pid);
+                            }
+                        }
+                    }
+                    if (!(bytes[5] & 0x01)) break; // Paskutinis bitas 0 = daugiau bitmap nėra
+                }
+            } else break;
+        }
+        obdLog('Palaikomi PID: ' + Array.from(STATE.supportedPids).join(', '), 'info');
     }
 
     let batteryVoltageInterval = null;
@@ -283,11 +312,10 @@ async function handleAutoRecovery() {
         STATE.pollTimer = setInterval(async () => {
             if (!STATE.connected || STATE.scanBusy || STATE.flushing) return;
 
-            if (ALL_PIDS.length === 0) return;
-            // Standartinis Mode 01 polling (išjungtas v51, bet kodas lieka)
-            // return;
+            const supported = ALL_PIDS.filter(p => STATE.supportedPids.has(p.pid));
+            if (supported.length === 0) return;
 
-            const def = ALL_PIDS[idx % ALL_PIDS.length];
+            const def = supported[idx % supported.length];
             idx++;
             const resp = await sendCmd('01' + def.pid);
             if (!resp || isNoData(resp)) return;
@@ -412,32 +440,33 @@ async function handleAutoRecovery() {
         STATE.scanBusy = true;
         renderAssigned();
         try {
-            obdLog('=== KLAIDŲ KODŲ SKAITYMAS (Service 0x18) ===', 'info');
-            await sendCmd('1003', 2000); // Extended session
-            const resp = await sendCmd('1802FF00', 2000);
+            obdLog('=== KLAIDŲ KODŲ SKAITYMAS (Mode 03 + 07) ===', 'info');
+            const r3 = await sendCmd('03', 2000);
+            const r7 = await sendCmd('07', 2000);
             const el = document.getElementById('obd-dtc-list');
 
-            if (!resp || isNoData(resp)) {
-                obdLog('DTC servisas neatsakė arba klaidų nėra.', 'warn');
-                if (el) el.innerText = 'DTC servisas neatsakė arba klaidų nėra.';
-            } else {
-                obdLog('DTC Atsakymas: ' + resp.trim(), 'success');
+            const parseDtc = (resp) => {
+                if (!resp || isNoData(resp)) return [];
                 const bytes = parseHexBytes(resp);
-                if (bytes.length >= 2 && bytes[0] === 0x58) {
-                    const count = bytes[1];
+                // Atsakymas prasideda 43 (Mode 03) arba 47 (Mode 07)
+                if (bytes[0] === 0x43 || bytes[0] === 0x47) {
                     const codes = [];
-                    for (let i = 0; i < count; i++) {
-                        const off = 2 + i * 2;
-                        if (off + 1 < bytes.length) {
-                            codes.push('P' + bytes[off].toString(16).padStart(2, '0') + bytes[off+1].toString(16).padStart(2, '0'));
-                        }
+                    for (let i = 1; i < bytes.length - 1; i += 2) {
+                        const b1 = bytes[i], b2 = bytes[i+1];
+                        if (b1 === 0 && b2 === 0) continue;
+                        const type = ['P','C','B','U'][b1 >> 6];
+                        const code = type + (b1 & 0x3F).toString(16).padStart(2,'0') + b2.toString(16).padStart(2,'0');
+                        codes.push(code.toUpperCase());
                     }
-                    if (el) el.innerText = codes.length > 0 ? codes.join(', ') : 'Klaidų nėra.';
-                    obdLog('Rasta klaidų: ' + (codes.length > 0 ? codes.join(', ') : '0'), 'success');
-                } else {
-                    if (el) el.innerText = 'Gautas nepažįstamas formatas: ' + resp.trim();
+                    return codes;
                 }
-            }
+                return [];
+            };
+
+            const codes = [...new Set([...parseDtc(r3), ...parseDtc(r7)])];
+            if (el) el.innerText = codes.length > 0 ? codes.join(', ') : 'Klaidų nerasta.';
+            obdLog('DTC: ' + (codes.length > 0 ? codes.join(', ') : '0'), 'success');
+
         } catch (e) {
             obdLog('DTC klaida: ' + e.message, 'error');
         } finally {
@@ -739,26 +768,26 @@ async function handleAutoRecovery() {
         obdLog('=== BŪSENA: ' + label + ' ===', 'warn');
     }
 
-    // "Surinkti viską" — vienas mygtukas, viena kelionė prie automobilio, max duomenų
     async function runFullCollection() {
         if (STATE.scanBusy || !STATE.connected) { obdLog('Nėra ryšio arba skenavimas jau vyksta.', 'error'); return; }
         if (!window.confirm('Ar automobilis STOVI? Vyks pilnas skenavimas.')) return;
         STATE.scanBusy = true;
         renderAssigned();
         try {
-            obdLog('########## PRADEDAMAS OPTIMIZUOTAS DUOMENŲ RINKIMAS ##########', 'success');
+            obdLog('########## PRADEDAMAS RINKIMAS (Mode 01/09/03) ##########', 'success');
             stopPolling();
-            // await runIdentityInternal(); // Isjungta v51 (neveikia EDC16)
-            await runProtocolProbeInternal();
-            await runDidScanInternal();
-            // await runModuleScanInternal(); // Isjungta v51 (neveikia EDC16)
-            await sendCmd('1001', 1000); // Taisymas 1 final
+            await updatePidBitmap();
+            await runIdentityInternal();
+            // await runProtocolProbeInternal(); // TP2.0 required
+            // await runDidScanInternal();       // TP2.0 required
+            // await runModuleScanInternal();    // No results
+            await readDtcCodes();
             obdLog('########## RINKIMAS BAIGTAS - žurnalas išsaugomas automatiškai ##########', 'success');
             saveObdLog();
         } finally {
             STATE.scanBusy = false;
             renderAssigned();
-            // startPolling(); // Isjungta v51
+            startPolling();
         }
     }
 
