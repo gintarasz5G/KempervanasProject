@@ -70,7 +70,7 @@ public class MainActivity extends BridgeActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 123;
     static final String VERSION_JSON_URL = "https://raw.githubusercontent.com/gintarasz5G/KempervanasProject/main/version.json";
-    static final int CURRENT_VERSION = 53;
+    static final int CURRENT_VERSION = 54;
 
     private Network boundNetwork = null;
     private volatile boolean autoBindPaused = false;
@@ -984,6 +984,7 @@ public class MainActivity extends BridgeActivity {
 
         @JavascriptInterface
         public void connect(String mac) {
+            disconnectInternal(); // v54: uždaryti/išvalyti bet kokią senesnę jungtį PRIEŠ naują connect
             new Thread(() -> {
                 try {
                     if (adapter == null || !hasConnectPerm()) throw new java.io.IOException("Trūksta Bluetooth leidimo");
@@ -1067,6 +1068,10 @@ public class MainActivity extends BridgeActivity {
                 } finally {
                     if (connected) {
                         connected = false;
+                        try { if (in != null) in.close(); } catch (Exception ignored) {}
+                        try { if (out != null) out.close(); } catch (Exception ignored) {}
+                        try { if (socket != null) socket.close(); } catch (Exception ignored) {}
+                        in = null; out = null; socket = null;
                         evalJs("window.onObdDisconnected && window.onObdDisconnected('Rysys nutruko')");
                     }
                 }

@@ -18,6 +18,7 @@ const ObdBLE = (function() {
         pollTimer: null,
         scanBusy: false,
         flushing: false,
+        consecutiveTimeouts: 0,
         autoResetCount: 0,
         safeMode: true, // v53: numatyta ON pigiems klonams
         blockResults: new Map(),
@@ -274,7 +275,7 @@ async function handleAutoRecovery() {
                     for (let i = 0; i < 4; i++) {
                         const b = bytes[i + 2];
                         if (b === undefined) break;
-                        for (let bit = 0; b < 8; bit++) {
+                        for (let bit = 0; bit < 8; bit++) {
                             if (b & (1 << (7 - bit))) {
                                 const pid = (offset + i * 8 + bit + 1).toString(16).padStart(2, '0').toUpperCase();
                                 STATE.supportedPids.add(pid);
@@ -568,8 +569,19 @@ async function handleAutoRecovery() {
         STATE.connected = false;
         STATE.connecting = false;
         stopPolling();
-        STATE.pending = null;
+        if (STATE.pending) {
+            clearTimeout(STATE.pending.timer);
+            const p = STATE.pending;
+            STATE.pending = null;
+            p.resolve(null); // <-- BŪTINA v54: kitaip laukiantis await sendCmd(...) niekad nebaigia
+        }
         STATE.queue = [];
+        STATE.scanBusy = false; // <-- atlaisvinti v54, kitaip run* funkcijos amžinai užblokuotos
+
+        ['obd_rpm','obd_speed','obd_coolant','obd_load','obd_map','obd_iat','obd_maf','obd_runtime',
+         'obd_baro','obd_ecu_v','obd_ambient','obd_oil_t','obd_fuel_rate','obd_torque','obd_torque_ref',
+         'obd_battery_v'].forEach(k => { if (window.sensorCache) delete window.sensorCache[k]; });
+
         renderAssigned();
     };
 

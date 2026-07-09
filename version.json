@@ -1,5 +1,5 @@
 {
-  "version": 53,
-  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v53.apk",
-  "notes": "🚀 v35.6 - Real OBD Data & UI Polish (v53)\n\n✅ OBD: Restored generic SAE J1979 support (RPM, Speed, Temps, Torques).\n✅ OBD: Switched to auto-protocol (ATSP0) for better ECU compatibility.\n✅ OBD: Supported-PID bitmap checker added (0100/20/40/60).\n✅ OBD: Decoupled ATRV (battery voltage) polling to run independently.\n✅ RENOGY: Removed non-existent temp sensors 3/4; temp 2 is now conditional.\n✅ JUNCTEK: Charging status fix for 'remaining time' display.\n✅ SSE: Fixed ESP temperature mapping."
+  "version": 54,
+  "apk_url": "https://github.com/gintarasz5G/KempervanasProject/raw/main/android/kemperis_v54.apk",
+  "notes": "🚀 v35.7 - Full Audit Fixes & System Hardening (v54)\n\n✅ OBD: Fixed PID bitmap loop bug and consecutiveTimeouts initialization.\n✅ OBD: Ensured pending commands resolve on disconnect to prevent UI hangs.\n✅ NATIVE: Added re-entry protection to connect() and improved resource cleanup.\n✅ UI: Sensors are now cleared (---) immediately upon module disconnect.\n✅ UI: Fixed Junctek SOC fallback logic to respect real 0% readings.\n✅ UI: Added cross-check validation for alarm thresholds (Low > Critical)."
 }

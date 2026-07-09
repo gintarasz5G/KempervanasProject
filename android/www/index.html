@@ -1719,7 +1719,7 @@
             let ah = parseFloat(sensorCache['junc_ah_remaining']);
             let cap = parseFloat(sensorCache['num_bat_capacity'] || 110);
             let soc = parseFloat(sensorCache['junc_soc']);
-            if ((isNaN(soc) || soc <= 0) && !isNaN(ah) && ah > 0.5 && cap > 1) {
+            if (isNaN(soc) && !isNaN(ah) && ah > 0.5 && cap > 1) {
                 sensorCache['junc_soc'] = Math.max(0, Math.min(100, Math.round((ah / cap) * 100)));
             }
         })();
@@ -3766,7 +3766,33 @@
     }
     function updateAlarmThreshold(id, val) {
         const a = ALARM_CONFIG.find(x => x.id === id);
-        if (a && !isNaN(val)) { a.threshold = parseFloat(val); saveAlarmConfig(); }
+        if (a && !isNaN(val)) {
+            let threshold = parseFloat(val);
+
+            // v54: kryžminė slenksčių patikra (low > critical)
+            if (id === 'soc_low') {
+                const c = ALARM_CONFIG.find(x => x.id === 'soc_critical');
+                if (c && threshold <= c.threshold) threshold = c.threshold + 5;
+            } else if (id === 'soc_critical') {
+                const l = ALARM_CONFIG.find(x => x.id === 'soc_low');
+                if (l && threshold >= l.threshold) threshold = l.threshold - 5;
+            } else if (id === 'water_low') {
+                const c = ALARM_CONFIG.find(x => x.id === 'water_critical');
+                if (c && threshold <= c.threshold) threshold = c.threshold + 5;
+            } else if (id === 'water_critical') {
+                const l = ALARM_CONFIG.find(x => x.id === 'water_low');
+                if (l && threshold >= l.threshold) threshold = l.threshold - 5;
+            }
+
+            a.threshold = threshold;
+            saveAlarmConfig();
+
+            // Update input UI if it was adjusted
+            const el = document.getElementById(`thr-${id}`);
+            if (el) el.value = threshold;
+
+            sysLog(`Slenkstis ${id} nustatytas į ${threshold}`, 'success');
+        }
     }
     function renderAlarmSettings() {
         const grid = document.getElementById('alarm-config-grid');

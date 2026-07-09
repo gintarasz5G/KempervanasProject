@@ -238,7 +238,13 @@ const RenogyBLE = (function() {
     function onDisconnect(type, id) {
         debug(`${type} disconnected`, 'warn');
         STATE.devices[type].connected = false;
-        if (type === 'battery') STATE.devices.battery.modelFetched = false; // vėl nuskaitysime po kito prisijungimo
+        if (type === 'battery') {
+            STATE.devices.battery.modelFetched = false;
+            ['ren_soc','ren_v','ren_a','ren_cell_0','ren_cell_1','ren_cell_2','ren_cell_3',
+             'ren_temp','ren_temp_1','ren_model'].forEach(k => delete window.sensorCache[k]);
+        } else if (type === 'dcc') {
+            Object.keys(window.sensorCache).filter(k => k.startsWith('dcc_')).forEach(k => delete window.sensorCache[k]);
+        }
         if (window.updateUI) window.updateUI();
     }
 
